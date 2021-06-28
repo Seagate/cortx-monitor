@@ -89,9 +89,9 @@ class TestServerMap(unittest.TestCase):
 
     @patch("framework.utils.ipmi_client.IPMITool._run_ipmitool_subcommand")
     def test_build_platform_sensor_data_temperature(self, sdr_type):
-        obj = self.create_server_obj()
+        server_map = self.create_server_obj()
         sdr_type.side_effect = get_sdr_type_response
-        resp = obj.get_platform_sensors_info()
+        resp = server_map.get_platform_sensors_info()
         assert resp["Temperature"][0]["uid"] == "CPU1_Temp"
         assert resp["Temperature"][0]["health"]["status"] == "OK"
         assert (
@@ -113,9 +113,9 @@ class TestServerMap(unittest.TestCase):
 
     @patch("framework.utils.ipmi_client.IPMITool._run_ipmitool_subcommand")
     def test_build_platform_sensor_voltage(self, sdr_type):
-        obj = self.create_server_obj()
+        server_map = self.create_server_obj()
         sdr_type.side_effect = get_sdr_type_response
-        resp = obj.get_platform_sensors_info()
+        resp = server_map.get_platform_sensors_info()
         assert resp["Voltage"][0]["uid"] == "12V"
         assert resp["Voltage"][0]["health"]["status"] == "OK"
         assert resp["Voltage"][0]["health"]["description"] == "12V sensor is in good health."
@@ -134,17 +134,17 @@ class TestServerMap(unittest.TestCase):
 
     @patch("framework.utils.ipmi_client.IPMITool._run_ipmitool_subcommand")
     def test_build_platform_sensor_data_current(self, sdr_type):
-        obj = self.create_server_obj()
+        server_map = self.create_server_obj()
         sdr_type.side_effect = get_sdr_type_response
-        resp = obj.get_platform_sensors_info()
+        resp = server_map.get_platform_sensors_info()
         assert resp["Current"] == []
 
     @patch("framework.utils.ipmi_client.IPMITool._run_ipmitool_subcommand")
     def test_build_fan_fru(self, sdr_type):
-        obj = self.create_server_obj()
+        server_map = self.create_server_obj()
         resp = {}
         sdr_type.side_effect = get_sdr_type_response
-        data = obj.get_fans_info()
+        data = server_map.get_fans_info()
         resp['Fan'] = data
         assert resp["Fan"][0]["uid"] == "FAN1"
         assert resp["Fan"][0]["health"]["status"] == "OK"

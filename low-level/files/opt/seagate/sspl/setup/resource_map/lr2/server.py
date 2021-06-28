@@ -29,8 +29,7 @@ from framework.platforms.server.network import Network
 from framework.base.sspl_constants import (CPU_PATH,
     DEFAULT_RECOMMENDATION, HEALTH_SVC_NAME)
 from framework.utils.conf_utils import (GLOBAL_CONF, NODE_TYPE_KEY, Conf)
-from framework.utils.utility import CustomLog
-from framework.utils.service_logging import logger
+from framework.utils.service_logging import CustomLog, logger
 
 
 class ServerMap(ResourceMap):
@@ -63,12 +62,12 @@ class ServerMap(ResourceMap):
         """Check for supported server type."""
         server_type = Conf.get(GLOBAL_CONF, NODE_TYPE_KEY).lower()
         # TODO Add support for 'virtual' type server.
-        logger.debug(self.log.format_svc_log(
+        logger.debug(self.log.svc_log(
             f"Server Type:{server_type}"))
         supported_types = ["physical"]
         if server_type not in supported_types:
             msg = f"Health provider is not supported for server type:{server_type}"
-            logger.error(self.log.format_svc_log(msg))
+            logger.error(self.log.svc_log(msg))
             raise ResourceMapError(
                 errno.EINVAL, msg)
 
@@ -78,7 +77,7 @@ class ServerMap(ResourceMap):
 
         rpath: Resource id (Example: nodes[0]>compute[0]>hw>disks)
         """
-        logger.info(self.log.format_svc_log(
+        logger.info(self.log.svc_log(
             f"Get Health data for rpath:{rpath}"))
         info = {}
         fru_found = False
@@ -107,7 +106,7 @@ class ServerMap(ResourceMap):
                     break
         if not fru_found:
             msg = f"Health provider doesn't have support for'{rpath}'."
-            logger.error(self.log.format_svc_log(msg))
+            logger.error(self.log.svc_log(msg))
             raise ResourceMapError(
                 errno.EINVAL, msg)
         return info
@@ -175,7 +174,7 @@ class ServerMap(ResourceMap):
                 "cpus": per_cpu_data
             }
         ]
-        logger.debug(self.log.format_svc_log(
+        logger.debug(self.log.svc_log(
             f"CPU Health Data:{cpu_data}"))
         return cpu_data
 
@@ -217,7 +216,7 @@ class ServerMap(ResourceMap):
                 response[sensor].append(
                     self.format_ipmi_platform_sensor_reading(reading)
                 )
-        logger.debug(self.log.format_svc_log(
+        logger.debug(self.log.svc_log(
             f"Platform Sensor Health Data:{response}"))
         return response
 
@@ -240,7 +239,7 @@ class ServerMap(ResourceMap):
         memory_dict = self.prepare_mem_json(status,
                                             description)
         data.append(memory_dict)
-        logger.debug(self.log.format_svc_log(
+        logger.debug(self.log.svc_log(
             f"Memory Health Data:{data}"))
         return data
 
@@ -280,7 +279,7 @@ class ServerMap(ResourceMap):
         sensor_reading = self._ipmi.get_sensor_list_by_type('Fan')
         if sensor_reading is None:
             msg = f"Failed to get Fan sensor reading using ipmitool"
-            logger.error(self.log.format_svc_log(msg))
+            logger.error(self.log.svc_log(msg))
             return
         for fan_reading in sensor_reading:
             sensor_id = fan_reading[0]
@@ -301,7 +300,7 @@ class ServerMap(ResourceMap):
                                  specifics=specifics)
 
             data.append(fan_dict)
-            logger.debug(self.log.format_svc_log(
+            logger.debug(self.log.svc_log(
                 f"Fan Health Data:{fan_dict}"))
         return data
 

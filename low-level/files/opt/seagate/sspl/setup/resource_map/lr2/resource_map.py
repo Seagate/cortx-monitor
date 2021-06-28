@@ -34,7 +34,7 @@ class ResourceMap(metaclass=ABCMeta):
         """Initialize resource."""
         logging_level = Conf.get(SSPL_CONF,
             f"{SYSTEM_INFORMATION}>{LOG_LEVEL}", "INFO")
-        init_logging('sspl_node-health', logging_level)
+        init_logging('node-health', logging_level)
 
     @abstractmethod
     def get_health_info(self, rpath):

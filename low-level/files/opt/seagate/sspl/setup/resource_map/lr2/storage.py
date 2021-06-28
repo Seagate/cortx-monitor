@@ -32,8 +32,7 @@ from framework.utils.conf_utils import (
 from error import ResourceMapError
 from resource_map import ResourceMap
 from framework.base.sspl_constants import HEALTH_UNDESIRED_VALS, HEALTH_SVC_NAME
-from framework.utils.utility import CustomLog
-from framework.utils.service_logging import logger
+from framework.utils.service_logging import CustomLog, logger
 
 
 class StorageMap(ResourceMap):
@@ -60,12 +59,12 @@ class StorageMap(ResourceMap):
     def validate_storage_type_support(self):
         """Check for supported storage type."""
         storage_type = Conf.get(GLOBAL_CONF, STORAGE_TYPE_KEY, "virtual").lower()
-        logger.debug(self.log.format_svc_log(
+        logger.debug(self.log.svc_log(
             f"Storage Type:{storage_type}"))
         supported_types = ["5u84", "rbod", "pods", "corvault"]
         if storage_type not in supported_types:
             msg = f"Health provider is not supported for storage type {storage_type}"
-            logger.error(self.log.format_svc_log(msg))
+            logger.error(self.log.svc_log(msg))
             raise ResourceMapError(
                 errno.EINVAL, msg)
 
@@ -75,7 +74,7 @@ class StorageMap(ResourceMap):
 
         rpath: Resouce path (Example: nodes[0]>storage[0]>hw>controllers)
         """
-        logger.info(self.log.format_svc_log(
+        logger.info(self.log.svc_log(
             f"Get Health data for rpath:{rpath}"))
         info = {}
         fru_found = False
@@ -105,7 +104,7 @@ class StorageMap(ResourceMap):
                     break
         if not fru_found:
             msg = f"Health provider doesn't have support for'{rpath}'."
-            logger.error(self.log.format_svc_log(msg))
+            logger.error(self.log.svc_log(msg))
             raise ResourceMapError(
                 errno.EINVAL, msg)
         return info
@@ -135,7 +134,7 @@ class StorageMap(ResourceMap):
                 controller_dict, status, description, recommendation,
                 specifics)
             data.append(controller_dict)
-            logger.debug(self.log.format_svc_log(
+            logger.debug(self.log.svc_log(
                 f"Contollers Health Data:{data}"))
         return data
 
@@ -163,14 +162,14 @@ class StorageMap(ResourceMap):
             self.set_health_data(
                 psu_dict, status, description, recommendation, specifics)
             data.append(psu_dict)
-            logger.debug(self.log.format_svc_log(
+            logger.debug(self.log.svc_log(
                 f"PSU Health Data:{data}"))
         return data
 
     def get_platform_sensors_info(self):
         sensor_list = ['temperature', 'current', 'voltage']
         sensor_data = self.build_encl_platform_sensors_data(sensor_list)
-        logger.debug(self.log.format_svc_log(
+        logger.debug(self.log.svc_log(
             f"Platform Sensors Health Data:{sensor_data}"))
         return sensor_data
 
@@ -241,7 +240,7 @@ class StorageMap(ResourceMap):
                     logvol_data_dict, health, description, recommendation,
                     specifics)
                 logvol_data.append(logvol_data_dict)
-        logger.debug(self.log.format_svc_log(
+        logger.debug(self.log.svc_log(
             f"Logical Volume Health Data:{logvol_data}"))
         return logvol_data
 
@@ -294,7 +293,7 @@ class StorageMap(ResourceMap):
                     dg_data_dict, health, recommendation=recommendation,
                     specifics=specifics)
                 dg_data.append(dg_data_dict)
-        logger.debug(self.log.format_svc_log(
+        logger.debug(self.log.svc_log(
             f"disk-group Health Data:{dg_data}"))
         return dg_data
 
@@ -329,7 +328,7 @@ class StorageMap(ResourceMap):
                 specifics=specifics)
 
             sideplane_expander_data.append(sideplane_dict)
-        logger.debug(self.log.format_svc_log(
+        logger.debug(self.log.svc_log(
             f"Sideplane Expander Health Data:{sideplane_expander_data}"))
         return sideplane_expander_data
 
@@ -400,7 +399,7 @@ class StorageMap(ResourceMap):
             self.set_health_data(
                 drives_dict, status, description, recommendation, specifics)
             drive_data.append(drives_dict)
-        logger.debug(self.log.format_svc_log(
+        logger.debug(self.log.svc_log(
             f"disk Health data:{drive_data}"))
         return drive_data
 
@@ -448,6 +447,6 @@ class StorageMap(ResourceMap):
                 nw_inf_data, nw_inf.get('health'), nw_inf.get('health-reason'),
                 nw_inf.get('health-recommendation'), [specifics])
             nw_data.append(nw_inf_data)
-        logger.debug(self.log.format_svc_log(
+        logger.debug(self.log.svc_log(
             f"Network ports Health data:{nw_data}"))
         return nw_data

@@ -23,9 +23,9 @@ class TestStorageMap(unittest.TestCase):
         "files.opt.seagate.sspl.setup.resource_map.lr2.storage.StorageMap.get_realstor_encl_data"
     )
     def test_get_platform_sensors(self, encl_response):
-        obj = self.create_storage_obj()
+        storage_map = self.create_storage_obj()
         encl_response.return_value = json.loads(ENCLOSURE_SENSORS_RESPONSE)['api-response']['sensors']
-        resp = obj.get_platform_sensors_info()
+        resp = storage_map.get_platform_sensors_info()
 
         # Temperature
         assert resp["temperature"][0]['uid'] == "sensor_temp_ctrl_B.1"
@@ -46,9 +46,9 @@ class TestStorageMap(unittest.TestCase):
         "files.opt.seagate.sspl.setup.resource_map.lr2.storage.StorageMap.get_realstor_encl_data"
     )
     def test_get_platform_sensors_empty(self, encl_response):
-        obj = self.create_storage_obj()
+        storage_map = self.create_storage_obj()
         encl_response.return_value = ENCLOSURE_RESPONSE_EMPTY
-        resp = obj.get_platform_sensors_info()
+        resp = storage_map.get_platform_sensors_info()
 
         # Temperature
         assert "temperature" not in resp
@@ -63,10 +63,10 @@ class TestStorageMap(unittest.TestCase):
         "files.opt.seagate.sspl.setup.resource_map.lr2.storage.StorageMap.get_realstor_encl_data"
     )
     def test_get_sideplane_expander_info(self, encl_response):
-        obj = self.create_storage_obj()
+        storage_map = self.create_storage_obj()
         encl_response.return_value = json.loads(
             ENCLOSURE_RESPONSE)['api-response']['enclosures']
-        resp = obj.get_sideplane_expanders_info()
+        resp = storage_map.get_sideplane_expanders_info()
         assert resp[0]['uid'] == 'sideplane_0.D0.B'
         assert resp[0]['health']['status'] == 'OK'
         assert resp[0]['health']['description'] == \
@@ -92,9 +92,9 @@ class TestStorageMap(unittest.TestCase):
     @patch(("files.opt.seagate.sspl.setup.resource_map.lr2.storage."
             "StorageMap.get_realstor_encl_data"))
     def test_get_nw_ports_info(self, encl_response):
-        obj = self.create_storage_obj()
+        storage_map = self.create_storage_obj()
         encl_response.return_value = json.loads(ENCLOSURE_NW_RESPONSE)
-        resp = obj.get_nw_ports_info()
+        resp = storage_map.get_nw_ports_info()
         assert resp[0]['uid'] == 'mgmtport_a'
         assert resp[0]['health']['status'] == 'OK'
         assert resp[0]['health']['description'] == \
@@ -108,10 +108,10 @@ class TestStorageMap(unittest.TestCase):
         "files.opt.seagate.sspl.setup.resource_map.lr2.storage.StorageMap.get_realstor_encl_data"
     )
     def test_get_controllers(self, encl_response):
-        obj = self.create_storage_obj()
+        storage_map = self.create_storage_obj()
         encl_response.return_value = json.loads(
             CONTROLLER_RESPONSE)['api-response']['controllers']
-        resp = obj.get_controllers_info()
+        resp = storage_map.get_controllers_info()
         assert resp[0]['uid'] == 'controller_a'
         assert resp[0]['health']['status'] == 'OK'
         specifics = resp[0]['health']['specifics'][0]
@@ -127,10 +127,10 @@ class TestStorageMap(unittest.TestCase):
         "files.opt.seagate.sspl.setup.resource_map.lr2.storage.StorageMap.get_realstor_encl_data"
     )
     def test_get_drives(self, encl_response):
-        obj = self.create_storage_obj()
+        storage_map = self.create_storage_obj()
         encl_response.return_value = json.loads(
             DRIVE_RESPONSE)['api-response']['drives']
-        resp = obj.get_drives_info()
+        resp = storage_map.get_drives_info()
         assert resp[0]['uid'] == 'disk_00.00'
         assert resp[0]['health']['status'] == 'OK'
         specifics = resp[0]['health']['specifics'][0]
