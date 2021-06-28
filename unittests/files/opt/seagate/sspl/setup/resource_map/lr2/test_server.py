@@ -180,10 +180,11 @@ class TestServerMap(unittest.TestCase):
     @patch("psutil.net_if_addrs")
     @patch("psutil.net_io_counters")
     def test_get_nw_ports_info(self, io_counter, if_addrs, nw_status):
+        server_map = self.create_server_obj()
         io_counter.return_value = NET_IO_COUNTERS
         if_addrs.return_value = NET_IF_ADDRESS
         nw_status.return_value = ("UP", "CONNECTED")
-        resp = self.server_map.get_nw_ports_info()
+        resp = server_map.get_nw_ports_info()
         print(resp)
         assert resp[0]['uid'] == 'lo'
         assert resp[0]['health']['status'] == "OK"
