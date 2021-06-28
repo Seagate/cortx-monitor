@@ -17,15 +17,15 @@
 
 import errno
 import psutil
-import re
 import time
+from socket import AF_INET
 from pathlib import Path
 
 from framework.utils.ipmi_client import IpmiFactory
-from framework.base import sspl_constants
 from framework.utils.tool_factory import ToolFactory
 from resource_map import ResourceMap
 from error import ResourceMapError
+from framework.platforms.server.network import Network
 from framework.base.sspl_constants import (CPU_PATH, DEFAULT_RECOMMENDATION)
 from framework.utils.conf_utils import (GLOBAL_CONF, NODE_TYPE_KEY, Conf)
 
@@ -49,7 +49,8 @@ class ServerMap(ResourceMap):
             'cpu': self.get_cpu_info,
             'platform_sensors': self.get_platform_sensors_info,
             'memory': self.get_mem_info,
-            'fans': self.get_fans_info
+            'fans': self.get_fans_info,
+            'nw_ports': self.get_nw_ports_info
         }
         self._ipmi = IpmiFactory().get_implementor("ipmitool")
         self.platform_sensor_list = ['Temperature', 'Voltage', 'Current']
@@ -285,3 +286,57 @@ class ServerMap(ResourceMap):
 
             data.append(fan_dict)
         return data
+
+    def get_nw_ports_info(self):
+        """Return the Network ports information."""
+        network_cable_data = []
+        io_counters = psutil.net_io_counters(pernic=True)
+
+        nw_instance = Network()
+        for interface, addrs in psutil.net_if_addrs().items():
+            nic_info = self.get_health_template(interface, False)
+            specifics = {}
+            for addr in addrs:
+                if addr.family == AF_INET:
+                    specifics["ipV4"] = addr.address
+            if interface in io_counters:
+                io_info = io_counters[interface]
+                specifics = {
+                    "networkErrors": io_info.errin + io_info.errout,
+                    "droppedPacketsIn": io_info.dropin,
+                    "droppedPacketsOut": io_info.dropout,
+                    "packetsIn": io_info.packets_recv,
+                    "packetsOut": io_info.packets_sent,
+                    "trafficIn": io_info.bytes_recv,
+                    "trafficOut": io_info.bytes_sent
+                }
+            # Get the interface health status.
+            nw_status, nw_cable_conn_status = \
+                self.get_nw_status(nw_instance, interface)
+            specifics["nwStatus"] = nw_status
+            specifics["nwCableConnStatus"] = nw_cable_conn_status
+            # Map and set the interface health status and description.
+            map_status = {"CONNECTED": "OK", "DISCONNECTED": "Disabled/Failed",
+                          "UNKNOWN": "NA"}
+            health_status = map_status[nw_cable_conn_status]
+            desc = "Network Interface '%s' is %sin good health." % (
+                interface, '' if health_status == "OK" else 'not '
+            )
+            self.set_health_data(nic_info, health_status, description=desc,
+                                 specifics=[specifics])
+            network_cable_data.append(nic_info)
+        return network_cable_data
+
+    def get_nw_status(self, nw_interface, interface):
+        """Read & Return the latest network status from sysfs files."""
+        try:
+            nw_status = nw_interface.get_operational_state(interface)
+        except Exception:
+            nw_status = "UNKNOWN"
+            # Log the error when logging class is in place.
+        try:
+            nw_cable_conn_status = nw_interface.get_link_state(interface)
+        except Exception:
+            nw_cable_conn_status = "UNKNOWN"
+            # Log the error when logging class is in place.
+        return nw_status, nw_cable_conn_status

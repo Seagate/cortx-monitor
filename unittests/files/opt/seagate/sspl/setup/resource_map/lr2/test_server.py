@@ -1,8 +1,28 @@
 import unittest
-
+from socket import AF_INET
 from unittest.mock import patch
+from collections import namedtuple
 
 from files.opt.seagate.sspl.setup.resource_map.lr2.server import ServerMap
+
+snetio = namedtuple('snetio', ['bytes_sent', 'bytes_recv', 'packets_sent',
+                               'packets_recv', 'errin', 'errout', 'dropin',
+                               'dropout'])
+snicaddr = namedtuple('snicaddr', ['family', 'address', 'netmask', 'broadcast',
+                                   'ptp'])
+
+NET_IO_COUNTERS = {
+    "lo": snetio(bytes_sent=11451635037, bytes_recv=11451635037,
+                 packets_sent=91734257, packets_recv=91734257,
+                 errin=0, errout=0, dropin=0,  dropout=0)
+    }
+
+NET_IF_ADDRESS = {
+    'lo': [
+        snicaddr(family=AF_INET, address='127.0.0.1',
+                 netmask='255.0.0.0', broadcast=None, ptp=None)
+        ]
+}
 
 
 def get_sdr_type_response(cmd):
@@ -145,6 +165,31 @@ class TestStorageMap(unittest.TestCase):
             resp["Fan"][2]["health"]["recommendation"]
             == "Please Contact Seagate Support."
         )
+
+    @patch(("files.opt.seagate.sspl.setup.resource_map.lr2.server."
+            "ServerMap.get_nw_status"))
+    @patch("psutil.net_if_addrs")
+    @patch("psutil.net_io_counters")
+    def test_get_nw_ports_info(self, io_counter, if_addrs, nw_status):
+        io_counter.return_value = NET_IO_COUNTERS
+        if_addrs.return_value = NET_IF_ADDRESS
+        nw_status.return_value = ("UP", "CONNECTED")
+        resp = self.server_map.get_nw_ports_info()
+        print(resp)
+        assert resp[0]['uid'] == 'lo'
+        assert resp[0]['health']['status'] == "OK"
+        assert resp[0]['health']['description'] == \
+            "Network Interface 'lo' is in good health."
+        specifics = resp[0]['health']['specifics'][0]
+        assert specifics['nwStatus'] == "UP"
+        assert specifics['nwCableConnStatus'] == "CONNECTED"
+        assert specifics['networkErrors'] == 0
+        assert specifics['droppedPacketsIn'] == 0
+        assert specifics['droppedPacketsOut'] == 0
+        assert specifics['packetsIn'] == 91734257
+        assert specifics['packetsOut'] == 91734257
+        assert specifics['trafficIn'] == 11451635037
+        assert specifics['trafficOut'] == 11451635037
 
 
 if __name__ == "__main__":
