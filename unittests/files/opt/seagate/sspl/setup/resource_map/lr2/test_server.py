@@ -166,7 +166,7 @@ class TestStorageMap(unittest.TestCase):
             == "Please Contact Seagate Support."
         )
 
-    @patch(("files.opt.seagate.sspl.setup.resource_map.server."
+    @patch(("files.opt.seagate.sspl.setup.resource_map.lr2.server."
             "ServerMap.get_nw_status"))
     @patch("psutil.net_if_addrs")
     @patch("psutil.net_io_counters")

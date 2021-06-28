@@ -15,10 +15,8 @@
 # For any questions about this software or licensing,
 # please email opensource@seagate.com or cortx-questions@seagate.com
 
-
 import errno
 import psutil
-import re
 import time
 from socket import AF_INET
 from pathlib import Path
