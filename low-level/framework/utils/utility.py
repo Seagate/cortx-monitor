@@ -167,3 +167,11 @@ def errno_to_str_mapping(err_no):
         logger.error("map_errno_to_text errno to text mapping failed due to %s: %s " % err)
         return
 
+class CustomLog:
+    """A wrapper class to add extra service name
+    as prefix to sspl logs."""
+    def __init__(self, svc_name):
+        self.service = svc_name
+
+    def format_svc_log(self, msg):
+        return f"[{self.service}] {msg}"
