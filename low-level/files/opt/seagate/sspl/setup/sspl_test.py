@@ -15,6 +15,7 @@
 import shutil
 import os
 import socket
+import pkg_resources
 
 from cortx.utils.process import SimpleProcess
 from cortx.utils.conf_store import Conf
@@ -57,14 +58,24 @@ class SSPLTestCmd:
             }
         # python 3rd party package dependency
         pip3_3ps_packages_test = {
-            "Flask": "1.1.1",
-            "coverage": "5.5"
+            "Flask": "1.1.1"
             }
         pkg_validator = PkgV()
         pkg_validator.validate_pip3_pkgs(host=socket.getfqdn(),
             pkgs=pip3_3ps_packages_test, skip_version_check=False)
         pkg_validator.validate_rpm_pkgs(host=socket.getfqdn(),
             pkgs=rpm_deps, skip_version_check=True)
+        # Validae the coverage==5.5 python pkg installation
+        coverage_pkg = [p for p in pkg_resources.working_set
+                        if 'coverage' == p.project_name]
+        if not coverage_pkg or coverage_pkg[0].version != '5.5':
+            if coverage_pkg:
+                _, err, ret = SimpleProcess('pip3 uninstall -y coverage').run()
+                if ret:
+                    logger.exception(err)
+            _, err, ret = SimpleProcess('pip3 install coverage==5.5').run()
+            if ret:
+                logger.exception(err)
         # Load global, sspl and test configs
         Conf.load(SSPL_CONFIG_INDEX, sspl_config_path)
         Conf.load(SSPL_TEST_CONFIG_INDEX, sspl_test_config_path)

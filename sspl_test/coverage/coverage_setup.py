@@ -57,16 +57,17 @@ def generate_cov_report(signal_number, frame):
         outfile='%scoverage/sspl_xml_coverage_report.xml')
     logger.info(f'XML coverage report generated with coverage of {cov_per} percentage.')
     ## Enable below code to inable HTML report generation
- 	# html_cov_per = co.html_report(
- 	#                     directory='%scoverage/sspl_html_coverage',
- 	#                     ignore_errors=True,
- 	#                 )
- 	# logger.info(f'HTML coverage report geverated with coverage of {html_cov_per} percentage.')\
-"""%(DATA_PATH, DATA_PATH)
+    # html_cov_per = co.html_report(
+    #                     directory='%scoverage/sspl_html_coverage',
+    #                     ignore_errors=True,
+    #                 )
+    # logger.info(f'HTML coverage report geverated with coverage of {html_cov_per} percentage.')\
+""" % (DATA_PATH, DATA_PATH)
 
 PATCH_4 = """\
     signal.signal(signal.SIGUSR1, generate_cov_report)\
 """
+
 
 def coverage_setup():
     """Creates required files for code coverage.
@@ -168,6 +169,7 @@ def print_help():
           'Args => \n'
           '    start : Set-up the environment for code coverage.\n'
           '    stop : Reset the sspl environmet to normal.')
+
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:

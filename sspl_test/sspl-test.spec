@@ -78,18 +78,6 @@ else
     #touch ${SSPL_DIR}/sspl_test/keep_flask
 fi
 
-# Check and install required coverage version
-cov=`pip3.6 freeze | grep coverage`
-if [[ -n $cov ]]; then
-    ver=${cov##*=}
-    if [[ "$ver" != "5.5" ]]; then
-        pip3 uninstall -y coverage
-        pip3 install coverage==5.5
-    fi
-else
-    pip3 install coverage==5.5
-fi
-
 %preun
 # Restore previous flask and its dependencies
 # TODO: EOS-8145
