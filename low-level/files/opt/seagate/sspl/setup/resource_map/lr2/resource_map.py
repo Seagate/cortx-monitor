@@ -78,12 +78,11 @@ class ResourceMap(metaclass=ABCMeta):
 
     @staticmethod
     def set_health_data(health_data: dict, status, description=None,
-                        recommendation=None, specifics=None, resource=""):
+                        recommendation=None, specifics=None):
         """Sets health attributes for a component."""
         good_state = (status == "OK")
         if not description:
-            description = "%s %s %s in good health." % (
-                resource,
+            description = "%s %s in good health." % (
                 health_data.get("uid"),
                 'is' if good_state else 'is not')
         if not recommendation:

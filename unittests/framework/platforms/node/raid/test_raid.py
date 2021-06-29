@@ -65,6 +65,7 @@ class TestRAID(unittest.TestCase):
               "serialNumber": "ZC236QHZ"
             }}], devices)
 
+    @patch('cortx.utils.conf_store.Conf.get', Mock())
     def test_get_data_integrity_status(self):
         mdadm = '0\n'
         with patch('framework.platforms.server.raid.raid.open', mock_open(read_data=mdadm)):
