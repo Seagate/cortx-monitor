@@ -29,7 +29,7 @@ from framework.base.sspl_constants import (CPU_PATH, DEFAULT_RECOMMENDATION,
                                            HEALTH_SVC_NAME, SAS_RESOURCE_ID,
                                            SERVICE_IFACE, SYSTEMD_BUS,
                                            UNIT_IFACE)
-from framework.platforms.server.disk import Disk, Disks
+from framework.platforms.server.disk import Disk
 from framework.platforms.server.error import (BuildInfoError, NetworkError,
                                               SASError, ServiceError)
 from framework.platforms.server.network import Network
@@ -739,7 +739,7 @@ class ServerMap(ResourceMap):
         return raids_data
 
     @staticmethod
-    def get_disk_usage():
+    def get_disk_overall_usage():
         units_factor_GB = 1000000000
         overall_usage = {
                 "totalSpace": f'{int(psutil.disk_usage("/")[0])//int(units_factor_GB)} GB',
