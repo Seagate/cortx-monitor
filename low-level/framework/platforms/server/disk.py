@@ -15,11 +15,81 @@
 
 
 import json
-from dbus import Array, Interface, SystemBus
-from cortx.utils.process import SimpleProcess
 import re
 
-class ServerDrives:
+from cortx.utils.process import SimpleProcess
+from dbus import Array, Interface, SystemBus
+
+
+class Disk:
+
+    def __init__(self, id, path, device) -> None:
+        """Initialize Disk class."""
+        self.id = str(id)
+        self.path = str(path)
+        self.device = str(device)
+
+    def get_health(self):
+        if self._is_local_drive():
+            smartctl = "sudo smartctl"
+        else:
+            smartctl = "sudo smartctl -d scsi"
+        # Get smart availability attributes
+        cmd = f"{smartctl} -i {self.device}"
+        response, _, _ = SimpleProcess(cmd).run()
+        response = response.decode()
+        health_data = {}
+        if re.findall("SMART support is: Available - device has SMART capability", response):
+            health_data["SMART_available"] = True
+        if re.findall("SMART support is: Enabled", response):
+            health_data["SMART_support"] = "Enabled"
+        # Get smart health attributes
+        cmd = f"{smartctl} --all {self.device} --json"
+        response, _, _ = SimpleProcess(cmd).run()
+        response = json.loads(response)
+        smart_test_status = "PASSED" if response['smart_status']['passed'] else "FAILED"
+        health_data["SMART_health"] = smart_test_status
+        smart_required_attributes = set(["Reallocated_Sector_Ct", "Spin_Retry_Count", "Current_Pending_Sector", "Offline_Uncorrectable"])
+        try:
+            for attribute in response["ata_smart_attributes"]["table"]:
+                try:
+                    if attribute["name"] in smart_required_attributes:
+                        health_data[attribute["name"]] = attribute["raw"]["value"]
+                except KeyError:
+                    pass
+        except KeyError:
+            pass
+        return health_data
+
+    def _is_local_drive(self):
+        """
+        Detect Node server local drives using Hdparm tool.
+
+        Hdparm tool give information only for node drive.
+        For external JBOD/virtual drives it will give output as:
+        "SG_IO: bad/missing sense data "
+        Hdparm does not have support for NVME drives, for this drives it gives o/p as:
+        "failed: Inappropriate ioctl for device"
+        """
+        DISK_ERR_MISSING_SENSE_DATA = "SG_IO: bad/missing sense data"
+        DISK_ERR_GET_ID_FAILURE = "HDIO_GET_IDENTITY failed: Invalid argument"
+        cmd = f'sudo hdparm -i {self.device}'
+        _, err, retcode = SimpleProcess(cmd).run()
+
+        if retcode == 0:
+            return True
+        else:
+            # TODO : In case of different error(other than \
+            # "SG_IO: bad/missing sense data") for local drives,
+            # this check would fail.
+            if DISK_ERR_MISSING_SENSE_DATA not in err and \
+                DISK_ERR_GET_ID_FAILURE not in err:
+                return True
+            else:
+                return False
+
+
+class Disks:
 
     def __init__(self):
         """Initialize dbus connection and update drive paths."""
@@ -28,8 +98,6 @@ class ServerDrives:
         self._disk_manager = Interface(self._bus.get_object('org.freedesktop.UDisks2',
             '/org/freedesktop/UDisks2'),
                 dbus_interface='org.freedesktop.DBus.ObjectManager')
-                # Dict of drives by-id symlink from systemd
-        self._drive_by_id = {}
 
         # Dict of drives by-path symlink from systemd
         self._drive_by_path = {}
@@ -63,15 +131,12 @@ class ServerDrives:
 
                     # Parse out the wwn symlink if it exists otherwise use the by-id
                     for symlink in symlinks:
-                        if "wwwn" in symlink:
-                            self._drive_by_id[udisk_block["Drive"]] = symlink
-                        elif "by-id" in symlink:
-                            self._drive_by_id[udisk_block["Drive"]] = symlink
                         # TODO:  Improve logic for getting resource_id
                         # Current approch for getting resource_id is to check "phy" in by-path
                         # symlink. If "phy" is in by-path use path of that drive for resource_id
-                        elif "by-path" in symlink:
+                        if "by-path" in symlink:
                             if "phy" in symlink:
+                                print(symlink, udisk_block["Drive"])
                                 self._drive_by_path[udisk_block["Drive"]] = symlink[len("/dev/disk/by-path/"):]
 
                     # Maintain a dict of device names
@@ -87,80 +152,18 @@ class ServerDrives:
         Get physical drives(server+enclosure) atttached to server.
 
         This will only return server drives if setup is non-JBOD
-        returns {
-                    "/org/freedesktop/UDisks2/drives/drive_3": properties,
-                    },
-                    "/org/freedesktop/UDisks2/drives/ST1000NM0055_1V410C_ZBS1VJHX": properties,
-                    }
-                }
         """
-        disks = {}
+
+        disks = []
+
         for obj_path, interfaces_and_property in self._disk_manager.GetManagedObjects().items():
             if "drive" in obj_path and self.is_physical_drive(interfaces_and_property["org.freedesktop.UDisks2.Drive"]):
-                disks[obj_path] = interfaces_and_property["org.freedesktop.UDisks2.Drive"]
+                disk = Disk(interfaces_and_property["org.freedesktop.UDisks2.Drive"]["Id"],
+                self._drive_by_path.get(obj_path, interfaces_and_property["org.freedesktop.UDisks2.Drive"]["Id"]),
+                self._drive_by_device_name[obj_path])
+                print(disk)
+                disks.append(disk)
         return disks
-
-
-    def get_disk_health(self, path):
-        if self._is_local_drive(path):
-            smartctl = "sudo smartctl"
-        else:
-            smartctl = "sudo smartctl -d scsi"
-        # Get smart availability attributes
-        cmd = f"{smartctl} -i {self._drive_by_device_name[path]}"
-        response, _, _ = SimpleProcess(cmd).run()
-        response = response.decode()
-        health_data = {}
-        if re.findall("SMART support is: Available - device has SMART capability", response):
-            health_data["SMART_available"] = True
-        if re.findall("SMART support is: Enabled", response):
-            health_data["SMART_support"] = "Enabled"
-        # Get smart health attributes
-        cmd = f"{smartctl} --all {self._drive_by_device_name[path]} --json"
-        response, _, _ = SimpleProcess(cmd).run()
-        response = json.loads(response)
-        smart_test_status = "PASSED" if response['smart_status']['passed'] else "FAILED"
-        health_data["SMART_health"] = smart_test_status
-        smart_required_attributes = set(["Reallocated_Sector_Ct", "Spin_Retry_Count", "Current_Pending_Sector", "Offline_Uncorrectable"])
-        try:
-            for attribute in response["ata_smart_attributes"]["table"]:
-                try:
-                    if attribute["name"] in smart_required_attributes:
-                        health_data[attribute["name"]] = attribute["raw"]["value"]
-                except KeyError:
-                    pass
-        except KeyError:
-            pass
-        return health_data
-
-
-    def _is_local_drive(self, object_path):
-        """
-        Detect Node server local drives using Hdparm tool.
-
-        Hdparm tool give information only for node drive.
-        For external JBOD/virtual drives it will give output as:
-        "SG_IO: bad/missing sense data "
-        Hdparm does not have support for NVME drives, for this drives it gives o/p as:
-        "failed: Inappropriate ioctl for device"
-        """
-        DISK_ERR_MISSING_SENSE_DATA = "SG_IO: bad/missing sense data"
-        DISK_ERR_GET_ID_FAILURE = "HDIO_GET_IDENTITY failed: Invalid argument"
-        drive_name = self._drive_by_device_name[object_path]
-        cmd = f'sudo hdparm -i {drive_name}'
-        _, err, retcode = SimpleProcess(cmd).run()
-
-        if retcode == 0:
-            return True
-        else:
-            # TODO : In case of different error(other than \
-            # "SG_IO: bad/missing sense data") for local drives,
-            # this check would fail.
-            if DISK_ERR_MISSING_SENSE_DATA not in err and \
-                DISK_ERR_GET_ID_FAILURE not in err:
-                return True
-            else:
-                return False
 
     @staticmethod
     def is_physical_drive(interfaces_and_property):

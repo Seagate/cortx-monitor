@@ -15,30 +15,37 @@
 # For any questions about this software or licensing,
 # please email opensource@seagate.com or cortx-questions@seagate.com
 
-import time
 import errno
-from cortx.utils.process import SimpleProcess
-import psutil
+import re
+import shlex
 import socket
+import time
 from pathlib import Path
-from dbus import (Interface, PROPERTIES_IFACE, DBusException)
+from socket import AF_INET
+
+import psutil
+from cortx.utils.process import SimpleProcess
+from dbus import PROPERTIES_IFACE, DBusException, Interface
+from framework.base.sspl_constants import (CPU_PATH, DEFAULT_RECOMMENDATION,
+                                           HEALTH_SVC_NAME, SAS_RESOURCE_ID,
+                                           SERVICE_IFACE, SYSTEMD_BUS,
+                                           UNIT_IFACE)
+from framework.platforms.server.disk import Disks
+from framework.platforms.server.error import (BuildInfoError, NetworkError,
+                                              SASError, ServiceError)
+from framework.platforms.server.network import Network
+from framework.platforms.server.platform import Platform
+from framework.platforms.server.raid.raid import RAIDs
+from framework.platforms.server.sas import SAS
+from framework.platforms.server.software import BuildInfo, Service
+from framework.utils.conf_utils import (GLOBAL_CONF, NODE_TYPE_KEY, SSPL_CONF,
+                                        Conf)
+from framework.utils.ipmi_client import IpmiFactory
+from framework.utils.service_logging import CustomLog, logger
+from framework.utils.tool_factory import ToolFactory
 
 from error import ResourceMapError
 from resource_map import ResourceMap
-from framework.base.sspl_constants import (
-    CPU_PATH, DEFAULT_RECOMMENDATION, UNIT_IFACE, SERVICE_IFACE,
-    SYSTEMD_BUS, SAS_RESOURCE_ID, HEALTH_SVC_NAME)
-from framework.platforms.server.raid.raid import RAIDs
-from framework.platforms.server.software import BuildInfo, Service
-from framework.platforms.server.network import Network
-from framework.platforms.server.error import (
-    SASError, NetworkError, BuildInfoError, ServiceError)
-from framework.platforms.server.platform import Platform
-from framework.platforms.server.sas import SAS
-from framework.utils.conf_utils import (GLOBAL_CONF, NODE_TYPE_KEY, Conf, SSPL_CONF)
-from framework.utils.service_logging import CustomLog, logger
-from framework.utils.ipmi_client import IpmiFactory
-from framework.utils.tool_factory import ToolFactory
 
 
 class ServerMap(ResourceMap):
@@ -736,47 +743,61 @@ class ServerMap(ResourceMap):
         """Update and return server drive information in specific format."""
         units_factor_GB = 1000000000
         overall_usage = {
-                "totalSpace":f'{int(psutil.disk_usage("/")[0])//int(units_factor_GB)} GB',
-                "usedSpace":f'{int(psutil.disk_usage("/")[1])//int(units_factor_GB)} GB',
-                "freeSpace":f'{int(psutil.disk_usage("/")[2])//int(units_factor_GB)} GB',
-                "diskUsedPercentage":psutil.disk_usage("/")[3],
+                "totalSpace": f'{int(psutil.disk_usage("/")[0])//int(units_factor_GB)} GB',
+                "usedSpace": f'{int(psutil.disk_usage("/")[1])//int(units_factor_GB)} GB',
+                "freeSpace": f'{int(psutil.disk_usage("/")[2])//int(units_factor_GB)} GB',
+                "diskUsedPercentage": psutil.disk_usage("/")[3],
             }
-        server_drive = ServerDrives()
         disks = []
-        for path, properties in server_drive.get_disks().items():
-            uid = server_drive._drive_by_path.get(path,
-                                    str(properties["Id"]))
+        for disk in Disks().get_disks():
+            uid = disk.path if disk.path else disk.id
             disk_health = self.get_health_template(uid, True)
-            disk_health["last_updated"] = int(time.time())
-            health_data = server_drive.get_disk_health(path)
+            health_data = disk.get_health()
             health = "OK" if health_data['SMART_health'] else "Fault"
             self.set_health_data(disk_health, health, specifics=[{"SMART": health_data}])
+            disk_health["last_updated"] = int(time.time())
             disks.append(disk_health)
         disks_health_info = [{
-            "overall_usage" : overall_usage,
-            "disk_count" : len(disks),
-            "disks" : disks,
+            "overall_usage": overall_usage,
+            "disk_count": len(disks),
+            "disks": disks,
             "last_updated": int(time.time())
         }]
         return disks_health_info
 
-
     def get_psu_info(self):
         """Update and return PSU information in specific format."""
+        print("called")
         psus = []
+        psu_mapping = {
+            "PS1 Status": "PSU1",
+            "PS2 Status": "PSU2"
+        }
+        response, _, _ = SimpleProcess(shlex.split('ipmitool sdr type "Power Supply" -c')).run()
+        uids = {}
+        for psu in response.decode().strip("\n").split("\n"):
+            psu_name, sensor, *_ = psu.split(",")
+            print(psu_name, sensor)
+            uids[psu_mapping[psu_name]] = f"#0x{sensor.strip('h').lower()}"
+        print(uids)
         response, _, _ = SimpleProcess("dmidecode -t 39").run()
-        response = response.decode()
-        matches = re.finditer("System Power Supply\n(\s*.*\n)\s*Location: (?P<location>.*)\n(\s*.*\n){7}\s*Status: (?P<status>.*)\n(\s*.*\n){2}\s*Plugged: (?P<plugged>.*)", response)
+        matches = re.finditer(r"System Power Supply\n(\s*.*\n)"
+                              r"\s*Location: (?P<location>.*)\n"
+                              r"(\s*.*\n){7}\s*Status: (?P<status>.*)\n"
+                              r"(\s*.*\n){2}\s*Plugged: (?P<plugged>.*)",
+                              response.decode())
+        print(matches)
         for match in matches:
             psu_data = match.groupdict()
-            data = self.get_health_template(psu_data["location"], True)
+            data = self.get_health_template(f'Power Supply {uids[psu_data["location"]]}', True)
             data["last_updated"] = int(time.time())
             health = "OK" if (psu_data["status"] == "Present, OK") else "Fault"
             self.set_health_data(data, health, specifics=psu_data)
             psus.append(data)
         return psus
 
+
 if __name__ == "__main__":
     server = ServerMap()
-    health_data = server.get_health_info(rpath="nodes[0]>compute[0]")
+    health_data = server.get_health_info(rpath="nodes[0]>compute[0]>disks")
     print(health_data)
