@@ -28,6 +28,7 @@ from error import ResourceMapError
 from framework.platforms.server.network import Network
 from framework.base.sspl_constants import (
     CPU_PATH, DEFAULT_RECOMMENDATION, HEALTH_SVC_NAME, SAS_RESOURCE_ID)
+from framework.platforms.server.raid.raid import RAIDs
 from framework.utils.conf_utils import (GLOBAL_CONF, NODE_TYPE_KEY, Conf)
 from framework.utils.service_logging import CustomLog, logger
 from framework.platforms.server.sas import SAS
@@ -57,7 +58,8 @@ class ServerMap(ResourceMap):
             'fans': self.get_fans_info,
             'sas_hba': self.get_sas_hba_info,
             'sas_ports': self.get_sas_ports_info,
-            'nw_ports': self.get_nw_ports_info
+            'nw_ports': self.get_nw_ports_info,
+            'raid': self.get_raid_info
         }
         self._ipmi = IpmiFactory().get_implementor("ipmitool")
         self.platform_sensor_list = ['Temperature', 'Voltage', 'Current']
@@ -463,3 +465,16 @@ class ServerMap(ResourceMap):
             nw_cable_conn_status = "UNKNOWN"
             logger.exception(self.log.svc_log(err))
         return nw_status, nw_cable_conn_status
+
+    def get_raid_info(self):
+        raids_data = []
+        for raid in RAIDs.get_configured_raids():
+            raid_data = self.get_health_template(raid.id, False)
+            health, description = raid.get_health()
+            devices = raid.get_devices()
+            specifics = [{"location": raid.raid,
+                          "data_integrity_status": raid.get_data_integrity_status(),
+                          "devices": devices}]
+            self.set_health_data(raid_data, health, specifics=specifics, description=description)
+            raids_data.append(raid_data)
+        return raids_data
