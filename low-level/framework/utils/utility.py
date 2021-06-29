@@ -27,7 +27,6 @@ import socket
 import time
 from cortx.utils.conf_store import Conf
 from cortx.utils.conf_store.error import ConfError
-from cortx.utils.process import SimpleProcess
 from framework.utils.service_logging import logger
 
 
@@ -80,8 +79,7 @@ class Utility(object):
             raise Exception("Unable to get machine id from host '%s'." % socket.getfqdn())
         return machine_id
 
-    @staticmethod
-    def get_os():
+    def get_os(self):
         """
         Returns os name({ID}{VERSION_ID}) from /etc/os-release.
         """
@@ -157,56 +155,6 @@ class Utility(object):
     def get_current_time():
         """Returns the time as integer number in seconds since the epoch in UTC."""
         return int(time.time())
-
-    @staticmethod
-    def get_manufacturer_name():
-        """Returns node server manufacturer name."""
-        manufacturer = "NA"
-        cmd = "ipmitool bmc info"
-        res_op, _, res_rc = SimpleProcess(cmd).run()
-        if isinstance(res_op, bytes):
-            res_op = res_op.decode("utf-8")
-        if res_rc == 0:
-            search_res = re.search(
-                r"Manufacturer Name[\s]+:[\s]+([\w]+)(.*)", res_op)
-            if search_res:
-                manufacturer = search_res.groups()[0]
-        return manufacturer
-
-    @staticmethod
-    def get_server_details():
-        """Returns a dictionary of server information.
-
-        Grep 'FRU device description on ID 0' information using ipmitool command.
-        """
-        specifics = {
-            "Board Mfg": "NA",
-            "Board Product": "NA",
-            "Board Part Number": "NA",
-            "Product Name": "NA",
-            "Product Part Number": "NA",
-            "Manufacturer": Utility.get_manufacturer_name(),
-            "OS": Utility.get_os()
-            }
-        cmd = "ipmitool fru print"
-        prefix = "FRU Device Description : Builtin FRU Device (ID 0)"
-        search_res = ""
-        res_op, _, res_rc = SimpleProcess(cmd).run()
-        if isinstance(res_op, bytes):
-            res_op = res_op.decode("utf-8")
-        if res_rc == 0:
-            # Get only 'FRU Device Description : Builtin FRU Device (ID 0)' information
-            search_res = re.search(r"((.*%s[\S\n\s]+ID 1\)).*)|(.*[\S\n\s]+)" % prefix, res_op)
-            if search_res:
-                search_res = search_res.group()
-        for key in specifics.keys():
-            if key in search_res:
-                device_desc = re.search(r"%s[\s]+:[\s]+([\w-]+)(.*)" % key, res_op)
-                if device_desc:
-                    value = device_desc.groups()[0]
-                specifics.update({key: value})
-        return specifics
-
 
 def errno_to_str_mapping(err_no):
     """Convert numerical errno to its meaning."""

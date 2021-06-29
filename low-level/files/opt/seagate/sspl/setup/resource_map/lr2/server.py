@@ -33,12 +33,12 @@ from framework.platforms.server.network import Network
 from framework.platforms.server.sas import SAS
 from framework.platforms.server.error import (
     SASError, NetworkError, BuildInfoError, ServiceError)
+from framework.platforms.server.platform import Platform
 from framework.utils.conf_utils import (
     Conf, GLOBAL_CONF, SSPL_CONF, NODE_TYPE_KEY)
 from framework.utils.service_logging import CustomLog, logger
 from framework.utils.ipmi_client import IpmiFactory
 from framework.utils.tool_factory import ToolFactory
-from framework.utils.utility import Utility
 
 
 class ServerMap(ResourceMap):
@@ -93,9 +93,13 @@ class ServerMap(ResourceMap):
 
     def get_health_info(self, rpath):
         """
-        Get health information of fru in given resource id
+        Fetch health information for given rpath
 
-        rpath: Resource id (Example: nodes[0]>compute[0]>hw>disks)
+        rpath: Resource path to fetch its health
+               Examples:
+                    node>compute[0]
+                    node>compute[0]>hw
+                    node>compute[0]>hw>disks
         """
         logger.info(self.log.svc_log(
             f"Get Health data for rpath:{rpath}"))
@@ -149,7 +153,7 @@ class ServerMap(ResourceMap):
 
     def get_server_health_info(self):
         unhealthy_resource_found = False
-        server_details = Utility.get_server_details()
+        server_details = Platform().get_server_details()
         info = {}
         info["make"] = server_details["Board Mfg"]
         info["model"]= server_details["Product Name"]
@@ -159,7 +163,7 @@ class ServerMap(ResourceMap):
                 try:
                     info[res_type].update({fru: method()})
                     for data in info[res_type][fru]:
-                        if data["health"]["status"] not in ["OK", "ok"]:
+                        if data["health"]["status"].lower() != "ok":
                             unhealthy_resource_found = True
                 except:
                     # TODO: Log the exception
@@ -167,7 +171,7 @@ class ServerMap(ResourceMap):
         info["uid"] = socket.getfqdn()
         info["last_updated"] = int(time.time())
         info["health"] = {}
-        info["health"]["status"] = "OK" if not unhealthy_resource_found else "NOT OK"
+        info["health"]["status"] = "OK" if not unhealthy_resource_found else "Degraded"
         health_desc = 'good' if info["health"]["status"] == 'OK' else 'bad'
         info["health"]["description"] = f"Server is in {health_desc} health."
         info["health"]["recommendation"] = DEFAULT_RECOMMENDATION \

@@ -77,9 +77,13 @@ class StorageMap(ResourceMap):
 
     def get_health_info(self, rpath):
         """
-        Fetch health information for given FRU.
+        Fetch health information for given rpath
 
-        rpath: Resource path (Example: node>storage[0]>hw>controllers)
+        rpath: Resource path to fetch its health
+               Examples:
+                    node>storage[0]
+                    node>storage[0]>fw
+                    node>storage[0]>fw>logical_volumes
         """
         logger.info(self.log.svc_log(
             f"Get Health data for rpath:{rpath}"))
@@ -90,12 +94,12 @@ class StorageMap(ResourceMap):
 
         # Fetch health information for all sub nodes
         if leaf_node == "storage":
-            info = self.get_storage_health_info()
             resource_found = True
+            info = self.get_storage_health_info()
         elif leaf_node in self.storage_resources:
+            resource_found = True
             for resource, method in self.storage_resources[leaf_node].items():
                 info.update({resource: method()})
-            resource_found = True
         else:
             for node in nodes:
                 resource, _ = self.get_node_details(node)
@@ -104,11 +108,13 @@ class StorageMap(ResourceMap):
                     if not method:
                         continue
                     try:
-                        info = method()
                         resource_found = True
+                        info = method()
+                        break
                     except:
                         # TODO: Log the exception
                         info = None
+
                 if resource_found:
                     break
 
@@ -164,7 +170,6 @@ class StorageMap(ResourceMap):
             info["health"]["description"] = encl_health["description"]
             info["health"]["recommendation"] = encl_health["recommendation"]
             info["health"]["specifics"] = []
-            info["last_updated"] = int(time.time())
             for res_type in self.storage_resources:
                 info.update({res_type: {}})
                 for fru, method in self.storage_resources[res_type].items():
@@ -173,6 +178,7 @@ class StorageMap(ResourceMap):
                     except:
                         # TODO: Log the exception
                         info[res_type].update({fru: None})
+            info["last_updated"] = int(time.time())
             storage.append(info)
         return storage
 
