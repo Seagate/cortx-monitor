@@ -18,9 +18,7 @@
 import os
 import shlex
 
-from dbus import SystemBus, Interface
 from cortx.utils.process import SimpleProcess
-
 from cortx.utils.conf_store.error import ConfError
 from cortx.utils.service.service_handler import DbusServiceHandler
 from framework.platforms.server.error import BuildInfoError, ServiceError
@@ -105,6 +103,7 @@ class Service:
 
         eg. (kafka.service,'LICENSE') -> 'Apache License, Version 2.0'
         """
+        # TODO Include service execution path in systemd_path_list
         systemd_path_list = ["/usr/lib/systemd/system/",
                              "/etc/systemd/system/"]
         result = "NA"

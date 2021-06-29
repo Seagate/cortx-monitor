@@ -14,7 +14,7 @@
 # cortx-questions@seagate.com.
 
 [Unit]
-Description=SSPL Low Level Process
+Description=SSPL Daemon responsible for monitoring platform
 After=syslog.target
 
 [Service]

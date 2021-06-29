@@ -16,10 +16,8 @@
 # please email opensource@seagate.com or cortx-questions@seagate.com
 
 import time
-import os
 import errno
 import psutil
-import shlex
 
 from socket import AF_INET
 from pathlib import Path
@@ -525,7 +523,7 @@ class ServerMap(ResourceMap):
         uid = str(properties_iface.Get(UNIT_IFACE, 'Id'))
         if not is_installed:
             health_status = "NA"
-            health_description = f"{uid} is not installed"
+            health_description = f"Software enabling {uid} is not installed"
             recommendation = "NA"
             specifics = [
                 {
@@ -555,19 +553,13 @@ class ServerMap(ResourceMap):
             try:
                 version = Service().get_service_info_from_rpm(
                     uid, "VERSION")
-            except ServiceError as err:
-                logger.error(self.log.svc_log(
-                    f"Unable to get service version due to {err}"))
-            except Exception as err:
+            except (ServiceError, Exception) as err:
                 logger.error(self.log.svc_log(
                     f"Unable to get service version due to {err}"))
             try:
                 service_license = Service().get_service_info_from_rpm(
                     uid, "LICENSE")
-            except ServiceError as err:
-                logger.error(self.log.svc_log(
-                    f"Unable to get service license due to {err}"))
-            except Exception as err:
+            except (ServiceError, Exception) as err:
                 logger.error(self.log.svc_log(
                     f"Unable to get service license due to {err}"))
 
