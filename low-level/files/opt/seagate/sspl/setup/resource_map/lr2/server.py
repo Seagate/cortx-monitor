@@ -15,24 +15,28 @@
 # For any questions about this software or licensing,
 # please email opensource@seagate.com or cortx-questions@seagate.com
 
+import time
 import errno
 import psutil
-import time
+
 from socket import AF_INET
 from pathlib import Path
-
-from framework.utils.ipmi_client import IpmiFactory
-from framework.utils.tool_factory import ToolFactory
+from dbus import (Interface, PROPERTIES_IFACE, DBusException)
 from resource_map import ResourceMap
 from error import ResourceMapError
+from framework.utils.ipmi_client import IpmiFactory
+from framework.utils.tool_factory import ToolFactory
 from framework.platforms.server.network import Network
-from framework.base.sspl_constants import (
-    CPU_PATH, DEFAULT_RECOMMENDATION, HEALTH_SVC_NAME, SAS_RESOURCE_ID)
+from framework.platforms.server.software import BuildInfo, Service
 from framework.platforms.server.raid.raid import RAIDs
-from framework.utils.conf_utils import (GLOBAL_CONF, NODE_TYPE_KEY, Conf)
 from framework.utils.service_logging import CustomLog, logger
 from framework.platforms.server.sas import SAS
-from framework.platforms.server.error import SASError, NetworkError
+from framework.platforms.server.error import (
+    SASError, NetworkError, BuildInfoError, ServiceError)
+from framework.utils.conf_utils import (GLOBAL_CONF, NODE_TYPE_KEY, Conf)
+from framework.base.sspl_constants import (
+    CPU_PATH, DEFAULT_RECOMMENDATION, UNIT_IFACE, SERVICE_IFACE,
+    SYSTEMD_BUS, SAS_RESOURCE_ID, HEALTH_SVC_NAME)
 
 
 class ServerMap(ResourceMap):
@@ -56,6 +60,9 @@ class ServerMap(ResourceMap):
             'platform_sensors': self.get_platform_sensors_info,
             'memory': self.get_mem_info,
             'fans': self.get_fans_info,
+            'nw_ports': self.get_nw_ports_info,
+            'cortx_sw_services': self.get_cortx_service_info,
+            'external_sw_services': self.get_external_service_info,
             'sas_hba': self.get_sas_hba_info,
             'sas_ports': self.get_sas_ports_info,
             'nw_ports': self.get_nw_ports_info,
@@ -89,6 +96,14 @@ class ServerMap(ResourceMap):
         fru_found = False
         nodes = rpath.strip().split(">")
         leaf_node, _ = self.get_node_details(nodes[-1])
+        build_instance = BuildInfo()
+        try:
+            info["name"] = build_instance.get_attribute("NAME")
+            info["version"] = build_instance.get_attribute("VERSION")
+            info["build"] = build_instance.get_attribute("BUILD")
+        except BuildInfoError as err:
+            logger.error(self.log.svc_log(
+                f"Unable to get build info due to {err}"))
         if leaf_node == "compute":
             for fru in self.server_map:
                 try:
@@ -156,7 +171,7 @@ class ServerMap(ResourceMap):
         }
 
         for cpu_id in range(0, cpu_count):
-            uid = f"cpu_{cpu_id}"
+            uid = f"CPU-{cpu_id}"
             cpu_dict = self.get_health_template(uid, is_fru=False)
             online_status = "Online" if cpu_id in cpu_online else "Offline"
             health_status = "OK" if online_status == "Online" else "NA"
@@ -368,7 +383,7 @@ class ServerMap(ResourceMap):
         except SASError as err:
             ports = []
             logger.error(self.log.svc_log(err))
-        except Exception as error:
+        except Exception as err:
             ports = []
             logger.exception(self.log.svc_log(err))
 
@@ -453,7 +468,7 @@ class ServerMap(ResourceMap):
         except NetworkError as err:
             nw_status = "UNKNOWN"
             logger.error(self.log.svc_log(err))
-        except Exception as error:
+        except Exception as err:
             nw_status = "UNKNOWN"
             logger.exception(self.log.svc_log(err))
         try:
@@ -465,6 +480,118 @@ class ServerMap(ResourceMap):
             nw_cable_conn_status = "UNKNOWN"
             logger.exception(self.log.svc_log(err))
         return nw_status, nw_cable_conn_status
+
+    def get_cortx_service_info(self):
+        """Get cortx service info in required format."""
+        service_info = []
+        cortx_services = Service().get_cortx_service_list()
+        for service in cortx_services:
+            response = self.get_systemd_service_info(service)
+            if response is not None:
+                service_info.append(response)
+        return service_info
+
+    def get_external_service_info(self):
+        """Get external service info in required format."""
+        service_info = []
+        external_services = Service().get_external_service_list()
+        for service in external_services:
+            response = self.get_systemd_service_info(service)
+            if response is not None:
+                service_info.append(response)
+        return service_info
+
+    def get_systemd_service_info(self, service_name):
+        """Get info of specified service using dbus API."""
+        try:
+            unit = Service()._bus.get_object(
+                SYSTEMD_BUS, Service()._manager.LoadUnit(service_name))
+            properties_iface = Interface(unit, dbus_interface=PROPERTIES_IFACE)
+        except DBusException as err:
+            logger.error(self.log.svc_log(
+                f"Unable to initialize {service_name} due to {err}"))
+            return None
+        path_array = properties_iface.Get(SERVICE_IFACE, 'ExecStart')
+        try:
+            command_line_path = str(path_array[0][0])
+        except IndexError as err:
+            logger.error(self.log.svc_log(
+                f"Unable to find {service_name} path due to {err}"))
+            command_line_path = "NA"
+
+        is_installed = True if command_line_path != "NA" or 'invalid' in properties_iface.Get(
+            UNIT_IFACE, 'UnitFileState') else False
+        uid = str(properties_iface.Get(UNIT_IFACE, 'Id'))
+        if not is_installed:
+            health_status = "NA"
+            health_description = f"Software enabling {uid} is not installed"
+            recommendation = "NA"
+            specifics = [
+                {
+                    "service_name": uid,
+                    "description": "NA",
+                    "installed": str(is_installed).lower(),
+                    "pid": "NA",
+                    "state": "NA",
+                    "substate": "NA",
+                    "status": "NA",
+                    "license": "NA",
+                    "version": "NA",
+                    "command_line_path": "NA"
+                }
+            ]
+        else:
+            service_license = "NA"
+            version = "NA"
+            service_description = str(
+                properties_iface.Get(UNIT_IFACE, 'Description'))
+            state = str(properties_iface.Get(UNIT_IFACE, 'ActiveState'))
+            substate = str(properties_iface.Get(UNIT_IFACE, 'SubState'))
+            service_status = 'enabled' if 'disabled' not in properties_iface.Get(
+                UNIT_IFACE, 'UnitFileState') else 'disabled'
+            pid = "NA" if state == "inactive" else str(
+                properties_iface.Get(SERVICE_IFACE, 'ExecMainPID'))
+            try:
+                version = Service().get_service_info_from_rpm(
+                    uid, "VERSION")
+            except ServiceError as err:
+                logger.error(self.log.svc_log(
+                    f"Unable to get service version due to {err}"))
+            try:
+                service_license = Service().get_service_info_from_rpm(
+                    uid, "LICENSE")
+            except ServiceError as err:
+                logger.error(self.log.svc_log(
+                    f"Unable to get service license due to {err}"))
+
+            specifics = [
+                {
+                    "service_name": uid,
+                    "description": service_description,
+                    "installed": str(is_installed).lower(),
+                    "pid": pid,
+                    "state": state,
+                    "substate": substate,
+                    "status": service_status,
+                    "license": service_license,
+                    "version": version,
+                    "command_line_path": command_line_path
+                }
+            ]
+            if service_status == 'enabled' and state == 'active' \
+                    and substate == 'running':
+                health_status = 'OK'
+                health_description = f"{uid} is in good health"
+                recommendation = "NA"
+            else:
+                health_status = state
+                health_description = f"{uid} is not in good health"
+                recommendation = DEFAULT_RECOMMENDATION
+
+        service_info = self.get_health_template(uid, is_fru=False)
+        self.set_health_data(service_info, health_status,
+                             health_description, recommendation, specifics)
+        return service_info
 
     def get_raid_info(self):
         raids_data = []
