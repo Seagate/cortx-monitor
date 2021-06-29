@@ -767,7 +767,6 @@ class ServerMap(ResourceMap):
 
     def get_psu_info(self):
         """Update and return PSU information in specific format."""
-        print("called")
         psus = []
         psu_mapping = {
             "PS1 Status": "PSU1",
@@ -777,16 +776,13 @@ class ServerMap(ResourceMap):
         uids = {}
         for psu in response.decode().strip("\n").split("\n"):
             psu_name, sensor, *_ = psu.split(",")
-            print(psu_name, sensor)
             uids[psu_mapping[psu_name]] = f"#0x{sensor.strip('h').lower()}"
-        print(uids)
         response, _, _ = SimpleProcess("dmidecode -t 39").run()
         matches = re.finditer(r"System Power Supply\n(\s*.*\n)"
                               r"\s*Location: (?P<location>.*)\n"
                               r"(\s*.*\n){7}\s*Status: (?P<status>.*)\n"
                               r"(\s*.*\n){2}\s*Plugged: (?P<plugged>.*)",
                               response.decode())
-        print(matches)
         for match in matches:
             psu_data = match.groupdict()
             data = self.get_health_template(f'Power Supply {uids[psu_data["location"]]}', True)

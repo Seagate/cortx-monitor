@@ -136,7 +136,6 @@ class Disks:
                         # symlink. If "phy" is in by-path use path of that drive for resource_id
                         if "by-path" in symlink:
                             if "phy" in symlink:
-                                print(symlink, udisk_block["Drive"])
                                 self._drive_by_path[udisk_block["Drive"]] = symlink[len("/dev/disk/by-path/"):]
 
                     # Maintain a dict of device names
@@ -161,7 +160,6 @@ class Disks:
                 disk = Disk(interfaces_and_property["org.freedesktop.UDisks2.Drive"]["Id"],
                 self._drive_by_path.get(obj_path, interfaces_and_property["org.freedesktop.UDisks2.Drive"]["Id"]),
                 self._drive_by_device_name[obj_path])
-                print(disk)
                 disks.append(disk)
         return disks
 
