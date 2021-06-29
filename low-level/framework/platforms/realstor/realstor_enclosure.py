@@ -77,6 +77,7 @@ class RealStorEnclosure(StorageEnclosure):
     URI_CLIAPI_NETWORKHEALTHSTATUS = "/show/network"
     URI_CLIAPI_SHOWEVENTS = "/show/events"
     URI_CLIAPI_SHOWVERSION = "/show/version/detail"
+    URI_CLIAPI_SHOWFRUS = "/show/frus"
     URI_CLIAPI_BASE = "/"
     URI_CLIAPI_DOWNLOADDEBUGDATA = "/downloadDebugData"
     URL_ENCLLOGS_POSTDATA = "/api/collectDebugData"

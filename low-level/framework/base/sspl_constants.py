@@ -95,6 +95,7 @@ CORTX_RELEASE_FACTORY_INFO = "/etc/yum.repos.d/RELEASE_FACTORY.INFO"
 DEFAULT_RECOMMENDATION = 'Please Contact Seagate Support.'
 HEALTH_SVC_NAME = 'node-health'
 SAS_RESOURCE_ID = "SASHBA-"
+MANIFEST_SVC_NAME = 'node-manifest'
 
 IVT_TEST_PLANS = ("full", "performance", "regression", "sanity",  "scalability")
 NOT_IMPLEMENTED_TEST_PLANS = ("full", "performance", "regression", "scalability")
