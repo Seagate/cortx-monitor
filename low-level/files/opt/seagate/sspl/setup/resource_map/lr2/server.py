@@ -17,7 +17,6 @@
 
 import errno
 import re
-import shlex
 import socket
 import time
 from pathlib import Path
@@ -739,8 +738,7 @@ class ServerMap(ResourceMap):
             raids_data.append(raid_data)
         return raids_data
 
-    def get_disks_info(self):
-        """Update and return server drive information in specific format."""
+    def get_disk_usage(self):
         units_factor_GB = 1000000000
         overall_usage = {
                 "totalSpace": f'{int(psutil.disk_usage("/")[0])//int(units_factor_GB)} GB',
@@ -748,6 +746,10 @@ class ServerMap(ResourceMap):
                 "freeSpace": f'{int(psutil.disk_usage("/")[2])//int(units_factor_GB)} GB',
                 "diskUsedPercentage": psutil.disk_usage("/")[3],
             }
+        return overall_usage
+
+    def get_disks_info(self):
+        """Update and return server drive information in specific format."""
         disks = []
         for disk in Disks().get_disks():
             uid = disk.path if disk.path else disk.id
@@ -756,17 +758,13 @@ class ServerMap(ResourceMap):
             health = "OK" if health_data['SMART_health'] else "Fault"
             self.set_health_data(disk_health, health, specifics=[{"SMART": health_data}])
             disks.append(disk_health)
-        disks_health_info = [{
-            "overall_usage": overall_usage,
-            "disk_count": len(disks),
-            "disks": disks,
-            "last_updated": int(time.time())
-        }]
-        return disks_health_info
+        logger.debug(self.log.svc_log(
+            f"Disk Health Data:{disks}"))
+        return disks
 
     def get_psu_info(self):
         """Update and return PSU information in specific format."""
-        psus = []
+        psus_health_data = []
         psu_mapping = {
             "PS1 Status": "PSU1",
             "PS2 Status": "PSU2"
@@ -775,16 +773,31 @@ class ServerMap(ResourceMap):
         for psu in self._ipmi.get_sensor_list_by_type("Power Supply"):
             psu_name, sensor, *_ = psu
             uids[psu_mapping[psu_name]] = f"#0x{sensor.strip('h').lower()}"
+        for psu in self.get_psus():
+            data = self.get_health_template(f'Power Supply {uids[psu["Location"]]}', True)
+            health = "OK" if (psu["Status"] == "Present, OK") else "Fault"
+            self.set_health_data(data, health, specifics=psu)
+            psus_health_data.append(data)
+        logger.debug(self.log.svc_log(
+            f"PSU Health Data:{psus_health_data}"))
+        return psus_health_data
+
+    def get_psus(self):
         response, _, _ = SimpleProcess("dmidecode -t 39").run()
-        matches = re.finditer(r"System Power Supply\n(\s*.*\n)"
-                              r"\s*Location: (?P<location>.*)\n"
-                              r"(\s*.*\n){7}\s*Status: (?P<status>.*)\n"
-                              r"(\s*.*\n){2}\s*Plugged: (?P<plugged>.*)",
-                              response.decode())
-        for match in matches:
-            psu_data = match.groupdict()
-            data = self.get_health_template(f'Power Supply {uids[psu_data["location"]]}', True)
-            health = "OK" if (psu_data["status"] == "Present, OK") else "Fault"
-            self.set_health_data(data, health, specifics=psu_data)
-            psus.append(data)
+        matches = re.findall("System Power Supply|Power Unit Group:.*|"
+                             "Location:.*|Name:.*|Serial Number:.*|"
+                             "Max Power Capacity:.*|Status: .*|"
+                             "Plugged:.*|Hot Replaceable:.*", response.decode())
+        psus = []
+        stack = []
+        while matches:
+            item = matches.pop()
+            while item != "System Power Supply":
+                stack.append(item)
+                item = matches.pop()
+            psu = {}
+            while stack:
+                key, value = stack.pop().strip().split(":")
+                psu[key] = value.strip()
+            psus.append(psu)
         return psus

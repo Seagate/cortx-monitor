@@ -135,8 +135,7 @@ class Disks:
                         # Current approch for getting resource_id is to check "phy" in by-path
                         # symlink. If "phy" is in by-path use path of that drive for resource_id
                         if "by-path" in symlink:
-                            if "phy" in symlink:
-                                self._drive_by_path[udisk_block["Drive"]] = symlink[len("/dev/disk/by-path/"):]
+                            self._drive_by_path[udisk_block["Drive"]] = symlink[len("/dev/disk/by-path/"):]
 
                     # Maintain a dict of device names
                     device = self._sanitize_dbus_value(udisk_block["Device"])
