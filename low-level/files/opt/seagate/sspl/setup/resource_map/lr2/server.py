@@ -557,7 +557,7 @@ class ServerMap(ResourceMap):
             try:
                 service_license = Service().get_service_info_from_rpm(
                     uid, "LICENSE")
-            except Exception as err:
+            except ServiceError as err:
                 logger.error(self.log.svc_log(
                     f"Unable to get service license due to {err}"))
 
