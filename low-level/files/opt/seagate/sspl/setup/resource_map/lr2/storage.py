@@ -31,7 +31,8 @@ from framework.utils.conf_utils import (
     RACK_ID_KEY, NODE_ID_KEY, CLUSTER_ID_KEY, RELEASE, TARGET_BUILD)
 from error import ResourceMapError
 from resource_map import ResourceMap
-from framework.base.sspl_constants import HEALTH_UNDESIRED_VALS
+from framework.base.sspl_constants import HEALTH_UNDESIRED_VALS, HEALTH_SVC_NAME
+from framework.utils.service_logging import CustomLog, logger
 
 
 class StorageMap(ResourceMap):
@@ -42,6 +43,7 @@ class StorageMap(ResourceMap):
     def __init__(self):
         """Initialize storage."""
         super().__init__()
+        self.log = CustomLog(HEALTH_SVC_NAME)
         self.validate_storage_type_support()
         self.storage_frus = {
             "controllers": self.get_controllers_info,
@@ -54,15 +56,17 @@ class StorageMap(ResourceMap):
             "disks": self.get_drives_info
         }
 
-    @staticmethod
-    def validate_storage_type_support():
+    def validate_storage_type_support(self):
         """Check for supported storage type."""
         storage_type = Conf.get(GLOBAL_CONF, STORAGE_TYPE_KEY, "virtual").lower()
+        logger.debug(self.log.svc_log(
+            f"Storage Type:{storage_type}"))
         supported_types = ["5u84", "rbod", "pods", "corvault"]
         if storage_type not in supported_types:
+            msg = f"Health provider is not supported for storage type {storage_type}"
+            logger.error(self.log.svc_log(msg))
             raise ResourceMapError(
-                errno.EINVAL,
-                "Health provider is not supported for storage type '%s'." % storage_type)
+                errno.EINVAL, msg)
 
     def get_health_info(self, rpath):
         """
@@ -70,6 +74,8 @@ class StorageMap(ResourceMap):
 
         rpath: Resouce path (Example: nodes[0]>storage[0]>hw>controllers)
         """
+        logger.info(self.log.svc_log(
+            f"Get Health data for rpath:{rpath}"))
         info = {}
         fru_found = False
         nodes = rpath.strip().split(">")
@@ -97,9 +103,10 @@ class StorageMap(ResourceMap):
                         info = None
                     break
         if not fru_found:
+            msg = f"Health provider doesn't have support for'{rpath}'."
+            logger.error(self.log.svc_log(msg))
             raise ResourceMapError(
-                errno.EINVAL,
-                f"Health provider doesn't have support for'{rpath}'.")
+                errno.EINVAL, msg)
         return info
 
     def get_controllers_info(self):
@@ -127,6 +134,8 @@ class StorageMap(ResourceMap):
                 controller_dict, status, description, recommendation,
                 specifics)
             data.append(controller_dict)
+            logger.debug(self.log.svc_log(
+                f"Contollers Health Data:{data}"))
         return data
 
     def get_psu_info(self):
@@ -153,11 +162,15 @@ class StorageMap(ResourceMap):
             self.set_health_data(
                 psu_dict, status, description, recommendation, specifics)
             data.append(psu_dict)
+            logger.debug(self.log.svc_log(
+                f"PSU Health Data:{data}"))
         return data
 
     def get_platform_sensors_info(self):
         sensor_list = ['temperature', 'current', 'voltage']
         sensor_data = self.build_encl_platform_sensors_data(sensor_list)
+        logger.debug(self.log.svc_log(
+            f"Platform Sensors Health Data:{sensor_data}"))
         return sensor_data
 
     def build_encl_platform_sensors_data(self, platform_sensors):
@@ -227,6 +240,8 @@ class StorageMap(ResourceMap):
                     logvol_data_dict, health, description, recommendation,
                     specifics)
                 logvol_data.append(logvol_data_dict)
+        logger.debug(self.log.svc_log(
+            f"Logical Volume Health Data:{logvol_data}"))
         return logvol_data
 
     def get_disk_groups_info(self):
@@ -278,6 +293,8 @@ class StorageMap(ResourceMap):
                     dg_data_dict, health, recommendation=recommendation,
                     specifics=specifics)
                 dg_data.append(dg_data_dict)
+        logger.debug(self.log.svc_log(
+            f"disk-group Health Data:{dg_data}"))
         return dg_data
 
     def get_sideplane_expanders_info(self):
@@ -311,6 +328,8 @@ class StorageMap(ResourceMap):
                 specifics=specifics)
 
             sideplane_expander_data.append(sideplane_dict)
+        logger.debug(self.log.svc_log(
+            f"Sideplane Expander Health Data:{sideplane_expander_data}"))
         return sideplane_expander_data
 
     def get_expander_data(self, expanders):
@@ -380,6 +399,8 @@ class StorageMap(ResourceMap):
             self.set_health_data(
                 drives_dict, status, description, recommendation, specifics)
             drive_data.append(drives_dict)
+        logger.debug(self.log.svc_log(
+            f"disk Health data:{drive_data}"))
         return drive_data
 
     @staticmethod
@@ -426,4 +447,6 @@ class StorageMap(ResourceMap):
                 nw_inf_data, nw_inf.get('health'), nw_inf.get('health-reason'),
                 nw_inf.get('health-recommendation'), [specifics])
             nw_data.append(nw_inf_data)
+        logger.debug(self.log.svc_log(
+            f"Network ports Health data:{nw_data}"))
         return nw_data

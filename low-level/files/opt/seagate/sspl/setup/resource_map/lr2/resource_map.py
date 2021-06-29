@@ -20,6 +20,9 @@ import time
 from abc import ABCMeta, abstractmethod
 
 from framework.base.sspl_constants import DEFAULT_RECOMMENDATION
+from framework.utils.service_logging import init_logging
+from framework.utils.conf_utils import ( SSPL_CONF, Conf,
+    SYSTEM_INFORMATION, LOG_LEVEL)
 
 
 class ResourceMap(metaclass=ABCMeta):
@@ -29,7 +32,9 @@ class ResourceMap(metaclass=ABCMeta):
 
     def __init__(self):
         """Initialize resource."""
-        pass
+        logging_level = Conf.get(SSPL_CONF,
+            f"{SYSTEM_INFORMATION}>{LOG_LEVEL}", "INFO")
+        init_logging('node-health', logging_level)
 
     @abstractmethod
     def get_health_info(self, rpath):
