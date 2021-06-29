@@ -93,10 +93,11 @@ class ServerMap(ResourceMap):
         fru_found = False
         nodes = rpath.strip().split(">")
         leaf_node, _ = self.get_node_details(nodes[-1])
+        build_instance = BuildInfo()
         try:
-            info["name"] = BuildInfo().get_attribute("NAME")
-            info["version"] = BuildInfo().get_attribute("VERSION")
-            info["build"] = BuildInfo().get_attribute("BUILD")
+            info["name"] = build_instance.get_attribute("NAME")
+            info["version"] = build_instance.get_attribute("VERSION")
+            info["build"] = build_instance.get_attribute("BUILD")
         except BuildInfoError as err:
             logger.error(self.log.svc_log(
                 f"Unable to get build info due to {err}"))
