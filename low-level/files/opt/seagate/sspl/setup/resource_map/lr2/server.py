@@ -478,6 +478,5 @@ class ServerMap(ResourceMap):
                           "data_integrity_status": raid.get_data_integrity_status(),
                           "devices": devices}]
             self.set_health_data(raid_data, health, specifics=specifics, description=description)
-            raid_data["last_updated"] = int(time.time())
             raids_data.append(raid_data)
         return raids_data
