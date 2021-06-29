@@ -154,6 +154,8 @@ class ServerMap(ResourceMap):
     def get_server_health_info(self):
         unhealthy_resource_found = False
         server_details = Platform().get_server_details()
+        # Currently only one instance of server is considered
+        server = []
         info = {}
         info["make"] = server_details["Board Mfg"]
         info["model"]= server_details["Product Name"]
@@ -177,7 +179,8 @@ class ServerMap(ResourceMap):
         info["health"]["recommendation"] = DEFAULT_RECOMMENDATION \
             if info["health"]["status"] != "OK" else "NA"
         info["health"]["specifics"] = []
-        return info
+        server.append(info)
+        return server
 
     @staticmethod
     def get_cpu_usage(index=2, percpu=False):
