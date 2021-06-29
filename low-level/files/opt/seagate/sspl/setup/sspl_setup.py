@@ -326,8 +326,8 @@ class TestCmd(Cmd):
         # Service restart is required for coverage.
         # Hence it can be enabled only with test plans
         # which are present in TEST_REQ_SERVICE_RESTART list.
-        if self.args.coverage and self.args.plan[0] in TEST_REQ_SERVICE_RESTART:
-            mag = "Code coverage can not be enabled for %s test plan." \
+        if self.args.coverage and self.args.plan[0] not in TEST_REQ_SERVICE_RESTART:
+            msg = "Code coverage can not be enabled for %s test plan." \
                 % self.args.plan[0]
             logger.error(msg)
             raise SetupError(
