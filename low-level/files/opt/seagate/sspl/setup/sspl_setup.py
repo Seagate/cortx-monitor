@@ -36,9 +36,9 @@ from cortx.utils.validator.v_service import ServiceV
 from cortx.utils.validator.error import VError
 from files.opt.seagate.sspl.setup.setup_error import SetupError
 from files.opt.seagate.sspl.setup.setup_logger import init_logging, logger
-from framework.base.sspl_constants import (PRVSNR_CONFIG_INDEX,
-    GLOBAL_CONFIG_INDEX, global_config_path, file_store_config_path,
-    SSPL_BASE_DIR)
+from framework.base.sspl_constants import (
+    PRVSNR_CONFIG_INDEX, GLOBAL_CONFIG_INDEX, global_config_path,
+    file_store_config_path, SSPL_BASE_DIR, TEST_REQ_SERVICE_RESTART)
 
 
 class Cmd:
@@ -60,7 +60,7 @@ class Cmd:
             [ post_install --config [<global_config_url>] ]
             [ init --config [<global_config_url>] ]
             [ config --config [<global_config_url>] ]
-            [ test --config [<global_config_url>] --plan [sanity|alerts|self_primary|self_secondary|self] ]
+            [ test --config [<global_config_url>] --plan [sanity|alerts|dev_sanity|full|performance|scalability|regression] ]
             [ reset --config [<global_config_url>] ]
             [ join_cluster --nodes [<nodes>] ]
             [ manifest_support_bundle [<id>] [<path>] ]
@@ -271,12 +271,22 @@ class InitCmd(Cmd):
 
 class TestCmd(Cmd):
     """Starts test based on plan:
-    (sanity|alerts|self_primary|self_secondary).
+    (alerts|dev_sanity|full|performance|regression|sanity).
     """
 
     name = "test"
     test_plan_found = False
-    sspl_test_plans = ["sanity", "alerts", "self_primary", "self_secondary", "self"]
+    sspl_test_plans = [
+        "alerts", "dev_sanity", "full", "performance", "regression", "sanity",
+        "scalability"]
+    # alerts: Contains realstor and node - sensors, actuator test cases,
+    # intended to run on VM.
+    # dev_sanity: Subset of 'alerts' test plan, intended to run on VM.
+    # full, performance, regression, scalability: non implemented IVT test
+    # plans.
+    # sanity: This is one of the IVT test plan, which contains
+    # HW related test cases, intended to run on HW setup.
+
 
     def __init__(self, args):
         super().__init__(args)
@@ -312,13 +322,19 @@ class TestCmd(Cmd):
             msg = "'sspl-test' rpm pkg not found."
             logger.error(msg)
             raise SetupError(1, msg)
-        logger.info("%s - Validation done" % self.name)
 
-        if self.args.coverage and 'self' in self.args.plan[0]:
-            raise SetupError(errno.EINVAL,
-                             "%s - Argument validation failure. %s",
-                             self.name,
-                             "Code coverage can not be enabled with self tests.")
+        # Service restart is required for coverage.
+        # Hence it can be enabled only with test plans
+        # which are present in TEST_REQ_SERVICE_RESTART list.
+        if self.args.coverage and self.args.plan[0] not in TEST_REQ_SERVICE_RESTART:
+            msg = "Code coverage can not be enabled for %s test plan." \
+                % self.args.plan[0]
+            logger.error(msg)
+            raise SetupError(
+                errno.EINVAL, "%s - Argument validation failure. %s",
+                self.name,
+                msg)
+        logger.info("%s - Validation done" % self.name)
 
     def process(self):
         """Setup and run SSPL test"""
@@ -474,7 +490,8 @@ class CleanupCmd(Cmd):
             "cortx>release>product")
         if self.product is None:
             msg = "%s - validation failure. %s" % (
-                self.name, "'Product' name is required to restore suitable configs.")
+                self.name,
+                "'Product' name is required to restore suitable configs.")
             logger.error(msg)
             raise SetupError(errno.EINVAL, msg)
         logger.info("%s - Validation done" % self.name)
@@ -483,8 +500,8 @@ class CleanupCmd(Cmd):
         try:
             if os.path.exists(file_store_config_path):
                 os.remove(file_store_config_path)
-            shutil.copyfile("%s/conf/sspl.conf.%s.yaml" % (SSPL_BASE_DIR,
-                self.product), file_store_config_path)
+            shutil.copyfile("%s/conf/sspl.conf.%s.yaml" % (
+                SSPL_BASE_DIR, self.product), file_store_config_path)
             logger.info("%s - Process done" % self.name)
         except OSError as e:
             logger.error(f"Failed in Cleanup. ERROR: {e}")
