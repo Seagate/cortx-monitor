@@ -7,7 +7,8 @@ from files.opt.seagate.sspl.setup.resource_map.lr2.storage import StorageMap
 
 from encl_api_response import (
     ENCLOSURE_RESPONSE, ENCLOSURE_SENSORS_RESPONSE, ENCLOSURE_RESPONSE_EMPTY,
-    ENCLOSURE_NW_RESPONSE, CONTROLLER_RESPONSE, DRIVE_RESPONSE)
+    ENCLOSURE_NW_RESPONSE, CONTROLLER_RESPONSE, DRIVE_RESPONSE,
+    SAS_PORTS_RESPONSE)
 
 
 class TestStorageMap(unittest.TestCase):
@@ -141,6 +142,19 @@ class TestStorageMap(unittest.TestCase):
         assert specifics['disk-group'] == 'poola'
         assert specifics['storage-pool-name'] == 'poola'
         assert specifics['location'] == '0.0'
+
+    @patch(("files.opt.seagate.sspl.setup.resource_map.lr2.storage."
+            "StorageMap.get_realstor_encl_data"))
+    def test_get_sas_ports_info(self, encl_response):
+        encl_response.return_value = SAS_PORTS_RESPONSE
+        res = self.storage_map.get_sas_ports_info()
+        assert res[0]['uid'] == "drawer_egress_0.D0.A0"
+        assert res[0]['health']['status'] == "OK"
+        assert res[0]['health']['description'] == \
+            "drawer_egress_0.D0.A0 is in good health."
+        specifics = res[0]['health']['specifics'][0]
+        assert specifics['sas-port-type'] == "Drawer Port Egress"
+        assert specifics['controller'] == "A"
 
 
 if __name__ == "__main__":

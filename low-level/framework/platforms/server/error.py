@@ -42,3 +42,11 @@ class NetworkError(InterfaceError):
     def __init__(self, rc, message, *message_args):
         """Initialize the Error information."""
         super(NetworkError, self).__init__(rc, message, *message_args)
+
+
+class SASError(InterfaceError):
+    """Error Handling for SAS related errors."""
+
+    def __init__(self, rc, message, *message_args):
+        """Initialize the Error information."""
+        super(SASError, self).__init__(rc, message, *message_args)
