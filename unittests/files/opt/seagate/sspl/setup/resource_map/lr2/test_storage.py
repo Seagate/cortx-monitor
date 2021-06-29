@@ -168,7 +168,7 @@ class TestStorageMap(unittest.TestCase):
         resp = storage_map.get_fanmodules_info()
         assert resp[0]['uid'] == 'fan_module_0.0'
         assert resp[0]['health']['status'] == 'OK'
-        assert resp[0]['health']['description'] == 'FAN is in good health'
+        assert resp[0]['health']['description'] == f"{resp[0]['uid']} is in good health."
 
         assert len(resp[0]['health']['specifics']) == 2
         assert resp[0]['health']['specifics'][0]["uid"] == "fan_0.fm0.0"

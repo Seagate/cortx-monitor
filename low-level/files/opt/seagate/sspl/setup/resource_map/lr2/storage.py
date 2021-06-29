@@ -124,9 +124,9 @@ class StorageMap(ResourceMap):
 
     def get_fanmodules_info(self):
         response = []
-        fanmoduels_data = self.get_realstor_encl_data("fan-modules")
-        if fanmoduels_data:
-            for fan_module in fanmoduels_data:
+        fanmodules_data = self.get_realstor_encl_data("fan-modules")
+        if fanmodules_data:
+            for fan_module in fanmodules_data:
                 uid = fan_module.get('durable-id', 'NA')
                 health = fan_module.get('health')
                 fan_module_resp = self.get_health_template(uid, is_fru=True)
@@ -134,7 +134,7 @@ class StorageMap(ResourceMap):
                 description = f"FAN is in {'good' if health=='OK' else 'bad'} health"
                 recommendation = fan_module.get('health-recommendation', 'NA'),
                 self.set_health_data(
-                    fan_module_resp, health, description, recommendation, specifics)
+                    fan_module_resp, health, specifics=specifics)
                 response.append(fan_module_resp)
         else:
             logger.error(self.log.svc_log("No reponse received from fan modules"))
@@ -502,3 +502,6 @@ class StorageMap(ResourceMap):
                 sas_port.get("health-recommendation"), specifics)
             data.append(port_data)
         return data
+
+# if __name__ == '__main__':
+#     print(StorageMap().get_fanmodules_info())
