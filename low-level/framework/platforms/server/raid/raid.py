@@ -18,6 +18,8 @@ import re
 
 from cortx.utils.process import SimpleProcess
 from framework.base.sspl_constants import MDADM_PATH, RaidDataConfig
+from framework.utils.conf_utils import (SSPL_CONF, Conf, SYSTEM_INFORMATION,
+                                        SYSFS_PATH)
 
 
 class RAID:
@@ -66,7 +68,8 @@ class RAID:
                     "raid_integrity_mismatch_count": "NA"
                 }
         try:
-            with open(f"/sys/block/{self.id}/{RaidDataConfig.MISMATCH_COUNT_FILE.value}") as f:
+            sysfs = Conf.get(SSPL_CONF, f'{SYSTEM_INFORMATION}>{SYSFS_PATH}')
+            with open(f"/{sysfs}/block/{self.id}/{RaidDataConfig.MISMATCH_COUNT_FILE.value}") as f:
                 mismatch_count = f.read().strip("\n")
                 status["raid_integrity_error"] = mismatch_count != "0"
                 status["raid_integrity_mismatch_count"] = mismatch_count
