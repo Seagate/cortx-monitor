@@ -30,9 +30,13 @@ class RAID:
         self.id = raid.split('/')[-1]
 
     def get_devices(self):
-        output, _, returncode = SimpleProcess(f"mdadm --detail --test {self.raid}").run()
+        output, err, returncode = SimpleProcess(f"mdadm --detail --test {self.raid}").run()
+        if returncode == 0:
+            output = output.decode()
+        else:
+            output = err.decode()
         devices = []
-        for state in re.findall(r"^\s*\d+\s*\d+\s*\d+\s*\d+\s*(.*)", output.decode(), re.MULTILINE):
+        for state in re.findall(r"^\s*\d+\s*\d+\s*\d+\s*\d+\s*(.*)", output, re.MULTILINE):
             device = {}
             device["state"] = state
             device["identity"] = {}

@@ -471,9 +471,7 @@ class ServerMap(ResourceMap):
         for raid in RAIDs.get_configured_raids():
             raid_data = self.get_health_template(raid.id, False)
             health, description = raid.get_health()
-            devices = []
-            if health != "Fault":
-                devices = raid.get_devices()
+            devices = raid.get_devices()
             specifics = [{"location": raid.raid,
                           "data_integrity_status": raid.get_data_integrity_status(),
                           "devices": devices}]
