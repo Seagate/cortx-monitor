@@ -23,9 +23,9 @@ from dbus import Array, Interface, SystemBus
 
 class Disk:
 
-    def __init__(self, id, path, device) -> None:
+    def __init__(self, _id, path, device) -> None:
         """Initialize Disk class."""
-        self.id = str(id)
+        self.id = str(_id)
         self.path = str(path)
         self.device = str(device)
 
