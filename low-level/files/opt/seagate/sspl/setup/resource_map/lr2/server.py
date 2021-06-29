@@ -481,9 +481,3 @@ class ServerMap(ResourceMap):
             raid_data["last_updated"] = int(time.time())
             raids_data.append(raid_data)
         return raids_data
-
-
-if __name__ == "__main__":
-    server = ServerMap()
-    health_data = server.get_health_info(rpath="nodes[0]>compute[0]>sw>os>raid")
-    print(health_data)
