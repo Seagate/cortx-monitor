@@ -23,7 +23,7 @@ from framework.base.sspl_constants import MDADM_PATH, RaidDataConfig
 class RAID:
 
     def __init__(self, raid) -> None:
-        """Initialize RAID class"""
+        """Initialize RAID class."""
         self.raid = raid
         self.id = raid.split('/')[-1]
 
@@ -52,13 +52,13 @@ class RAID:
     def get_health(self):
         _, _, returncode = SimpleProcess(f"mdadm --detail --test {self.raid}").run()
         if returncode == 0:
-            return "OK"
+            return ("OK", "The array is functioning normally")
         elif returncode == 4:
-            return "Missing"
+            return ("Fault", "There was an error while trying to get information about the device.")
         elif returncode == 2:
-            return "Fault"
+            return ("Failed", "The array has multiple failed devices such that it is unusable.")
         elif returncode == 1:
-            return "Degraded"
+            return ("Degraded", "The array has at least one failed device.")
 
     def get_data_integrity_status(self):
         status = {
