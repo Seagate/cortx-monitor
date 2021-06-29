@@ -101,9 +101,6 @@ class ServerMap(ResourceMap):
         except BuildInfoError as err:
             logger.error(self.log.svc_log(
                 f"Unable to get build info due to {err}"))
-        except Exception as err:
-            logger.error(self.log.svc_log(
-                f"Unable to get build info due to {err}"))
         if leaf_node == "compute":
             for fru in self.server_map:
                 try:
@@ -554,13 +551,13 @@ class ServerMap(ResourceMap):
             try:
                 version = Service().get_service_info_from_rpm(
                     uid, "VERSION")
-            except (ServiceError, Exception) as err:
+            except ServiceError as err:
                 logger.error(self.log.svc_log(
                     f"Unable to get service version due to {err}"))
             try:
                 service_license = Service().get_service_info_from_rpm(
                     uid, "LICENSE")
-            except (ServiceError, Exception) as err:
+            except Exception as err:
                 logger.error(self.log.svc_log(
                     f"Unable to get service license due to {err}"))
 
