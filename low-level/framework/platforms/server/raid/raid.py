@@ -54,9 +54,9 @@ class RAID:
     def get_health(self):
         _, _, returncode = SimpleProcess(f"mdadm --detail --test {self.raid}").run()
         if returncode == 0:
-            return ("OK", "The array is functioning normally")
+            return ("OK", "The array is in good health")
         elif returncode == 4:
-            return ("Fault", "There was an error while trying to get information about the device.")
+            return ("Fault", "There was an error while trying to get information about the array.")
         elif returncode == 2:
             return ("Failed", "The array has multiple failed devices such that it is unusable.")
         elif returncode == 1:

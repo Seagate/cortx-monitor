@@ -15,14 +15,10 @@
 
 import json
 import os
-import sys
 import unittest
 from unittest.mock import Mock, mock_open, patch
 
-PROJECT_ROOT = "/".join(os.path.abspath(__file__).split("/")
-                        [:-6]) + "/low-level"
-sys.path.append(PROJECT_ROOT)
-from framework.platforms.server.raid.raid import RAIDs, RAID
+from framework.platforms.server.raid.raid import RAID, RAIDs
 
 with open(f'{os.path.dirname(__file__)}/mdadm.txt', 'rb') as f:
     mdadm = f.read()
