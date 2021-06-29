@@ -541,8 +541,8 @@ class ServerMap(ResourceMap):
                 }
             ]
         else:
-            version = "NA"
             service_license = "NA"
+            version = "NA"
             service_description = str(
                 properties_iface.Get(UNIT_IFACE, 'Description'))
             state = str(properties_iface.Get(UNIT_IFACE, 'ActiveState'))
