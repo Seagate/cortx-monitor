@@ -28,7 +28,7 @@ from error import ResourceMapError
 from framework.platforms.server.network import Network
 from framework.base.sspl_constants import (
     CPU_PATH, DEFAULT_RECOMMENDATION, HEALTH_SVC_NAME, SAS_RESOURCE_ID)
-from framework.platforms.node.raid.raid import RAIDs
+from framework.platforms.server.raid.raid import RAIDs
 from framework.utils.conf_utils import (GLOBAL_CONF, NODE_TYPE_KEY, Conf)
 from framework.utils.service_logging import CustomLog, logger
 from framework.platforms.server.sas import SAS
@@ -474,9 +474,9 @@ class ServerMap(ResourceMap):
             devices = []
             if health != "Missing":
                 devices = raid.get_devices()
-            specifics = [{"location": raid.raid, 
-                    "data_integrity_status" : raid.get_data_integrity_status(), 
-                    "devices": devices}]
+            specifics = [{"location": raid.raid,
+                          "data_integrity_status": raid.get_data_integrity_status(),
+                          "devices": devices}]
             self.set_health_data(raid_data, health, specifics=specifics, resource="RAID Array")
             raid_data["last_updated"] = int(time.time())
             raids_data.append(raid_data)

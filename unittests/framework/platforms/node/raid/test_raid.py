@@ -24,6 +24,13 @@ PROJECT_ROOT = "/".join(os.path.abspath(__file__).split("/")
 sys.path.append(PROJECT_ROOT)
 from framework.platforms.server.raid.raid import RAIDs, RAID
 
+with open(f'{os.path.dirname(__file__)}/mdadm.txt', 'rb') as f:
+    mdadm = f.read()
+
+simpleprocess_return = [(mdadm, b'', 0),
+                        (json.dumps({"serial_number": "ZBS1VV3D"}), b'', 0),
+                        (json.dumps({"serial_number": "ZC236QHZ"}), b'', 0)]
+
 
 class TestRAIDs(unittest.TestCase):
 
@@ -31,18 +38,14 @@ class TestRAIDs(unittest.TestCase):
         pass
 
     def test_get_configured_raid(self):
-        mdadm = '# mdadm.conf written out by anaconda\nMAILADDR root\nAUTO +imsm +1.x -all\nARRAY /dev/md/0 level=raid1 num-devices=2 UUID=6c9cbe03:018e1941:5b6fff24:92796749\nARRAY /dev/md/1 level=raid1 num-devices=2 UUID=bcf899b5:17b8cdc9:9ed1e528:5148c4ad\n'
+        with open(f'{os.path.dirname(__file__)}/mdadm.conf') as f:
+            mdadm = f.read()
         with patch('framework.platforms.server.raid.raid.open', mock_open(read_data=mdadm)):
             devices = RAIDs.get_configured_raids()
         for device in devices:
             self.assertIsInstance(device, RAID)
         self.assertEqual(devices[0].raid, "/dev/md0")
         self.assertEqual(devices[1].raid, "/dev/md1")
-
-
-simpleprocess_return = [(b'/dev/md0:\n           Version : 1.2\n     Creation Time : Thu Jan 28 10:08:13 2021\n        Raid Level : raid1\n        Array Size : 1046528 (1022.00 MiB 1071.64 MB)\n     Used Dev Size : 1046528 (1022.00 MiB 1071.64 MB)\n      Raid Devices : 2\n     Total Devices : 2\n       Persistence : Superblock is persistent\n\n     Intent Bitmap : Internal\n\n       Update Time : Wed Jun 23 06:57:46 2021\n             State : clean \n    Active Devices : 2\n   Working Devices : 2\n    Failed Devices : 0\n     Spare Devices : 0\n\nConsistency Policy : bitmap\n\n              Name : smc24-m16.colo.seagate.com:0  (local to host smc24-m16.colo.seagate.com)\n              UUID : 6c9cbe03:018e1941:5b6fff24:92796749\n            Events : 211\n\n    Number   Major   Minor   RaidDevice State\n       0       8        2        0      active sync   /dev/sda2\n       1       8       18        1      active sync   /dev/sdb2\n', b'', 0),
-                        (json.dumps({"serial_number": "ZBS1VV3D"}), b'', 0),
-                        (json.dumps({"serial_number": "ZC236QHZ"}), b'', 0)]
 
 
 class TestRAID(unittest.TestCase):

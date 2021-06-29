@@ -23,7 +23,7 @@ from framework.base.sspl_constants import MDADM_PATH, RaidDataConfig
 class RAID:
 
     def __init__(self, raid) -> None:
-        """Creats RAID class"""
+        """Initialize RAID class"""
         self.raid = raid
         self.id = raid.split('/')[-1]
 
