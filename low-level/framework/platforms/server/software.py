@@ -30,9 +30,7 @@ from framework.base.sspl_constants import (MANAGER_IFACE, SYSTEMD_BUS,
 
 
 class BuildInfo:
-    """BuildInfo class provides information for Cortx build, 
-    version, kernel version etc.
-    """
+    """Provides information for Cortx build, version, kernel etc."""
 
     name = "BuildInfo"
 
@@ -43,7 +41,8 @@ class BuildInfo:
         if os.path.isfile(CORTX_RELEASE_FACTORY_INFO):
             Conf.load("cortx_build_info", self.cortx_build_info_file_path)
 
-    def get_attribute(self, attribute):
+    @staticmethod
+    def get_attribute(attribute):
         """Get specific attribute from build info."""
         result = "NA"
         try:
@@ -56,9 +55,7 @@ class BuildInfo:
 
 
 class Service:
-    """Service class provides methods to fetch information
-    for systemd services using dbus API.
-    """
+    """Provides methods to fetch information for systemd services."""
 
     name = "Service"
     SERVICE_HANDLER = 'SERVICEMONITOR'

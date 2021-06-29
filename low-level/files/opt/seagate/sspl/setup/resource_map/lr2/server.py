@@ -36,7 +36,7 @@ from framework.platforms.server.error import (
 from framework.utils.service_logging import CustomLog, logger
 from framework.utils.conf_utils import (GLOBAL_CONF, NODE_TYPE_KEY, Conf)
 from framework.base.sspl_constants import (
-    CPU_PATH, DEFAULT_RECOMMENDATION,UNIT_IFACE, SERVICE_IFACE,
+    CPU_PATH, DEFAULT_RECOMMENDATION, UNIT_IFACE, SERVICE_IFACE,
     SYSTEMD_BUS, SAS_RESOURCE_ID, HEALTH_SVC_NAME)
 
 
