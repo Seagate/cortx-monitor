@@ -28,10 +28,11 @@ from framework.utils.ipmi_client import IpmiFactory
 from framework.utils.tool_factory import ToolFactory
 from framework.platforms.server.network import Network
 from framework.platforms.server.software import BuildInfo, Service
+from framework.platforms.server.raid.raid import RAIDs
+from framework.utils.service_logging import CustomLog, logger
 from framework.platforms.server.sas import SAS
 from framework.platforms.server.error import (
     SASError, NetworkError, BuildInfoError, ServiceError)
-from framework.utils.service_logging import CustomLog, logger
 from framework.utils.conf_utils import (GLOBAL_CONF, NODE_TYPE_KEY, Conf)
 from framework.base.sspl_constants import (
     CPU_PATH, DEFAULT_RECOMMENDATION, UNIT_IFACE, SERVICE_IFACE,
@@ -63,7 +64,9 @@ class ServerMap(ResourceMap):
             'cortx_sw_services': self.get_cortx_service_info,
             'external_sw_services': self.get_external_service_info,
             'sas_hba': self.get_sas_hba_info,
-            'sas_ports': self.get_sas_ports_info
+            'sas_ports': self.get_sas_ports_info,
+            'nw_ports': self.get_nw_ports_info,
+            'raid': self.get_raid_info
         }
         self._ipmi = IpmiFactory().get_implementor("ipmitool")
         self.platform_sensor_list = ['Temperature', 'Voltage', 'Current']
@@ -589,3 +592,16 @@ class ServerMap(ResourceMap):
         self.set_health_data(service_info, health_status,
                              health_description, recommendation, specifics)
         return service_info
+
+    def get_raid_info(self):
+        raids_data = []
+        for raid in RAIDs.get_configured_raids():
+            raid_data = self.get_health_template(raid.id, False)
+            health, description = raid.get_health()
+            devices = raid.get_devices()
+            specifics = [{"location": raid.raid,
+                          "data_integrity_status": raid.get_data_integrity_status(),
+                          "devices": devices}]
+            self.set_health_data(raid_data, health, specifics=specifics, description=description)
+            raids_data.append(raid_data)
+        return raids_data
