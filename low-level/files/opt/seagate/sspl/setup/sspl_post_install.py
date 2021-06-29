@@ -49,6 +49,8 @@ class SSPLPostInstall:
         consts.SSPL_LOG_PATH = "/var/log/%s/sspl/" % consts.PRODUCT_FAMILY
         consts.SSPL_BUNDLE_PATH = "/var/%s/sspl/bundle/" % consts.PRODUCT_FAMILY
         self.state_file = "%s/state.txt" % consts.DATA_PATH
+        # configure sspl-setup log dir before validation stage.
+        self.configure_sspl_setup_log()
 
     def validate(self):
         """Check below requirements are met in setup.
@@ -59,9 +61,6 @@ class SSPLPostInstall:
         5. Validate storage controller connectivity
         """
         machine_id = Utility.get_machine_id()
-
-        # configure sspl-setup log dir before validation stage.
-        self.configure_sspl_setup_log()
 
         # Validate input/provisioner configs
         self.product = Utility.get_config_value(consts.PRVSNR_CONFIG_INDEX,
