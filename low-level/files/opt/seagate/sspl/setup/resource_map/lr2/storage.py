@@ -123,6 +123,7 @@ class StorageMap(ResourceMap):
         }
 
     def get_fanmodules_info(self):
+        """Returns fan modules health data."""
         response = []
         fanmodules_data = self.get_realstor_encl_data("fan-modules")
         if fanmodules_data:
@@ -502,6 +503,3 @@ class StorageMap(ResourceMap):
                 sas_port.get("health-recommendation"), specifics)
             data.append(port_data)
         return data
-
-# if __name__ == '__main__':
-#     print(json.dumps(StorageMap().get_fanmodules_info()))
