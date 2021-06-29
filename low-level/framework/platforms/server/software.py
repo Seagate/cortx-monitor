@@ -30,7 +30,7 @@ from framework.base.sspl_constants import (MANAGER_IFACE, SYSTEMD_BUS,
 
 
 class BuildInfo:
-    """Provides information for Cortx build, version, kernel etc."""
+    """ Provides information for Cortx build, version, kernel etc. """
 
     name = "BuildInfo"
 
@@ -55,7 +55,7 @@ class BuildInfo:
 
 
 class Service:
-    """Provides methods to fetch information for systemd services."""
+    """ Provides methods to fetch information for systemd services """
 
     name = "Service"
     SERVICE_HANDLER = 'SERVICEMONITOR'
