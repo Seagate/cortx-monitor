@@ -29,7 +29,7 @@ from framework.base.sspl_constants import (CPU_PATH, DEFAULT_RECOMMENDATION,
                                            HEALTH_SVC_NAME, SAS_RESOURCE_ID,
                                            SERVICE_IFACE, SYSTEMD_BUS,
                                            UNIT_IFACE)
-from framework.platforms.server.disk import Disks
+from framework.platforms.server.disk import Disk, Disks
 from framework.platforms.server.error import (BuildInfoError, NetworkError,
                                               SASError, ServiceError)
 from framework.platforms.server.network import Network
@@ -738,7 +738,8 @@ class ServerMap(ResourceMap):
             raids_data.append(raid_data)
         return raids_data
 
-    def get_disk_usage(self):
+    @staticmethod
+    def get_disk_usage():
         units_factor_GB = 1000000000
         overall_usage = {
                 "totalSpace": f'{int(psutil.disk_usage("/")[0])//int(units_factor_GB)} GB',
@@ -751,7 +752,7 @@ class ServerMap(ResourceMap):
     def get_disks_info(self):
         """Update and return server drive information in specific format."""
         disks = []
-        for disk in Disks().get_disks():
+        for disk in Disk.get_disks():
             uid = disk.path if disk.path else disk.id
             disk_health = self.get_health_template(uid, True)
             health_data = disk.get_health()
@@ -782,7 +783,8 @@ class ServerMap(ResourceMap):
             f"PSU Health Data:{psus_health_data}"))
         return psus_health_data
 
-    def get_psus(self):
+    @staticmethod
+    def get_psus():
         response, _, _ = SimpleProcess("dmidecode -t 39").run()
         matches = re.findall("System Power Supply|Power Unit Group:.*|"
                              "Location:.*|Name:.*|Serial Number:.*|"

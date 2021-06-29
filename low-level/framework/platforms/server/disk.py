@@ -83,51 +83,40 @@ class Disk:
             # "SG_IO: bad/missing sense data") for local drives,
             # this check would fail.
             if DISK_ERR_MISSING_SENSE_DATA not in err and \
-                DISK_ERR_GET_ID_FAILURE not in err:
+               DISK_ERR_GET_ID_FAILURE not in err:
                 return True
             else:
                 return False
 
-
-class Disks:
-
-    def __init__(self):
-        """Initialize dbus connection and update drive paths."""
-        self._bus = SystemBus()
+    @classmethod
+    def get_disks(cls):
+        bus = SystemBus()
         # Obtain a disk manager interface for monitoring drives
-        self._disk_manager = Interface(self._bus.get_object('org.freedesktop.UDisks2',
-            '/org/freedesktop/UDisks2'),
-                dbus_interface='org.freedesktop.DBus.ObjectManager')
+        disk_manager = Interface(bus.get_object('org.freedesktop.UDisks2',
+                                                '/org/freedesktop/UDisks2'),
+                                 dbus_interface='org.freedesktop.DBus.ObjectManager')
 
         # Dict of drives by-path symlink from systemd
-        self._drive_by_path = {}
+        drive_by_path = {}
 
         # Dict of drives by device name from systemd
-        self._drive_by_device_name = {}
+        drive_by_device_name = {}
 
-        # Dict of drives by path
-        self._drives = {}
-
-        self._update_by_id_paths()
-
-    def _update_by_id_paths(self):
-        """Updates the global dict of by-id symlinks for each drive."""
-        # Refresh the set of managed systemd objects
-        self._disk_objects = self._disk_manager.GetManagedObjects()
+        disk_objects = disk_manager.GetManagedObjects()
 
         # Get a list of all the block devices available in systemd
         re_blocks = re.compile('(?P<path>.*?/block_devices/(?P<id>.*))')
         block_devs = [m.groupdict() for m in
-                      [re_blocks.match(path) for path in list(self._disk_objects.keys())]
+                      [re_blocks.match(path) for path in list(disk_objects.keys())]
                       if m]
 
         # Retrieve the by-id symlink for each drive and save in a dict with the drive path as key
         for block_dev in block_devs:
             try:
-                if self._disk_objects[block_dev['path']].get('org.freedesktop.UDisks2.Block') is not None:
+                if disk_objects[block_dev['path']].get('org.freedesktop.UDisks2.Block') is not None:
                     # Obtain the list of symlinks for the block device
-                    udisk_block = self._disk_objects[block_dev['path']]["org.freedesktop.UDisks2.Block"]
-                    symlinks = self._sanitize_dbus_value(udisk_block["Symlinks"])
+                    udisk_block = disk_objects[block_dev['path']]["org.freedesktop.UDisks2.Block"]
+                    symlinks = cls._sanitize_dbus_value(udisk_block["Symlinks"])
 
                     # Parse out the wwn symlink if it exists otherwise use the by-id
                     for symlink in symlinks:
@@ -135,30 +124,23 @@ class Disks:
                         # Current approch for getting resource_id is to check "phy" in by-path
                         # symlink. If "phy" is in by-path use path of that drive for resource_id
                         if "by-path" in symlink:
-                            self._drive_by_path[udisk_block["Drive"]] = symlink[len("/dev/disk/by-path/"):]
+                            drive_by_path[udisk_block["Drive"]] = symlink[len("/dev/disk/by-path/"):]
 
                     # Maintain a dict of device names
-                    device = self._sanitize_dbus_value(udisk_block["Device"])
-                    self._drive_by_device_name[udisk_block["Drive"]] = device
+                    device = cls._sanitize_dbus_value(udisk_block["Device"])
+                    drive_by_device_name[udisk_block["Drive"]] = device
 
             except Exception as ae:
                 # block_dev unusable
                 print("block_dev unusable: %r" % ae)
 
-    def get_disks(self):
-        """
-        Get physical drives(server+enclosure) atttached to server.
-
-        This will only return server drives if setup is non-JBOD
-        """
-
         disks = []
 
-        for obj_path, interfaces_and_property in self._disk_manager.GetManagedObjects().items():
-            if "drive" in obj_path and self.is_physical_drive(interfaces_and_property["org.freedesktop.UDisks2.Drive"]):
-                disk = Disk(interfaces_and_property["org.freedesktop.UDisks2.Drive"]["Id"],
-                self._drive_by_path.get(obj_path, interfaces_and_property["org.freedesktop.UDisks2.Drive"]["Id"]),
-                self._drive_by_device_name[obj_path])
+        for obj_path, interfaces_and_property in disk_manager.GetManagedObjects().items():
+            if "drive" in obj_path and cls.is_physical_drive(interfaces_and_property["org.freedesktop.UDisks2.Drive"]):
+                disk = cls(interfaces_and_property["org.freedesktop.UDisks2.Drive"]["Id"],
+                           drive_by_path.get(obj_path, interfaces_and_property["org.freedesktop.UDisks2.Drive"]["Id"]),
+                           drive_by_device_name[obj_path])
                 disks.append(disk)
         return disks
 
@@ -186,14 +168,15 @@ class Disks:
         """
         return interfaces_and_property["WWN"].startswith("0x5")
 
-    def _sanitize_dbus_value(self, value):
+    @classmethod
+    def _sanitize_dbus_value(cls, value):
         """Convert certain DBus type combinations so that they are easier to read."""
         if isinstance(value, Array) and value.signature == "ay":
             try:
-                return self._decode_ay(value)
+                return cls._decode_ay(value)
             except Exception:
                 # Try an array of arrays; 'aay' which is the symlinks
-                return list(map(self._decode_ay, value or ()))
+                return list(map(cls._decode_ay, value or ()))
         elif isinstance(value, Array) and value.signature == "y":
             return bytearray(value).rstrip(bytearray((0,))).decode('utf-8')
         else:
