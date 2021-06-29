@@ -166,4 +166,3 @@ def errno_to_str_mapping(err_no):
     except Exception as err:
         logger.error("map_errno_to_text errno to text mapping failed due to %s: %s " % err)
         return
-

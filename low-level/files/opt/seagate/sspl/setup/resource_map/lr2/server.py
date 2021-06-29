@@ -15,7 +15,6 @@
 # For any questions about this software or licensing,
 # please email opensource@seagate.com or cortx-questions@seagate.com
 
-
 import time
 import os
 import errno
@@ -32,13 +31,14 @@ from cortx.utils.conf_store.error import ConfError
 from framework.utils.ipmi_client import IpmiFactory
 from framework.utils.tool_factory import ToolFactory
 from framework.platforms.server.network import Network
+from framework.utils.service_logging import CustomLog, logger
 from framework.utils.conf_utils import (GLOBAL_CONF, SSPL_CONF,
                                         NODE_TYPE_KEY, Conf)
 from framework.base.sspl_constants import (CPU_PATH, DEFAULT_RECOMMENDATION,
                                            UNIT_IFACE, SERVICE_IFACE,
                                            MANAGER_IFACE, SYSTEMD_BUS,
                                            CORTX_RELEASE_FACTORY_INFO,
-                                           CONFIG_SPEC_TYPE)
+                                           CONFIG_SPEC_TYPE, HEALTH_SVC_NAME)
 
 
 class ServerMap(ResourceMap):
@@ -54,6 +54,7 @@ class ServerMap(ResourceMap):
     def __init__(self):
         """Initialize server"""
         super().__init__()
+        self.log = CustomLog(HEALTH_SVC_NAME)
         self.validate_server_type_support()
         self.sysfs = ToolFactory().get_instance('sysfs')
         self.sysfs.initialize()
@@ -73,16 +74,18 @@ class ServerMap(ResourceMap):
         self._ipmi = IpmiFactory().get_implementor("ipmitool")
         self.platform_sensor_list = ['Temperature', 'Voltage', 'Current']
 
-    @staticmethod
-    def validate_server_type_support():
+    def validate_server_type_support(self):
         """Check for supported server type."""
         server_type = Conf.get(GLOBAL_CONF, NODE_TYPE_KEY).lower()
         # TODO Add support for 'virtual' type server.
+        logger.debug(self.log.svc_log(
+            f"Server Type:{server_type}"))
         supported_types = ["physical"]
         if server_type not in supported_types:
+            msg = f"Health provider is not supported for server type:{server_type}"
+            logger.error(self.log.svc_log(msg))
             raise ResourceMapError(
-                errno.EINVAL,
-                f"Health provider is not supported for server type:{server_type}")
+                errno.EINVAL, msg)
 
     def get_health_info(self, rpath):
         """
@@ -90,6 +93,8 @@ class ServerMap(ResourceMap):
 
         rpath: Resource id (Example: nodes[0]>compute[0]>hw>disks)
         """
+        logger.info(self.log.svc_log(
+            f"Get Health data for rpath:{rpath}"))
         info = {}
         fru_found = False
         nodes = rpath.strip().split(">")
@@ -124,9 +129,10 @@ class ServerMap(ResourceMap):
                         info = None
                     break
         if not fru_found:
+            msg = f"Health provider doesn't have support for'{rpath}'."
+            logger.error(self.log.svc_log(msg))
             raise ResourceMapError(
-                errno.EINVAL,
-                f"Health provider doesn't have support for'{rpath}'.")
+                errno.EINVAL, msg)
         return info
 
     @staticmethod
@@ -192,6 +198,8 @@ class ServerMap(ResourceMap):
                 "cpus": per_cpu_data
             }
         ]
+        logger.debug(self.log.svc_log(
+            f"CPU Health Data:{cpu_data}"))
         return cpu_data
 
     def format_ipmi_platform_sensor_reading(self, reading):
@@ -232,6 +240,8 @@ class ServerMap(ResourceMap):
                 response[sensor].append(
                     self.format_ipmi_platform_sensor_reading(reading)
                 )
+        logger.debug(self.log.svc_log(
+            f"Platform Sensor Health Data:{response}"))
         return response
 
     def get_mem_info(self):
@@ -253,6 +263,8 @@ class ServerMap(ResourceMap):
         memory_dict = self.prepare_mem_json(status,
                                             description)
         data.append(memory_dict)
+        logger.debug(self.log.svc_log(
+            f"Memory Health Data:{data}"))
         return data
 
     def prepare_mem_json(self, status, description):
@@ -290,7 +302,8 @@ class ServerMap(ResourceMap):
         data = []
         sensor_reading = self._ipmi.get_sensor_list_by_type('Fan')
         if sensor_reading is None:
-            # TODO log error
+            msg = f"Failed to get Fan sensor reading using ipmitool"
+            logger.error(self.log.svc_log(msg))
             return
         for fan_reading in sensor_reading:
             sensor_id = fan_reading[0]
@@ -311,6 +324,8 @@ class ServerMap(ResourceMap):
                                  specifics=specifics)
 
             data.append(fan_dict)
+            logger.debug(self.log.svc_log(
+                f"Fan Health Data:{fan_dict}"))
         return data
 
     def get_nw_ports_info(self):
