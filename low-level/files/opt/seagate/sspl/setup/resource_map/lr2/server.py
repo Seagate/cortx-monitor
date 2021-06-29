@@ -766,16 +766,8 @@ class ServerMap(ResourceMap):
     def get_psu_info(self):
         """Update and return PSU information in specific format."""
         psus_health_data = []
-        psu_mapping = {
-            "PS1 Status": "PSU1",
-            "PS2 Status": "PSU2"
-        }
-        uids = {}
-        for psu in self._ipmi.get_sensor_list_by_type("Power Supply"):
-            psu_name, sensor, *_ = psu
-            uids[psu_mapping[psu_name]] = f"#0x{sensor.strip('h').lower()}"
         for psu in self.get_psus():
-            data = self.get_health_template(f'Power Supply {uids[psu["Location"]]}', True)
+            data = self.get_health_template(f'{psu["Location"]}', True)
             health = "OK" if (psu["Status"] == "Present, OK") else "Fault"
             self.set_health_data(data, health, specifics=psu)
             psus_health_data.append(data)
