@@ -216,6 +216,8 @@ class ServerMap(ResourceMap):
         response = {sensor: [] for sensor in self.platform_sensor_list}
         for sensor in self.platform_sensor_list:
             sensor_reading = self._ipmi.get_sensor_list_by_type(sensor)
+            if not sensor_reading:
+                logger.debug(self.log.svc_log(f"No sensor data received for :{sensor}"))
             for reading in sensor_reading:
                 response[sensor].append(
                     self.format_ipmi_platform_sensor_reading(reading)

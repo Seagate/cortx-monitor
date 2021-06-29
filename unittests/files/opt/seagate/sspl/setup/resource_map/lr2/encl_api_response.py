@@ -15,6 +15,86 @@
 # please email opensource@seagate.com or cortx-questions@seagate.com
 
 
+FANMODULES_RESPONSE = """
+{
+    "status_code": 200,
+    "api-response":{
+        "fan-modules":[
+            {
+                "object-name":"fan-modules",
+                "meta":"/meta/fan-modules",
+                "durable-id":"fan_module_0.0",
+                "enclosure-id":0,
+                "dom-id":0,
+                "name":"Fan Module 0",
+                "location":"Enclosure 0 - Left",
+                "status":"OK",
+                "status-numeric":1,
+                "extended-status":"00000000",
+                "position":"Indexed",
+                "position-numeric":5,
+                "health":"OK",
+                "health-numeric":0,
+                "health-reason":"",
+                "health-recommendation":"",
+                "fan":[
+                    {
+                    "object-name":"fan-details",
+                    "meta":"/meta/fan",
+                    "durable-id":"fan_0.fm0.0",
+                    "name":"Fan 0",
+                    "location":"Enclosure 0, Fan Module 0",
+                    "status-ses":"OK",
+                    "status-ses-numeric":1,
+                    "extended-status":"00000010",
+                    "status":"Up",
+                    "status-numeric":0,
+                    "speed":13800,
+                    "position":"N/A",
+                    "position-numeric":6,
+                    "serial-number":"N/A",
+                    "part-number":"N/A",
+                    "fw-revision":"",
+                    "hw-revision":"",
+                    "locator-led":"Off",
+                    "locator-led-numeric":0,
+                    "health":"OK",
+                    "health-numeric":0,
+                    "health-reason":"",
+                    "health-recommendation":""
+                    },
+                    {
+                    "object-name":"fan-details",
+                    "meta":"/meta/fan",
+                    "durable-id":"fan_0.fm0.1",
+                    "name":"Fan 1",
+                    "location":"Enclosure 0, Fan Module 0",
+                    "status-ses":"OK",
+                    "status-ses-numeric":1,
+                    "extended-status":"00000010",
+                    "status":"Up",
+                    "status-numeric":0,
+                    "speed":13860,
+                    "position":"N/A",
+                    "position-numeric":6,
+                    "serial-number":"N/A",
+                    "part-number":"N/A",
+                    "fw-revision":"",
+                    "hw-revision":"",
+                    "locator-led":"Off",
+                    "locator-led-numeric":0,
+                    "health":"OK",
+                    "health-numeric":0,
+                    "health-reason":"",
+                    "health-recommendation":""
+                    }
+                ]
+            }
+        ]
+    }
+}
+"""
+
 ENCLOSURE_SENSORS_RESPONSE = """
     {
         "status_code": 200,
