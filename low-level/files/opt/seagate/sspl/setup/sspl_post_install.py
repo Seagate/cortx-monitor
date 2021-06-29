@@ -60,6 +60,9 @@ class SSPLPostInstall:
         """
         machine_id = Utility.get_machine_id()
 
+        # configure sspl-setup log dir before validation stage.
+        self.configure_sspl_setup_log()
+
         # Validate input/provisioner configs
         self.product = Utility.get_config_value(consts.PRVSNR_CONFIG_INDEX,
             "cortx>release>product")
@@ -165,17 +168,43 @@ class SSPLPostInstall:
             pkg_validator.validate("rpms", vm_dependency_rpms)
             # No processes to check in VM environment
 
+    def configure_sspl_setup_log(self):
+        """Configure sspl-setup log file in rsyslog
+        and update logrotate config file."""
+        from cortx.utils.service import DbusServiceHandler
+        self.dbus_service = DbusServiceHandler()
+
+        Conf.load(consts.SSPL_CONFIG_INDEX, consts.sspl_config_path)
+
+        # SSPL Setup log configuration
+        system_files_root = "%s/low-level/files" % consts.SSPL_BASE_DIR
+        sspl_log_file_path = Utility.get_config_value(consts.SSPL_CONFIG_INDEX,
+            "SYSTEM_INFORMATION>sspl_log_file_path")
+        setup_log_file_path = sspl_log_file_path.replace("/sspl.log","/sspl-setup.log")
+        if not os.path.exists(consts.RSYSLOG_SETUP_CONF):
+            shutil.copyfile("%s/%s" % (system_files_root, consts.RSYSLOG_SETUP_CONF),
+                consts.RSYSLOG_SETUP_CONF)
+        # Update log location as per sspl.conf
+        Utility.replace_expr(consts.RSYSLOG_SETUP_CONF, 'File.*[=,"]',
+            'File="%s"' % setup_log_file_path)
+
+        # configure logrotate
+        os.makedirs(consts.LOGROTATE_DIR, exist_ok=True)
+        Utility.replace_expr("%s/etc/logrotate.d/sspl_setup_logs" % system_files_root,
+            0, setup_log_file_path)
+
+        shutil.copy2("%s/etc/logrotate.d/sspl_setup_logs" % system_files_root,
+            consts.SETUP_LOGROTATE_CONF)
+        self.dbus_service.restart('rsyslog.service')
+
     def process(self):
         """Create SSPL user and required config files."""
         # dbus module import is implicit in cortx utils. Keeping this
         # after dependency validation will enrich the use of
         # validate_dependencies() method.
-        from cortx.utils.service import DbusServiceHandler
-        self.dbus_service = DbusServiceHandler()
 
         # Create and load sspl config
         self.create_sspl_conf()
-        Conf.load(consts.SSPL_CONFIG_INDEX, consts.sspl_config_path)
 
         # Update sspl.conf with provisioner supplied input config copy
         Conf.set(
@@ -262,7 +291,6 @@ class SSPLPostInstall:
         iem_log_file_path = Utility.get_config_value(consts.SSPL_CONFIG_INDEX,
             "IEMSENSOR>log_file_path")
         manifest_log_file_path = sspl_log_file_path.replace("/sspl.log","/manifest.log")
-        setup_log_file_path = sspl_log_file_path.replace("/sspl.log","/sspl-setup.log")
 
         # IEM configuration
         os.makedirs("%s/iem/iec_mapping" % consts.PRODUCT_BASE_DIR, exist_ok=True)
@@ -299,14 +327,6 @@ class SSPLPostInstall:
         Utility.replace_expr(consts.RSYSLOG_SB_CONF, 'File.*[=,"]',
             'File="%s"' % sspl_sb_log_file_path)
 
-        # SSPL Setup log configuration
-        if not os.path.exists(consts.RSYSLOG_SETUP_CONF):
-            shutil.copyfile("%s/%s" % (system_files_root, consts.RSYSLOG_SETUP_CONF),
-                consts.RSYSLOG_SETUP_CONF)
-        # Update log location as per sspl.conf
-        Utility.replace_expr(consts.RSYSLOG_SETUP_CONF, 'File.*[=,"]',
-            'File="%s"' % setup_log_file_path)
-
         # Configure logrotate
         # Create logrotate dir in case it's not present
         os.makedirs(consts.LOGROTATE_DIR, exist_ok=True)
@@ -316,8 +336,6 @@ class SSPLPostInstall:
             0, sspl_log_file_path)
         Utility.replace_expr("%s/etc/logrotate.d/sspl_sb_logs" % system_files_root,
             0, sspl_sb_log_file_path)
-        Utility.replace_expr("%s/etc/logrotate.d/sspl_setup_logs" % system_files_root,
-            0, setup_log_file_path)
         shutil.copy2("%s/etc/logrotate.d/iem_messages" % system_files_root,
             consts.IEM_LOGROTATE_CONF)
         shutil.copy2("%s/etc/logrotate.d/sspl_logs" % system_files_root,
@@ -326,8 +344,6 @@ class SSPLPostInstall:
             consts.MSB_LOGROTATE_CONF)
         shutil.copy2("%s/etc/logrotate.d/sspl_sb_logs" % system_files_root,
             consts.SB_LOGROTATE_CONF)
-        shutil.copy2("%s/etc/logrotate.d/sspl_setup_logs" % system_files_root,
-            consts.SETUP_LOGROTATE_CONF)
 
         # This rsyslog restart will happen after successful updation of rsyslog
         # conf file and before sspl starts. If at all this will be removed from
