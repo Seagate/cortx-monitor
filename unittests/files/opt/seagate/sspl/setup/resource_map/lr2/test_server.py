@@ -178,6 +178,7 @@ class TestServerMap(unittest.TestCase):
     @patch("framework.platforms.server.sas.SAS.get_port_list")
     @patch("framework.platforms.server.sas.SAS.get_host_list")
     def test_get_sas_hba_info(self, host_list, port_list, port_data):
+        server_map = self.create_server_obj()
         host_list.return_value = ['host1']
         port_list.return_value = ['port-1:0']
         port_data.return_value = {
@@ -185,7 +186,7 @@ class TestServerMap(unittest.TestCase):
             "state": "running",
             "sas_address": "0x500c0fff0a98b000"
         }
-        resp = self.server_map.get_sas_hba_info()
+        resp = server_map.get_sas_hba_info()
         assert resp[0]['uid'] == "SASHBA-1"
         assert resp[0]['health']['status'] == "OK"
         assert resp[0]['health']['description'] == \
@@ -201,6 +202,7 @@ class TestServerMap(unittest.TestCase):
     @patch("framework.platforms.server.sas.SAS.get_phy_list_for_port")
     @patch("framework.platforms.server.sas.SAS.get_port_list")
     def test_get_sas_ports_info(self, port_list, phy_list, phy_data):
+        server_map = self.create_server_obj()
         port_list.return_value = ['port-1:0']
         phy_list.return_value = ['phy-1:0']
         phy_data.return_value = {
@@ -208,7 +210,7 @@ class TestServerMap(unittest.TestCase):
             "state": "enabled",
             "negotiated_linkrate": "12.0 Gbit"
         }
-        resp = self.server_map.get_sas_ports_info()
+        resp = server_map.get_sas_ports_info()
         assert resp[0]['uid'] == "sas_port-1:0"
         assert resp[0]['health']['status'] == "OK"
         assert resp[0]['health']['description'] == \
