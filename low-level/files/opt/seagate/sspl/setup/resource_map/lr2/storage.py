@@ -131,10 +131,7 @@ class StorageMap(ResourceMap):
                 health = fan_module.get('health')
                 fan_module_resp = self.get_health_template(uid, is_fru=True)
                 specifics = [self.get_fan_specfics(fan) for fan in fan_module['fan']]
-                description = f"FAN is in {'good' if health=='OK' else 'bad'} health"
-                recommendation = fan_module.get('health-recommendation', 'NA'),
-                self.set_health_data(
-                    fan_module_resp, health, specifics=specifics)
+                self.set_health_data(fan_module_resp, health, specifics=specifics)
                 response.append(fan_module_resp)
         else:
             logger.error(self.log.svc_log("No reponse received from fan modules"))
