@@ -18,7 +18,6 @@
 import re
 
 from cortx.utils.process import SimpleProcess
-from framework.utils.utility import Utility
 
 
 class Platform:

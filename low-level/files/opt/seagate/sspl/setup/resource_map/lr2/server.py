@@ -36,8 +36,7 @@ from framework.platforms.server.error import (
 from framework.platforms.server.platform import Platform
 from framework.platforms.server.sas import SAS
 from framework.platforms.server.error import SASError, NetworkError
-from framework.utils.conf_utils import (
-    Conf, GLOBAL_CONF, SSPL_CONF, NODE_TYPE_KEY)
+from framework.utils.conf_utils import (GLOBAL_CONF, NODE_TYPE_KEY, Conf, SSPL_CONF)
 from framework.utils.service_logging import CustomLog, logger
 from framework.utils.ipmi_client import IpmiFactory
 from framework.utils.tool_factory import ToolFactory

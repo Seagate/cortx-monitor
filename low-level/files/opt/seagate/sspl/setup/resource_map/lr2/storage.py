@@ -184,8 +184,9 @@ class StorageMap(ResourceMap):
                 for fru, method in self.storage_resources[res_type].items():
                     try:
                         info[res_type].update({fru: method()})
-                    except:
-                        # TODO: Log the exception
+                    except Exception as err:
+                        logger.error(
+                            self.log.svc_log(f"{err.__class__.__name__}: {err}"))
                         info[res_type].update({fru: None})
             info["last_updated"] = int(time.time())
             storage.append(info)
