@@ -39,6 +39,7 @@ from framework.utils.sysfs_interface import SysFS
 from framework.utils.tool_factory import ToolFactory
 from message_handlers.node_data_msg_handler import NodeDataMsgHandler
 from framework.platforms.server.sas import SAS
+from framework.platforms.server.error import SASError
 
 # Override default store
 store = file_store
@@ -136,9 +137,13 @@ class SASPortSensor(SensorThread, InternalMsgQ):
 
         try:
             self.HOST_ID = SAS().get_host_list()[0].replace('host', '')
-        except OSError as err:
-            logger.exception(err)
-            self.shutdown()
+        except SASError as err:
+            logger.error(f"Shutting Down the SASPort Sensor due to {err}")
+            return False
+        except Exception as err:
+            logger.exception("Shutting Down the SASPort Sensor with error: %s",
+                             err)
+            return False
 
         self.RESOURCE_ID = SAS_RESOURCE_ID + self.HOST_ID  # eg. SASHBA-0 if host_id=0
 
