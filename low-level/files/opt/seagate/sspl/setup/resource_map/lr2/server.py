@@ -755,7 +755,6 @@ class ServerMap(ResourceMap):
             health_data = disk.get_health()
             health = "OK" if health_data['SMART_health'] else "Fault"
             self.set_health_data(disk_health, health, specifics=[{"SMART": health_data}])
-            disk_health["last_updated"] = int(time.time())
             disks.append(disk_health)
         disks_health_info = [{
             "overall_usage": overall_usage,
@@ -772,10 +771,9 @@ class ServerMap(ResourceMap):
             "PS1 Status": "PSU1",
             "PS2 Status": "PSU2"
         }
-        response, _, _ = SimpleProcess(shlex.split('ipmitool sdr type "Power Supply" -c')).run()
         uids = {}
-        for psu in response.decode().strip("\n").split("\n"):
-            psu_name, sensor, *_ = psu.split(",")
+        for psu in self._ipmi.get_sensor_list_by_type("Power Supply"):
+            psu_name, sensor, *_ = psu
             uids[psu_mapping[psu_name]] = f"#0x{sensor.strip('h').lower()}"
         response, _, _ = SimpleProcess("dmidecode -t 39").run()
         matches = re.finditer(r"System Power Supply\n(\s*.*\n)"
@@ -786,7 +784,6 @@ class ServerMap(ResourceMap):
         for match in matches:
             psu_data = match.groupdict()
             data = self.get_health_template(f'Power Supply {uids[psu_data["location"]]}', True)
-            data["last_updated"] = int(time.time())
             health = "OK" if (psu_data["status"] == "Present, OK") else "Fault"
             self.set_health_data(data, health, specifics=psu_data)
             psus.append(data)
