@@ -102,7 +102,8 @@ class StorageMap(ResourceMap):
                     info.update({resource: method()})
                     resource_found = True
                 except Exception as err:
-                    logger.error(self.log.svc_log(f"{err}"))
+                    logger.error(
+                        self.log.svc_log(f"{err.__class__.__name__}:{err}"))
                     info = None
         else:
             for node in nodes:
@@ -110,13 +111,17 @@ class StorageMap(ResourceMap):
                 for res_type in self.storage_resources:
                     method = self.storage_resources[res_type].get(resource)
                     if not method:
+                        logger.error(
+                            self.log.svc_log(
+                                f"No mapping function found for {res_type}"))
                         continue
                     try:
                         resource_found = True
                         info = method()
                         break
                     except Exception as err:
-                        logger.error(self.log.svc_log(f"{err}"))
+                        logger.error(
+                            self.log.svc_log(f"{err.__class__.__name__}: {err}"))
                         info = None
 
                 if resource_found:

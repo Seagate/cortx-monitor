@@ -126,7 +126,7 @@ class ServerMap(ResourceMap):
                     resource_found = True
                 except Exception as err:
                     logger.error(
-                        self.log.svc_log(f"{err.__class__.__name__}:{err}"))
+                        self.log.svc_log(f"{err.__class__.__name__}: {err}"))
                     info = None
         else:
             for node in nodes:
@@ -134,13 +134,16 @@ class ServerMap(ResourceMap):
                 for res_type in self.server_resources:
                     method = self.server_resources[res_type].get(resource)
                     if not method:
+                        logger.error(
+                            self.log.svc_log(
+                                f"No mapping function found for {res_type}"))
                         continue
                     try:
                         info = method()
                         resource_found = True
                     except Exception as err:
                         logger.error(
-                            self.log.svc_log(f"{err.__class__.__name__}:{err}"))
+                            self.log.svc_log(f"{err.__class__.__name__}: {err}"))
                         info = None
                 if resource_found:
                     break
