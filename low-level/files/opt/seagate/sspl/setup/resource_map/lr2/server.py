@@ -15,19 +15,21 @@
 # For any questions about this software or licensing,
 # please email opensource@seagate.com or cortx-questions@seagate.com
 
-
-import time
-import re
 import errno
-from framework.utils.ipmi_client import IpmiFactory
-from framework.base import sspl_constants
-
 import psutil
+import time
+from socket import AF_INET
 from pathlib import Path
+
+from framework.utils.ipmi_client import IpmiFactory
 from framework.utils.tool_factory import ToolFactory
 from resource_map import ResourceMap
 from error import ResourceMapError
-from framework.base.sspl_constants import CPU_PATH
+from framework.platforms.server.network import Network
+from framework.base.sspl_constants import (CPU_PATH,
+    DEFAULT_RECOMMENDATION, HEALTH_SVC_NAME)
+from framework.utils.conf_utils import (GLOBAL_CONF, NODE_TYPE_KEY, Conf)
+from framework.utils.service_logging import CustomLog, logger
 
 
 class ServerMap(ResourceMap):
@@ -40,6 +42,8 @@ class ServerMap(ResourceMap):
     def __init__(self):
         """Initialize server"""
         super().__init__()
+        self.log = CustomLog(HEALTH_SVC_NAME)
+        self.validate_server_type_support()
         self.sysfs = ToolFactory().get_instance('sysfs')
         self.sysfs.initialize()
         self.sysfs_base_path = self.sysfs.get_sysfs_base_path()
@@ -47,10 +51,25 @@ class ServerMap(ResourceMap):
         self.server_frus = {
             'cpu': self.get_cpu_info,
             'platform_sensors': self.get_platform_sensors_info,
-            'memory': self.get_mem_info
+            'memory': self.get_mem_info,
+            'fans': self.get_fans_info,
+            'nw_ports': self.get_nw_ports_info
         }
         self._ipmi = IpmiFactory().get_implementor("ipmitool")
         self.platform_sensor_list = ['Temperature', 'Voltage', 'Current']
+
+    def validate_server_type_support(self):
+        """Check for supported server type."""
+        server_type = Conf.get(GLOBAL_CONF, NODE_TYPE_KEY).lower()
+        # TODO Add support for 'virtual' type server.
+        logger.debug(self.log.svc_log(
+            f"Server Type:{server_type}"))
+        supported_types = ["physical"]
+        if server_type not in supported_types:
+            msg = f"Health provider is not supported for server type:{server_type}"
+            logger.error(self.log.svc_log(msg))
+            raise ResourceMapError(
+                errno.EINVAL, msg)
 
     def get_health_info(self, rpath):
         """
@@ -58,13 +77,19 @@ class ServerMap(ResourceMap):
 
         rpath: Resource id (Example: nodes[0]>compute[0]>hw>disks)
         """
+        logger.info(self.log.svc_log(
+            f"Get Health data for rpath:{rpath}"))
         info = {}
         fru_found = False
         nodes = rpath.strip().split(">")
         leaf_node, _ = self.get_node_details(nodes[-1])
         if leaf_node == "compute":
             for fru in self.server_frus:
-                info.update({fru: self.server_frus[fru]()})
+                try:
+                    info.update({fru: self.server_frus[fru]()})
+                except:
+                    # TODO: Log the exception
+                    info.update({fru: None})
             info["last_updated"] = int(time.time())
             fru_found = True
         else:
@@ -73,33 +98,18 @@ class ServerMap(ResourceMap):
                 fru, _ = self.get_node_details(node)
                 if self.server_frus.get(fru):
                     fru_found = True
-                    info = self.server_frus[fru]()
+                    try:
+                        info = self.server_frus[fru]()
+                    except:
+                        # TODO: Log the exception
+                        info = None
                     break
         if not fru_found:
+            msg = f"Health provider doesn't have support for'{rpath}'."
+            logger.error(self.log.svc_log(msg))
             raise ResourceMapError(
-                errno.EINVAL,
-                f"Health provider doesn't have support for'{rpath}'.")
+                errno.EINVAL, msg)
         return info
-
-    @staticmethod
-    def set_health_data(health_data: dict, status, description=None,
-                        recommendation=None, specifics=None):
-        """Sets health attributes for a component."""
-        good_state = (status == "OK")
-        if not description:
-            description = "%s %s in good health" % (
-                health_data.get("uid"),
-                'is' if good_state else 'is not')
-        if not recommendation:
-            recommendation = 'None' if good_state\
-                             else "Fault detected, please contact Seagate support."
-
-        health_data["health"].update({
-            "status": status,
-            "description": description,
-            "recommendation": recommendation,
-            "specifics": specifics
-        })
 
     @staticmethod
     def get_cpu_usage(index=2, percpu=False):
@@ -142,7 +152,6 @@ class ServerMap(ResourceMap):
         for cpu_id in range(0, cpu_count):
             uid = f"cpu_{cpu_id}"
             cpu_dict = self.get_health_template(uid, is_fru=False)
-            cpu_dict["last_updated"] = int(time.time())
             online_status = "Online" if cpu_id in cpu_online else "Offline"
             health_status = "OK" if online_status == "Online" else "NA"
             usage = "NA" if health_status == "NA" \
@@ -165,6 +174,8 @@ class ServerMap(ResourceMap):
                 "cpus": per_cpu_data
             }
         ]
+        logger.debug(self.log.svc_log(
+            f"CPU Health Data:{cpu_data}"))
         return cpu_data
 
     def format_ipmi_platform_sensor_reading(self, reading):
@@ -180,26 +191,20 @@ class ServerMap(ResourceMap):
         upper_non_recoverable = sensor_props[1].get('Upper Non-Recoverable', 'NA')
         status = 'OK' if reading[2] == 'ok' else 'NA'
         health_desc = 'good' if status == 'OK' else 'bad'
-        recommendation = sspl_constants.DEFAULT_ALERT_RECOMMENDATION if status != 'OK' else 'NA'
-        resp = {
-            "uid": uid,
-            "fru": "false",
-            "last_updated":  int(time.time()),
-            "health": {
-                "status": status,
-                "description": f"{uid} sensor is in {health_desc} health",
-                "recommendation": f"{recommendation}",
-                "specifics": [
-                    {
-                        "Sensor Reading": f"{reading[-1]}",
-                        "lower_critical_threshold": lower_critical,
-                        "upper_critical_threshold": upper_critical,
-                        "lower_non_recoverable": lower_non_recoverable,
-                        "upper_non_recoverable": upper_non_recoverable,
-                    }
-                ]
-            }
-        }
+        description = f"{uid} sensor is in {health_desc} health."
+        recommendation = DEFAULT_RECOMMENDATION if status != 'OK' else 'NA'
+        specifics = [
+            {
+                "Sensor Reading": f"{reading[-1]}",
+                "lower_critical_threshold": lower_critical,
+                "upper_critical_threshold": upper_critical,
+                "lower_non_recoverable": lower_non_recoverable,
+                "upper_non_recoverable": upper_non_recoverable,
+                }
+            ]
+        resp = self.get_health_template(uid, is_fru=False)
+        self.set_health_data(
+            resp, status, description, recommendation, specifics)
         return resp
 
     def get_platform_sensors_info(self):
@@ -211,6 +216,8 @@ class ServerMap(ResourceMap):
                 response[sensor].append(
                     self.format_ipmi_platform_sensor_reading(reading)
                 )
+        logger.debug(self.log.svc_log(
+            f"Platform Sensor Health Data:{response}"))
         return response
 
     def get_mem_info(self):
@@ -221,17 +228,19 @@ class ServerMap(ResourceMap):
             80))
         data = []
         status = "OK"
-        description = "Host memory is in good health"
+        description = "Host memory is in good health."
         self.mem_info = dict(psutil.virtual_memory()._asdict())
         curr_mem_usage_threshold = int(self.mem_info['percent'])
         if curr_mem_usage_threshold > int(default_mem_usage_threshold):
             status = "Overloaded"
             description = (f"Current host memory usage is {curr_mem_usage_threshold},"
-                           f"beyond configured threshold of {default_mem_usage_threshold}")
+                           f"beyond configured threshold of {default_mem_usage_threshold}.")
 
         memory_dict = self.prepare_mem_json(status,
                                             description)
         data.append(memory_dict)
+        logger.debug(self.log.svc_log(
+            f"Memory Health Data:{data}"))
         return data
 
     def prepare_mem_json(self, status, description):
@@ -242,15 +251,8 @@ class ServerMap(ResourceMap):
                 total_memory['percent'] = str(self.mem_info['percent']) + '%'
             else:
                 total_memory[key] = str(self.mem_info[key] >> 20) + 'MB'
-
-        memory_dict = {
-            "uid": "main_memory",
-            "fru": "false",
-            "last_updated": int(time.time()),
-            "health": {
-                "status": status,
-                "description": description,
-                "specifics": [
+        uid = "main_memory"
+        specifics = [
                     {
                         "total": total_memory['total'],
                         "available": total_memory['available'],
@@ -265,13 +267,93 @@ class ServerMap(ResourceMap):
                         "slab": total_memory['slab']
                     }
                 ]
-            }
-        }
+        memory_dict = self.get_health_template(uid, is_fru=False)
+        self.set_health_data(
+            memory_dict, status=status, description=description,
+            specifics=specifics)
         return memory_dict
 
+    def get_fans_info(self):
+        """Get the Fan sensor information using ipmitool."""
+        data = []
+        sensor_reading = self._ipmi.get_sensor_list_by_type('Fan')
+        if sensor_reading is None:
+            msg = f"Failed to get Fan sensor reading using ipmitool"
+            logger.error(self.log.svc_log(msg))
+            return
+        for fan_reading in sensor_reading:
+            sensor_id = fan_reading[0]
+            fan_dict = self.get_health_template(sensor_id, is_fru=True)
+            sensor_props = self._ipmi.get_sensor_props(sensor_id)
+            status = 'OK' if fan_reading[2] == 'ok' else 'NA'
+            lower_critical = sensor_props[1].get('Lower Critical', 'NA')
+            upper_critical = sensor_props[1].get('Upper Critical', 'NA')
+            specifics = [
+                    {
+                        "Sensor Reading": f"{fan_reading[-1]}",
+                        "lower_critical_threshold": lower_critical,
+                        "upper_critical_threshold": upper_critical
+                    }
+                ]
 
-# if __name__ == "__main__":
-#     server = ServerMap()
-#     health_data = server.get_health_info(
-#         rpath="nodes[0]>compute[0]>hw>memory")
-#     print(health_data)
+            self.set_health_data(fan_dict, status=status,
+                                 specifics=specifics)
+
+            data.append(fan_dict)
+            logger.debug(self.log.svc_log(
+                f"Fan Health Data:{fan_dict}"))
+        return data
+
+    def get_nw_ports_info(self):
+        """Return the Network ports information."""
+        network_cable_data = []
+        io_counters = psutil.net_io_counters(pernic=True)
+
+        nw_instance = Network()
+        for interface, addrs in psutil.net_if_addrs().items():
+            nic_info = self.get_health_template(interface, False)
+            specifics = {}
+            for addr in addrs:
+                if addr.family == AF_INET:
+                    specifics["ipV4"] = addr.address
+            if interface in io_counters:
+                io_info = io_counters[interface]
+                specifics = {
+                    "networkErrors": io_info.errin + io_info.errout,
+                    "droppedPacketsIn": io_info.dropin,
+                    "droppedPacketsOut": io_info.dropout,
+                    "packetsIn": io_info.packets_recv,
+                    "packetsOut": io_info.packets_sent,
+                    "trafficIn": io_info.bytes_recv,
+                    "trafficOut": io_info.bytes_sent
+                }
+            # Get the interface health status.
+            nw_status, nw_cable_conn_status = \
+                self.get_nw_status(nw_instance, interface)
+            specifics["nwStatus"] = nw_status
+            specifics["nwCableConnStatus"] = nw_cable_conn_status
+            # Map and set the interface health status and description.
+            map_status = {"CONNECTED": "OK", "DISCONNECTED": "Disabled/Failed",
+                          "UNKNOWN": "NA"}
+            health_status = map_status[nw_cable_conn_status]
+            desc = "Network Interface '%s' is %sin good health." % (
+                interface, '' if health_status == "OK" else 'not '
+            )
+            self.set_health_data(nic_info, health_status, description=desc,
+                                 specifics=[specifics])
+            network_cable_data.append(nic_info)
+        return network_cable_data
+
+    def get_nw_status(self, nw_interface, interface):
+        """Read & Return the latest network status from sysfs files."""
+        try:
+            nw_status = nw_interface.get_operational_state(interface)
+        except Exception:
+            nw_status = "UNKNOWN"
+            # Log the error when logging class is in place.
+        try:
+            nw_cable_conn_status = nw_interface.get_link_state(interface)
+        except Exception:
+            nw_cable_conn_status = "UNKNOWN"
+            # Log the error when logging class is in place.
+        return nw_status, nw_cable_conn_status

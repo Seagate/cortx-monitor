@@ -142,3 +142,12 @@ logger = _logger
 
 # TODO: Instead of python logger, make use of this custom logger class and
 # which should also solve problem of line no and file name
+
+class CustomLog:
+    """A wrapper class to add extra service name
+    as prefix to sspl logs."""
+    def __init__(self, svc_name):
+        self.service = svc_name
+
+    def svc_log(self, msg):
+        return f"[{self.service}] {msg}"

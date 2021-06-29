@@ -1,5 +1,3 @@
-#!/bin/python3
-
 # CORTX Python common library.
 # Copyright (c) 2021 Seagate Technology LLC and/or its Affiliates
 # This program is free software: you can redistribute it and/or modify
@@ -15,4 +13,32 @@
 # For any questions about this software or licensing,
 # please email opensource@seagate.com or cortx-questions@seagate.com
 
-"""LR2 solution platform monitor"""
+class InterfaceError(Exception):
+    """Error Handling for Physical Interface/Ports Implementations."""
+
+    def __init__(self, rc, message, *args):
+        """Initialize the error information."""
+        self._rc = rc
+        self._desc = message % (args)
+
+    @property
+    def rc(self):
+        return self._rc
+
+    @property
+    def desc(self):
+        return self._desc
+
+    def __str__(self):
+        """Return the error string."""
+        if self._rc == 0:
+            return self._desc
+        return "error(%d): %s" % (self._rc, self._desc)
+
+
+class NetworkError(InterfaceError):
+    """Error Handling for Network related errors."""
+
+    def __init__(self, rc, message, *message_args):
+        """Initialize the Error information."""
+        super(NetworkError, self).__init__(rc, message, *message_args)

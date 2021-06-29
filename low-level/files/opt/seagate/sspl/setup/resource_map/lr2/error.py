@@ -1,4 +1,4 @@
-#!/bin/python3
+#!/bin/env python3
 
 # CORTX Python common library.
 # Copyright (c) 2021 Seagate Technology LLC and/or its Affiliates
@@ -13,6 +13,15 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 # For any questions about this software or licensing,
-# please email opensource@seagate.com or cortx-questions@seagate.com
+# please email opensource@seagate.com or cortx-questions@seagate.com.
 
-"""LR2 solution platform monitor"""
+from cortx.utils.errors import BaseError
+
+
+class ResourceMapError(BaseError):
+    """Generic Exception with error code and output."""
+
+    def __init__(self, rc=0, desc=None, message_id=None, message_args=None):
+        """Initialize ResourceMapError."""
+        super(ResourceMapError, self).__init__(
+              rc, 'SSPL: %s' % desc, message_id, message_args)
