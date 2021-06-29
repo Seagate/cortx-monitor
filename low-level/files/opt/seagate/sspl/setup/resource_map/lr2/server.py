@@ -27,7 +27,7 @@ from resource_map import ResourceMap
 from framework.base.sspl_constants import (
     CPU_PATH, DEFAULT_RECOMMENDATION, UNIT_IFACE, SERVICE_IFACE,
     SYSTEMD_BUS, SAS_RESOURCE_ID, HEALTH_SVC_NAME)
-from framework.platforms.server.raid.raid import RAID
+from framework.platforms.server.raid.raid import RAIDs
 from framework.platforms.server.software import BuildInfo, Service
 from framework.platforms.server.network import Network
 from framework.platforms.server.sas import SAS
@@ -40,6 +40,7 @@ from framework.utils.conf_utils import (GLOBAL_CONF, NODE_TYPE_KEY, Conf, SSPL_C
 from framework.utils.service_logging import CustomLog, logger
 from framework.utils.ipmi_client import IpmiFactory
 from framework.utils.tool_factory import ToolFactory
+
 
 class ServerMap(ResourceMap):
     """ServerMap class provides resource map and related information
