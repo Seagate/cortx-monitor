@@ -795,9 +795,3 @@ class ServerMap(ResourceMap):
             self.set_health_data(data, health, specifics=psu_data)
             psus.append(data)
         return psus
-
-
-if __name__ == "__main__":
-    server = ServerMap()
-    health_data = server.get_health_info(rpath="nodes[0]>compute[0]>disks")
-    print(health_data)
