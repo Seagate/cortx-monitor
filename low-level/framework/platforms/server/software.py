@@ -22,10 +22,10 @@ from dbus import SystemBus, Interface
 from cortx.utils.process import SimpleProcess
 
 from cortx.utils.conf_store.error import ConfError
+from cortx.utils.service.service_handler import DbusServiceHandler
 from framework.platforms.server.error import BuildInfoError, ServiceError
 from framework.utils.conf_utils import SSPL_CONF, Conf
-from framework.base.sspl_constants import (MANAGER_IFACE, SYSTEMD_BUS,
-                                           CORTX_RELEASE_FACTORY_INFO,
+from framework.base.sspl_constants import (CORTX_RELEASE_FACTORY_INFO,
                                            CONFIG_SPEC_TYPE)
 
 
@@ -63,10 +63,7 @@ class Service:
 
     def __init__(self):
         """Initialize the class."""
-        self._bus = SystemBus()
-        self._systemd = self._bus.get_object(
-            SYSTEMD_BUS, "/org/freedesktop/systemd1")
-        self._manager = Interface(self._systemd, dbus_interface=MANAGER_IFACE)
+        self._bus, self._manager = DbusServiceHandler._get_systemd_interface()
 
     def get_external_service_list(self):
         """Get list of external services."""
