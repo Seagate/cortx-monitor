@@ -94,6 +94,7 @@ SYSTEMD_BUS = "org.freedesktop.systemd1"
 CORTX_RELEASE_FACTORY_INFO = "/etc/yum.repos.d/RELEASE_FACTORY.INFO"
 DEFAULT_RECOMMENDATION = 'Please Contact Seagate Support.'
 HEALTH_SVC_NAME = 'node-health'
+SAS_RESOURCE_ID = "SASHBA-"
 
 # This file will be created when sspl is being configured for node replacement case
 REPLACEMENT_NODE_ENV_VAR_FILE = "/etc/profile.d/set_replacement_env.sh"

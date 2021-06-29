@@ -52,6 +52,14 @@ class BuildInfoError(InterfaceError):
         super(BuildInfoError, self).__init__(rc, message, *message_args)
 
 
+class SASError(InterfaceError):
+    """Error Handling for SAS related errors."""
+
+    def __init__(self, rc, message, *message_args):
+        """Initialize the Error information."""
+        super(SASError, self).__init__(rc, message, *message_args)
+
+
 class ServiceError(InterfaceError):
     """Error handling while fetching service info."""
 

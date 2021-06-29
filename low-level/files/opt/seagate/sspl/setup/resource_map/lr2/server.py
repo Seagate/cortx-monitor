@@ -30,13 +30,14 @@ from framework.utils.ipmi_client import IpmiFactory
 from framework.utils.tool_factory import ToolFactory
 from framework.platforms.server.network import Network
 from framework.platforms.server.software import BuildInfo, Service
-from framework.platforms.server.error import BuildInfoError, ServiceError
+from framework.platforms.server.sas import SAS
+from framework.platforms.server.error import (
+    SASError, NetworkError, BuildInfoError, ServiceError)
 from framework.utils.service_logging import CustomLog, logger
-from framework.utils.conf_utils import (GLOBAL_CONF, Conf,
-                                        NODE_TYPE_KEY, )
-from framework.base.sspl_constants import (CPU_PATH, DEFAULT_RECOMMENDATION,
-                                           UNIT_IFACE, SERVICE_IFACE,
-                                           SYSTEMD_BUS, HEALTH_SVC_NAME)
+from framework.utils.conf_utils import (GLOBAL_CONF, NODE_TYPE_KEY, Conf)
+from framework.base.sspl_constants import (
+    CPU_PATH, DEFAULT_RECOMMENDATION,UNIT_IFACE, SERVICE_IFACE,
+    SYSTEMD_BUS, SAS_RESOURCE_ID, HEALTH_SVC_NAME)
 
 
 class ServerMap(ResourceMap):
@@ -55,14 +56,16 @@ class ServerMap(ResourceMap):
         self.sysfs.initialize()
         self.sysfs_base_path = self.sysfs.get_sysfs_base_path()
         self.cpu_path = self.sysfs_base_path + CPU_PATH
-        self.server_frus = {
+        self.server_map = {
             'cpu': self.get_cpu_info,
             'platform_sensors': self.get_platform_sensors_info,
             'memory': self.get_mem_info,
             'fans': self.get_fans_info,
             'nw_ports': self.get_nw_ports_info,
             'cortx_sw_services': self.get_cortx_service_info,
-            'external_sw_services': self.get_external_service_info
+            'external_sw_services': self.get_external_service_info,
+            'sas_hba': self.get_sas_hba_info,
+            'sas_ports': self.get_sas_ports_info
         }
         self._ipmi = IpmiFactory().get_implementor("ipmitool")
         self.platform_sensor_list = ['Temperature', 'Voltage', 'Current']
@@ -103,9 +106,9 @@ class ServerMap(ResourceMap):
             logger.error(self.log.svc_log(
                 f"Unable to get build info due to {err}"))
         if leaf_node == "compute":
-            for fru in self.server_frus:
+            for fru in self.server_map:
                 try:
-                    info.update({fru: self.server_frus[fru]()})
+                    info.update({fru: self.server_map[fru]()})
                 except:
                     # TODO: Log the exception
                     info.update({fru: None})
@@ -115,10 +118,10 @@ class ServerMap(ResourceMap):
             fru = None
             for node in nodes:
                 fru, _ = self.get_node_details(node)
-                if self.server_frus.get(fru):
+                if self.server_map.get(fru):
                     fru_found = True
                     try:
-                        info = self.server_frus[fru]()
+                        info = self.server_map[fru]()
                     except:
                         # TODO: Log the exception
                         info = None
@@ -231,6 +234,8 @@ class ServerMap(ResourceMap):
         response = {sensor: [] for sensor in self.platform_sensor_list}
         for sensor in self.platform_sensor_list:
             sensor_reading = self._ipmi.get_sensor_list_by_type(sensor)
+            if not sensor_reading:
+                logger.debug(self.log.svc_log(f"No sensor data received for :{sensor}"))
             for reading in sensor_reading:
                 response[sensor].append(
                     self.format_ipmi_platform_sensor_reading(reading)
@@ -323,6 +328,100 @@ class ServerMap(ResourceMap):
                 f"Fan Health Data:{fan_dict}"))
         return data
 
+    def get_sas_hba_info(self):
+        """Return SAS-HBA current health."""
+        sas_hba_data = []
+        sas_instance = SAS()
+        try:
+            hosts = sas_instance.get_host_list()  # ['host1']
+        except SASError as err:
+            hosts = []
+            logger.error(self.log.svc_log(err))
+        except Exception as err:
+            hosts = []
+            logger.exception(self.log.svc_log(err))
+
+        for host in hosts:
+            host_id = SAS_RESOURCE_ID + host.replace('host', '')
+            host_data = self.get_health_template(host_id, False)
+            try:
+                ports = sas_instance.get_port_list(host)
+                # ports = ['port-1:0', 'port-1:1', 'port-1:2', 'port-1:3']
+            except SASError as err:
+                ports = []
+                logger.error(self.log.svc_log(err))
+            except Exception as err:
+                ports = []
+                logger.exception(self.log.svc_log(err))
+            health = "OK"
+            specifics = {
+                'num_ports': len(ports),
+                'ports': []
+            }
+            for port in ports:
+                try:
+                    port_data = sas_instance.get_port_data(port)
+                except SASError as err:
+                    port_data = []
+                    logger.error(self.log.svc_log(err))
+                except Exception as err:
+                    port_data = []
+                    logger.exception(self.log.svc_log(err))
+                specifics['ports'].append(port_data)
+                if not port_data or port_data['state'] != 'running':
+                    health = "NA"
+            self.set_health_data(host_data, health, specifics=[specifics])
+            sas_hba_data.append(host_data)
+        return sas_hba_data
+
+    def get_sas_ports_info(self):
+        """Return SAS Ports current health."""
+        sas_ports_data = []
+        sas_instance = SAS()
+        try:
+            ports = sas_instance.get_port_list()
+            # eg: ['port-1:0', 'port-1:1', 'port-1:2', 'port-1:3']
+        except SASError as err:
+            ports = []
+            logger.error(self.log.svc_log(err))
+        except Exception as err:
+            ports = []
+            logger.exception(self.log.svc_log(err))
+
+        for port in ports:
+            port_id = 'sas_' + port
+            port_data = self.get_health_template(port_id, False)
+            try:
+                phys = sas_instance.get_phy_list_for_port(port)
+                # eg: [ 'phy-1:0', 'phy-1:1', 'phy-1:2', 'phy-1:3']
+            except SASError as err:
+                phys = []
+                logger.error(self.log.svc_log(err))
+            except Exception as err:
+                phys = []
+                logger.exception(self.log.svc_log(err))
+            specifics = {
+                'num_phys': len(phys),
+                'phys': []
+            }
+            health = "OK"
+            for phy in phys:
+                try:
+                    phy_data = sas_instance.get_phy_data(phy)
+                except SASError as err:
+                    phy_data = {}
+                    logger.error(self.log.svc_log(err))
+                except Exception:
+                    phy_data = {}
+                    logger.exception(self.log.svc_log(err))
+                specifics['phys'].append(phy_data)
+                if not phy_data or phy_data['state'] != 'enabled' or \
+                   'Gbit' not in phy_data['negotiated_linkrate']:
+                    health = "NA"
+            self.set_health_data(port_data, health, specifics=[specifics])
+            sas_ports_data.append(port_data)
+        return sas_ports_data
+
     def get_nw_ports_info(self):
         """Return the Network ports information."""
         network_cable_data = []
@@ -367,14 +466,20 @@ class ServerMap(ResourceMap):
         """Read & Return the latest network status from sysfs files."""
         try:
             nw_status = nw_interface.get_operational_state(interface)
-        except Exception:
+        except NetworkError as err:
             nw_status = "UNKNOWN"
-            # Log the error when logging class is in place.
+            logger.error(self.log.svc_log(err))
+        except Exception as err:
+            nw_status = "UNKNOWN"
+            logger.exception(self.log.svc_log(err))
         try:
             nw_cable_conn_status = nw_interface.get_link_state(interface)
-        except Exception:
+        except NetworkError as err:
             nw_cable_conn_status = "UNKNOWN"
-            # Log the error when logging class is in place.
+            logger.exception(self.log.svc_log(err))
+        except Exception as err:
+            nw_cable_conn_status = "UNKNOWN"
+            logger.exception(self.log.svc_log(err))
         return nw_status, nw_cable_conn_status
 
     def get_cortx_service_info(self):
