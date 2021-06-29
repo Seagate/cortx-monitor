@@ -65,15 +65,14 @@ class StorageMap(ResourceMap):
 
     def validate_storage_type_support(self):
         """Check for supported storage type."""
-        storage_type = Conf.get(GLOBAL_CONF, STORAGE_TYPE_KEY, "virtual").lower()
-        logger.debug(self.log.svc_log(
-            f"Storage Type:{storage_type}"))
+        storage_type = Conf.get(
+            GLOBAL_CONF, STORAGE_TYPE_KEY, "virtual").lower()
+        logger.debug(self.log.svc_log(f"Storage Type:{storage_type}"))
         supported_types = ["5u84", "rbod", "pods", "corvault"]
         if storage_type not in supported_types:
             msg = f"Health provider is not supported for storage type {storage_type}"
             logger.error(self.log.svc_log(msg))
-            raise ResourceMapError(
-                errno.EINVAL, msg)
+            raise ResourceMapError(errno.EINVAL, msg)
 
     def get_health_info(self, rpath):
         """
@@ -99,7 +98,12 @@ class StorageMap(ResourceMap):
         elif leaf_node in self.storage_resources:
             resource_found = True
             for resource, method in self.storage_resources[leaf_node].items():
-                info.update({resource: method()})
+                try:
+                    info.update({resource: method()})
+                    resource_found = True
+                except Exception as err:
+                    logger.error(self.log.svc_log(f"{err}"))
+                    info = None
         else:
             for node in nodes:
                 resource, _ = self.get_node_details(node)
@@ -111,17 +115,17 @@ class StorageMap(ResourceMap):
                         resource_found = True
                         info = method()
                         break
-                    except:
-                        # TODO: Log the exception
+                    except Exception as err:
+                        logger.error(self.log.svc_log(f"{err}"))
                         info = None
 
                 if resource_found:
                     break
 
         if not resource_found:
-            raise ResourceMapError(
-                errno.EINVAL,
-                f"Invalid rpath or health provider doesn't have support for'{rpath}'.")
+            msg = f"Invalid rpath or health provider doesn't have support for'{rpath}'."
+            logger.error(self.log.svc_log(f"{msg}"))
+            raise ResourceMapError(errno.EINVAL, msg)
 
         return info
 
@@ -155,7 +159,7 @@ class StorageMap(ResourceMap):
         return response
 
     def get_storage_health_info(self):
-        """Get storage enclosure information"""
+        """Get overall storage enclosure information"""
         enclosures = self.get_enclosures_info()
         storage = []
         for encl in enclosures:

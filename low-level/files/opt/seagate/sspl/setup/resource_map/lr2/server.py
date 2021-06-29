@@ -34,12 +34,13 @@ from framework.platforms.server.sas import SAS
 from framework.platforms.server.error import (
     SASError, NetworkError, BuildInfoError, ServiceError)
 from framework.platforms.server.platform import Platform
+from framework.platforms.server.sas import SAS
+from framework.platforms.server.error import SASError, NetworkError
 from framework.utils.conf_utils import (
     Conf, GLOBAL_CONF, SSPL_CONF, NODE_TYPE_KEY)
 from framework.utils.service_logging import CustomLog, logger
 from framework.utils.ipmi_client import IpmiFactory
 from framework.utils.tool_factory import ToolFactory
-
 
 class ServerMap(ResourceMap):
     """ServerMap class provides resource map and related information
@@ -82,14 +83,12 @@ class ServerMap(ResourceMap):
         """Check for supported server type."""
         server_type = Conf.get(GLOBAL_CONF, NODE_TYPE_KEY).lower()
         # TODO Add support for 'virtual' type server.
-        logger.debug(self.log.svc_log(
-            f"Server Type:{server_type}"))
+        logger.debug(self.log.svc_log(f"Server Type:{server_type}"))
         supported_types = ["physical"]
         if server_type not in supported_types:
             msg = f"Health provider is not supported for server type:{server_type}"
             logger.error(self.log.svc_log(msg))
-            raise ResourceMapError(
-                errno.EINVAL, msg)
+            raise ResourceMapError(errno.EINVAL, msg)
 
     def get_health_info(self, rpath):
         """
@@ -125,8 +124,9 @@ class ServerMap(ResourceMap):
                 try:
                     info.update({resource: method()})
                     resource_found = True
-                except:
-                    # TODO: Log the exception
+                except Exception as err:
+                    logger.error(
+                        self.log.svc_log(f"{err.__class__.__name__}:{err}"))
                     info = None
         else:
             for node in nodes:
@@ -138,20 +138,31 @@ class ServerMap(ResourceMap):
                     try:
                         info = method()
                         resource_found = True
-                    except:
-                        # TODO: Log the exception
+                    except Exception as err:
+                        logger.error(
+                            self.log.svc_log(f"{err.__class__.__name__}:{err}"))
                         info = None
                 if resource_found:
                     break
 
         if not resource_found:
-            raise ResourceMapError(
-                errno.EINVAL,
-                f"Invalid rpath or health provider doesn't have support for'{rpath}'.")
+            msg = f"Invalid rpath or health provider doesn't have support for'{rpath}'."
+            logger.error(self.log.svc_log(f"{msg}"))
+            raise ResourceMapError(errno.EINVAL, msg)
 
         return info
 
+    def _is_any_resource_unhealthy(self, fru, data):
+        """Check for any unhealthy resource at child level"""
+        for child in data[fru]:
+            if isinstance(child, dict):
+                if child.get("health") and \
+                    child["health"]["status"].lower() != "ok":
+                    return True
+        return False
+
     def get_server_health_info(self):
+        """Returns overall server information"""
         unhealthy_resource_found = False
         server_details = Platform().get_server_details()
         # Currently only one instance of server is considered
@@ -159,17 +170,23 @@ class ServerMap(ResourceMap):
         info = {}
         info["make"] = server_details["Board Mfg"]
         info["model"]= server_details["Product Name"]
+        info["resource_usage"] = {}
+        info["resource_usage"]["cpu_usage"] = self.get_cpu_overall_usage()
+        info["resource_usage"]["disk_usage"] = self.get_disk_overall_usage()
+        info["resource_usage"]["memory_usage"] = self.get_memory_overall_usage()
+
         for res_type in self.server_resources:
             info.update({res_type: {}})
             for fru, method in self.server_resources[res_type].items():
                 try:
                     info[res_type].update({fru: method()})
-                    for data in info[res_type][fru]:
-                        if data["health"]["status"].lower() != "ok":
-                            unhealthy_resource_found = True
-                except:
-                    # TODO: Log the exception
+                    unhealthy_resource_found = self._is_any_resource_unhealthy(
+                        fru, info[res_type])
+                except Exception as err:
+                    logger.error(
+                        self.log.svc_log(f"{err.__class__.__name__}:{err}"))
                     info[res_type].update({fru: None})
+
         info["uid"] = socket.getfqdn()
         info["last_updated"] = int(time.time())
         info["health"] = {}
@@ -204,7 +221,7 @@ class ServerMap(ResourceMap):
         cpu_list = self.sysfs.convert_cpu_info_list(cpu_info)
         return cpu_list
 
-    def get_cpu_info(self):
+    def get_cpu_info(self, add_overall_usage=False):
         """Update and return CPU information in specific format."""
         per_cpu_data = []
         cpu_present = self.get_cpu_list("present")
@@ -245,9 +262,52 @@ class ServerMap(ResourceMap):
                 "cpus": per_cpu_data
             }
         ]
+        if not add_overall_usage:
+            cpu_data = per_cpu_data
+
         logger.debug(self.log.svc_log(
             f"CPU Health Data:{cpu_data}"))
         return cpu_data
+
+    def get_cpu_overall_usage(self):
+        """Returns CPU overall usage"""
+        overall_usage = None
+        cpu_data = self.get_cpu_info(add_overall_usage=True)
+        if cpu_data[0].get("overall_usage"):
+            overall_usage = cpu_data[0].get("overall_usage")
+        else:
+            logger.error(
+                self.log.svc_log("Failed to get overall cpu usage"))
+        return overall_usage
+
+    def get_disk_info(self, add_overall_usage=False):
+        """Update and return Disk information in specific format."""
+        per_disk_data = []
+        overall_usage = None
+        disk_data = [
+            {
+                "overall_usage": overall_usage,
+                "last_updated": int(time.time()),
+                "disks": per_disk_data
+            }
+        ]
+        if not add_overall_usage:
+            disk_data = per_disk_data
+
+        logger.debug(self.log.svc_log(
+            f"Disk Health Data:{disk_data}"))
+        return disk_data
+
+    def get_disk_overall_usage(self):
+        """Returns Disk overall usage"""
+        overall_usage = None
+        disk_data = self.get_disk_info(add_overall_usage=True)
+        if disk_data[0].get("overall_usage"):
+            overall_usage = disk_data[0].get("overall_usage")
+        else:
+            logger.error(
+                self.log.svc_log("Failed to get overall disk usage"))
+        return overall_usage
 
     def format_ipmi_platform_sensor_reading(self, reading):
         """builds json resposne from ipmi tool response.
@@ -285,6 +345,7 @@ class ServerMap(ResourceMap):
             sensor_reading = self._ipmi.get_sensor_list_by_type(sensor)
             if not sensor_reading:
                 logger.debug(self.log.svc_log(f"No sensor data received for :{sensor}"))
+                continue
             for reading in sensor_reading:
                 response[sensor].append(
                     self.format_ipmi_platform_sensor_reading(reading)
@@ -344,6 +405,17 @@ class ServerMap(ResourceMap):
             memory_dict, status=status, description=description,
             specifics=specifics)
         return memory_dict
+
+    def get_memory_overall_usage(self):
+        """Returns Memory overall usage"""
+        overall_usage = None
+        mem_info = self.get_mem_info()
+        if mem_info[0].get("health"):
+            overall_usage = mem_info[0]["health"]["specifics"]
+        else:
+            logger.error(
+                self.log.svc_log("Failed to get memory overall usage"))
+        return overall_usage
 
     def get_fans_info(self):
         """Get the Fan sensor information using ipmitool."""
