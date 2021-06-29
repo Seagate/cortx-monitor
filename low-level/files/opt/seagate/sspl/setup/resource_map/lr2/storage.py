@@ -133,8 +133,9 @@ class StorageMap(ResourceMap):
                 specifics = [self.get_fan_specfics(fan) for fan in fan_module['fan']]
                 self.set_health_data(fan_module_resp, health, specifics=specifics)
                 response.append(fan_module_resp)
+            logger.debug(self.log.svc_log(f"Fan modules health Data:{response}"))
         else:
-            logger.error(self.log.svc_log("No reponse received from fan modules"))
+            logger.error(self.log.svc_log("No response received from fan modules"))
         return response
 
     def get_controllers_info(self):
@@ -238,6 +239,8 @@ class StorageMap(ResourceMap):
                                 single_sensor_data)
                         else:
                             sensors_data[platform_sensor] = [single_sensor_data]
+        else:
+            logger.error(self.log.svc_log("No response received for platform sensors"))
         return sensors_data
 
     def get_logical_volumes_info(self):
@@ -501,4 +504,4 @@ class StorageMap(ResourceMap):
         return data
 
 # if __name__ == '__main__':
-#     print(StorageMap().get_fanmodules_info())
+#     print(json.dumps(StorageMap().get_fanmodules_info()))
