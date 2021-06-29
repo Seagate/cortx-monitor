@@ -18,10 +18,14 @@
 import re
 
 from cortx.utils.process import SimpleProcess
+from framework.utils.ipmi_client import IpmiFactory
 
 
 class Platform:
     """provides information about server."""
+
+    def __init__(self):
+        self._ipmi = IpmiFactory().get_implementor("ipmitool")
 
     @staticmethod
     def get_os():
@@ -39,23 +43,19 @@ class Platform:
                 return "".join(os_info)
         return os_release
 
-    @staticmethod
-    def get_manufacturer_name():
+    def get_manufacturer_name(self):
         """Returns node server manufacturer name."""
         manufacturer = ""
-        cmd = "ipmitool bmc info"
-        res_op, _, res_rc = SimpleProcess(cmd).run()
-        if isinstance(res_op, bytes):
-            res_op = res_op.decode("utf-8")
-        if res_rc == 0:
+        cmd = "bmc info"
+        out, _, retcode = self._ipmi._run_ipmitool_subcommand(cmd)
+        if retcode == 0:
             search_res = re.search(
-                r"Manufacturer Name[\s]+:[\s]+([\w]+)(.*)", res_op)
+                r"Manufacturer Name[\s]+:[\s]+([\w]+)(.*)", out)
             if search_res:
                 manufacturer = search_res.groups()[0]
         return manufacturer
 
-    @staticmethod
-    def get_server_details():
+    def get_server_details(self):
         """Returns a dictionary of server information.
 
         Grep 'FRU device description on ID 0' information using
@@ -67,23 +67,23 @@ class Platform:
             "Board Part Number": "",
             "Product Name": "",
             "Product Part Number": "",
-            "Manufacturer": Platform.get_manufacturer_name(),
-            "OS": Platform.get_os()
+            "Manufacturer": self.get_manufacturer_name(),
+            "OS": self.get_os()
             }
-        cmd = "ipmitool fru print"
+        cmd = "fru print"
         prefix = "FRU Device Description : Builtin FRU Device (ID 0)"
         search_res = ""
-        res_op, _, res_rc = SimpleProcess(cmd).run()
-        if isinstance(res_op, bytes):
-            res_op = res_op.decode("utf-8")
-        if res_rc == 0:
+        out, _, retcode = self._ipmi._run_ipmitool_subcommand(cmd)
+        if retcode == 0:
             # Get only 'FRU Device Description : Builtin FRU Device (ID 0)' information
-            search_res = re.search(r"((.*%s[\S\n\s]+ID 1\)).*)|(.*[\S\n\s]+)" % prefix, res_op)
+            search_res = re.search(
+                r"((.*%s[\S\n\s]+ID 1\)).*)|(.*[\S\n\s]+)" % prefix, out)
             if search_res:
                 search_res = search_res.group()
         for key in specifics.keys():
             if key in search_res:
-                device_desc = re.search(r"%s[\s]+:[\s]+([\w-]+)(.*)" % key, res_op)
+                device_desc = re.search(
+                    r"%s[\s]+:[\s]+([\w-]+)(.*)" % key, out)
                 if device_desc:
                     value = device_desc.groups()[0]
                 specifics.update({key: value})
