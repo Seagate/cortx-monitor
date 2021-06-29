@@ -7,7 +7,8 @@ from files.opt.seagate.sspl.setup.resource_map.lr2.storage import StorageMap
 
 from encl_api_response import (
     ENCLOSURE_RESPONSE, ENCLOSURE_SENSORS_RESPONSE, ENCLOSURE_RESPONSE_EMPTY,
-    ENCLOSURE_NW_RESPONSE, CONTROLLER_RESPONSE, DRIVE_RESPONSE)
+    ENCLOSURE_NW_RESPONSE, CONTROLLER_RESPONSE, DRIVE_RESPONSE,
+    FANMODULES_RESPONSE)
 
 
 class TestStorageMap(unittest.TestCase):
@@ -141,6 +142,25 @@ class TestStorageMap(unittest.TestCase):
         assert specifics['disk-group'] == 'poola'
         assert specifics['storage-pool-name'] == 'poola'
         assert specifics['location'] == '0.0'
+
+    @patch(
+        "files.opt.seagate.sspl.setup.resource_map.lr2.storage.StorageMap.get_realstor_encl_data"
+    )
+    def test_get_fanmodules_info(self, encl_response):
+        storage_map = self.create_storage_obj()
+        encl_response.return_value = json.loads(
+            FANMODULES_RESPONSE
+        )['api-response']['fan-modules']
+        resp = storage_map.get_fanmodules_info()
+        assert resp[0]['uid'] == 'fan_module_0.0'
+        assert resp[0]['health']['status'] == 'OK'
+        assert resp[0]['health']['description'] == 'FAN is in good health'
+
+        assert len(resp[0]['health']['specifics']) == 2
+        assert resp[0]['health']['specifics'][0]["uid"] == "fan_0.fm0.0"
+        assert resp[0]['health']['specifics'][0]["location"] == "Enclosure 0, Fan Module 0"
+        assert resp[0]['health']['specifics'][0]["status"] == "Up"
+        assert resp[0]['health']['specifics'][0]["speed"] == 13800
 
 
 if __name__ == "__main__":

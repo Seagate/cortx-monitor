@@ -53,7 +53,8 @@ class StorageMap(ResourceMap):
             "disk_groups": self.get_disk_groups_info,
             "sideplane_expanders": self.get_sideplane_expanders_info,
             "nw_ports": self.get_nw_ports_info,
-            "disks": self.get_drives_info
+            "disks": self.get_drives_info,
+            "fanmodules": self.get_fanmodules_info,
         }
 
     def validate_storage_type_support(self):
@@ -108,6 +109,42 @@ class StorageMap(ResourceMap):
             raise ResourceMapError(
                 errno.EINVAL, msg)
         return info
+
+    @staticmethod
+    def get_fan_specfics(fan):
+        return {
+            "uid": fan.get("durable-id", "NA"),
+            "location": fan.get("location", "NA"),
+            "status": fan.get("status", "NA"),
+            "speed": fan.get("speed", "NA"),
+            "serial-number": fan.get("serial-number", "N/A"),
+            "part-number": fan.get("part-number", "N/A"),
+            "health": fan.get("health", "OK"),
+        }
+
+    def get_fanmodules_info(self):
+        response = []
+        fanmoduels_data = self.get_realstor_encl_data("fan-modules")
+        if fanmoduels_data:
+            for fan_module in fanmoduels_data:
+                uid = fan_module.get('durable-id', 'NA')
+                health = fan_module.get('health')
+                fan_module_resp = {
+                    "uid": uid,
+                    "fru": "true",
+                    "last_updated": int(time.time()),
+                    "health": {
+                        "status": health,
+                        "description": f"FAN is in {'good' if health=='OK' else 'bad'} health",
+                        "recommendation": fan_module.get('health-recommendation', 'NA'),
+                        "specifics": [self.get_fan_specfics(fan) for fan in fan_module['fan']],
+                    }
+                }
+                response.append(fan_module_resp)
+        else:
+            # TODO log error
+            pass
+        return response
 
     def get_controllers_info(self):
         """Update and return controller information in specific format"""
@@ -418,7 +455,8 @@ class StorageMap(ResourceMap):
             "disk-groups": ENCL.URI_CLIAPI_SHOWDISKGROUPS,
             "enclosures": ENCL.URI_CLIAPI_SHOWENCLOSURE,
             "network-parameters": ENCL.URI_CLIAPI_NETWORKHEALTHSTATUS,
-            "drives": ENCL.URI_CLIAPI_SHOWDISKS
+            "drives": ENCL.URI_CLIAPI_SHOWDISKS,
+            "fan-modules": ENCL.URI_CLIAPI_SHOWFANMODULES,
         }
         url = ENCL.build_url(fru_uri_map.get(fru))
         response = ENCL.ws_request(url, ENCL.ws.HTTP_GET)
