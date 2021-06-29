@@ -23,22 +23,20 @@ import shlex
 
 from socket import AF_INET
 from pathlib import Path
-from dbus import (SystemBus, Interface, PROPERTIES_IFACE, DBusException)
-from cortx.utils.process import SimpleProcess
+from dbus import (Interface, PROPERTIES_IFACE, DBusException)
 from resource_map import ResourceMap
 from error import ResourceMapError
-from cortx.utils.conf_store.error import ConfError
 from framework.utils.ipmi_client import IpmiFactory
 from framework.utils.tool_factory import ToolFactory
 from framework.platforms.server.network import Network
+from framework.platforms.server.software import BuildInfo, Service
+from framework.platforms.server.error import BuildInfoError, ServiceError
 from framework.utils.service_logging import CustomLog, logger
-from framework.utils.conf_utils import (GLOBAL_CONF, SSPL_CONF,
-                                        NODE_TYPE_KEY, Conf)
+from framework.utils.conf_utils import (GLOBAL_CONF, Conf,
+                                        NODE_TYPE_KEY, )
 from framework.base.sspl_constants import (CPU_PATH, DEFAULT_RECOMMENDATION,
                                            UNIT_IFACE, SERVICE_IFACE,
-                                           MANAGER_IFACE, SYSTEMD_BUS,
-                                           CORTX_RELEASE_FACTORY_INFO,
-                                           CONFIG_SPEC_TYPE, HEALTH_SVC_NAME)
+                                           SYSTEMD_BUS, HEALTH_SVC_NAME)
 
 
 class ServerMap(ResourceMap):
@@ -48,9 +46,6 @@ class ServerMap(ResourceMap):
 
     name = "server"
 
-    SERVICE_HANDLER = 'SERVICEMONITOR'
-    SERVICE_LIST = 'monitored_services'
-
     def __init__(self):
         """Initialize server"""
         super().__init__()
@@ -58,8 +53,6 @@ class ServerMap(ResourceMap):
         self.validate_server_type_support()
         self.sysfs = ToolFactory().get_instance('sysfs')
         self.sysfs.initialize()
-        self.initialize_systemd()
-        self.initialize_cortx_build_info()
         self.sysfs_base_path = self.sysfs.get_sysfs_base_path()
         self.cpu_path = self.sysfs_base_path + CPU_PATH
         self.server_frus = {
@@ -100,13 +93,15 @@ class ServerMap(ResourceMap):
         nodes = rpath.strip().split(">")
         leaf_node, _ = self.get_node_details(nodes[-1])
         try:
-            info["name"] = Conf.get("cortx_build_info", "NAME")
-            info["version"] = Conf.get("cortx_build_info", "VERSION")
-            info["build"] = Conf.get("cortx_build_info", "BUILD")
-            info["os"] = Conf.get("cortx_build_info", "OS")
-        except ConfError as e:
-            # TODO add logs
-            print(f"Unable to get OS & CORTX Build info: {e}")
+            info["name"] = BuildInfo().get_attribute("NAME")
+            info["version"] = BuildInfo().get_attribute("VERSION")
+            info["build"] = BuildInfo().get_attribute("BUILD")
+        except BuildInfoError as err:
+            logger.error(self.log.svc_log(
+                f"Unable to get build info due to {err}"))
+        except Exception as err:
+            logger.error(self.log.svc_log(
+                f"Unable to get build info due to {err}"))
         if leaf_node == "compute":
             for fru in self.server_frus:
                 try:
@@ -382,53 +377,10 @@ class ServerMap(ResourceMap):
             # Log the error when logging class is in place.
         return nw_status, nw_cable_conn_status
 
-    def initialize_systemd(self):
-        """Initialize system bus and interface."""
-        self._bus = SystemBus()
-        self._systemd = self._bus.get_object(
-            SYSTEMD_BUS, "/org/freedesktop/systemd1")
-        self._manager = Interface(self._systemd, dbus_interface=MANAGER_IFACE)
-
-    @staticmethod
-    def initialize_cortx_build_info():
-        """Initialize Cortx build info."""
-        if os.path.isfile(CORTX_RELEASE_FACTORY_INFO):
-            cortx_build_info_file_path = "%s://%s" % (
-                CONFIG_SPEC_TYPE, CORTX_RELEASE_FACTORY_INFO)
-            Conf.load("cortx_build_info", cortx_build_info_file_path)
-
-    @staticmethod
-    def get_cortx_service_list():
-        """Get list of cortx services for health generation."""
-        # TODO use solution supplied from HA for getting
-        # list of cortx services or by parsing resource xml from PCS
-        cortx_services = [
-            "motr-free-space-monitor.service",
-            "s3authserver.service",
-            "s3backgroundproducer.service",
-            "s3backgroundconsumer.service",
-            "hare-hax.service",
-            "haproxy.service",
-            "sspl-ll.service",
-            "kibana.service",
-            "csm_agent.service",
-            "csm_web.service",
-            "event_analyzer.service",
-        ]
-        return cortx_services
-
-    def get_external_service_list(self):
-        """Get list of external services for health generation."""
-        # TODO use solution supplied from RE for getting
-        # list of external services.
-        external_services = set(Conf.get(
-            SSPL_CONF, f"{self.SERVICE_HANDLER}>{self.SERVICE_LIST}", []))
-        return external_services
-
     def get_cortx_service_info(self):
         """Get cortx service info in required format."""
         service_info = []
-        cortx_services = self.get_cortx_service_list()
+        cortx_services = Service().get_cortx_service_list()
         for service in cortx_services:
             response = self.get_systemd_service_info(service)
             if response is not None:
@@ -438,74 +390,29 @@ class ServerMap(ResourceMap):
     def get_external_service_info(self):
         """Get external service info in required format."""
         service_info = []
-        external_services = self.get_external_service_list()
+        external_services = Service().get_external_service_list()
         for service in external_services:
             response = self.get_systemd_service_info(service)
             if response is not None:
                 service_info.append(response)
         return service_info
 
-    @staticmethod
-    def get_service_info_from_rpm(service, prop):
-        """
-        Get specified service property from its corrosponding RPM.
-
-        eg. (kafka.service,'LICENSE') -> 'Apache License, Version 2.0'
-        """
-        systemd_path_list = ["/usr/lib/systemd/system/",
-                             "/etc/systemd/system/"]
-        result = "NA"
-        for path in systemd_path_list:
-            # unit_file_path represents the path where
-            # systemd service file resides
-            # eg. kafka service -> /etc/systemd/system/kafka.service
-            unit_file_path = path + service
-            if os.path.isfile(unit_file_path):
-                # this command will return the full name of RPM
-                # which installs the service at given unit_file_path
-                # eg. /etc/systemd/system/kafka.service -> kafka-2.13_2.7.0-el7.x86_64
-                command = " ".join(["rpm", "-qf", unit_file_path])
-                command = shlex.split(command)
-                service_rpm, _, ret_code = SimpleProcess(command).run()
-                if ret_code != 0:
-                    return result
-                try:
-                    service_rpm = service_rpm.decode("utf-8")
-                except AttributeError:
-                    # TODO add logs
-                    return result
-                # this command will extract specified property from given RPM
-                # eg. (kafka-2.13_2.7.0-el7.x86_64, 'LICENSE') -> 'Apache License, Version 2.0'
-                command = " ".join(
-                    ["rpm", "-q", "--queryformat", "%{"+prop+"}", service_rpm])
-                command = shlex.split(command)
-                result, _, ret_code = SimpleProcess(command).run()
-                if ret_code != 0:
-                    return result
-                try:
-                    # returned result should be in byte which need to be decoded
-                    # eg. b'Apache License, Version 2.0' -> 'Apache License, Version 2.0'
-                    result = result.decode("utf-8")
-                except AttributeError:
-                    # TODO add logs
-                    return result
-                break
-        return result
-
     def get_systemd_service_info(self, service_name):
         """Get info of specified service using dbus API."""
         try:
-            unit = self._bus.get_object(
-                SYSTEMD_BUS, self._manager.LoadUnit(service_name))
+            unit = Service()._bus.get_object(
+                SYSTEMD_BUS, Service()._manager.LoadUnit(service_name))
             properties_iface = Interface(unit, dbus_interface=PROPERTIES_IFACE)
-        except DBusException:
-            # TODO add logs
+        except DBusException as err:
+            logger.error(self.log.svc_log(
+                f"Unable to initialize {service_name} due to {err}"))
             return None
         path_array = properties_iface.Get(SERVICE_IFACE, 'ExecStart')
         try:
             command_line_path = str(path_array[0][0])
-        except IndexError:
-            # TODO add logs
+        except IndexError as err:
+            logger.error(self.log.svc_log(
+                f"Unable to find {service_name} path due to {err}"))
             command_line_path = "NA"
 
         is_installed = True if command_line_path != "NA" or 'invalid' in properties_iface.Get(
@@ -530,6 +437,8 @@ class ServerMap(ResourceMap):
                 }
             ]
         else:
+            version = "NA"
+            service_license = "NA"
             service_description = str(
                 properties_iface.Get(UNIT_IFACE, 'Description'))
             state = str(properties_iface.Get(UNIT_IFACE, 'ActiveState'))
@@ -538,8 +447,25 @@ class ServerMap(ResourceMap):
                 UNIT_IFACE, 'UnitFileState') else 'disabled'
             pid = "NA" if state == "inactive" else str(
                 properties_iface.Get(SERVICE_IFACE, 'ExecMainPID'))
-            version = self.get_service_info_from_rpm(uid, "VERSION")
-            service_license = self.get_service_info_from_rpm(uid, "LICENSE")
+            try:
+                version = Service().get_service_info_from_rpm(
+                    uid, "VERSION")
+            except ServiceError as err:
+                logger.error(self.log.svc_log(
+                    f"Unable to get service version due to {err}"))
+            except Exception as err:
+                logger.error(self.log.svc_log(
+                    f"Unable to get service version due to {err}"))
+            try:
+                service_license = Service().get_service_info_from_rpm(
+                    uid, "LICENSE")
+            except ServiceError as err:
+                logger.error(self.log.svc_log(
+                    f"Unable to get service license due to {err}"))
+            except Exception as err:
+                logger.error(self.log.svc_log(
+                    f"Unable to get service license due to {err}"))
+
             specifics = [
                 {
                     "service_name": uid,
@@ -560,7 +486,7 @@ class ServerMap(ResourceMap):
                 health_description = f"{uid} is in good health"
                 recommendation = "NA"
             else:
-                health_status = substate
+                health_status = state
                 health_description = f"{uid} is not in good health"
                 recommendation = DEFAULT_RECOMMENDATION
 
