@@ -31,6 +31,7 @@ from framework.base.sspl_constants import (
 from framework.utils.conf_utils import (GLOBAL_CONF, NODE_TYPE_KEY, Conf)
 from framework.utils.service_logging import CustomLog, logger
 from framework.platforms.server.sas import SAS
+from framework.platforms.server.error import SASError, NetworkError
 
 
 class ServerMap(ResourceMap):
@@ -313,9 +314,12 @@ class ServerMap(ResourceMap):
         sas_instance = SAS()
         try:
             hosts = sas_instance.get_host_list()  # ['host1']
-        except Exception:
+        except SASError as err:
             hosts = []
-            # Log the error when logging module is ready.
+            logger.error(self.log.svc_log(err))
+        except Exception as err:
+            hosts = []
+            logger.exception(self.log.svc_log(err))
 
         for host in hosts:
             host_id = SAS_RESOURCE_ID + host.replace('host', '')
@@ -323,9 +327,12 @@ class ServerMap(ResourceMap):
             try:
                 ports = sas_instance.get_port_list(host)
                 # ports = ['port-1:0', 'port-1:1', 'port-1:2', 'port-1:3']
-            except Exception:
+            except SASError as err:
                 ports = []
-                # Log the error when logging module is ready.
+                logger.error(self.log.svc_log(err))
+            except Exception as err:
+                ports = []
+                logger.exception(self.log.svc_log(err))
             health = "OK"
             specifics = {
                 'num_ports': len(ports),
@@ -334,9 +341,12 @@ class ServerMap(ResourceMap):
             for port in ports:
                 try:
                     port_data = sas_instance.get_port_data(port)
-                except Exception:
+                except SASError as err:
                     port_data = []
-                    # Log the error when logging module is ready.
+                    logger.error(self.log.svc_log(err))
+                except Exception as err:
+                    port_data = []
+                    logger.exception(self.log.svc_log(err))
                 specifics['ports'].append(port_data)
                 if not port_data or port_data['state'] != 'running':
                     health = "NA"
@@ -351,9 +361,12 @@ class ServerMap(ResourceMap):
         try:
             ports = sas_instance.get_port_list()
             # eg: ['port-1:0', 'port-1:1', 'port-1:2', 'port-1:3']
-        except Exception:
+        except SASError as err:
             ports = []
-            # Log the error when logging module is ready.
+            logger.error(self.log.svc_log(err))
+        except Exception as error:
+            ports = []
+            logger.exception(self.log.svc_log(err))
 
         for port in ports:
             port_id = 'sas_' + port
@@ -361,9 +374,12 @@ class ServerMap(ResourceMap):
             try:
                 phys = sas_instance.get_phy_list_for_port(port)
                 # eg: [ 'phy-1:0', 'phy-1:1', 'phy-1:2', 'phy-1:3']
-            except Exception:
+            except SASError as err:
                 phys = []
-                # Log the error when logging module is ready.
+                logger.error(self.log.svc_log(err))
+            except Exception as err:
+                phys = []
+                logger.exception(self.log.svc_log(err))
             specifics = {
                 'num_phys': len(phys),
                 'phys': []
@@ -372,9 +388,12 @@ class ServerMap(ResourceMap):
             for phy in phys:
                 try:
                     phy_data = sas_instance.get_phy_data(phy)
+                except SASError as err:
+                    phy_data = {}
+                    logger.error(self.log.svc_log(err))
                 except Exception:
                     phy_data = {}
-                    # Log the error when logging module is ready.
+                    logger.exception(self.log.svc_log(err))
                 specifics['phys'].append(phy_data)
                 if not phy_data or phy_data['state'] != 'enabled' or \
                    'Gbit' not in phy_data['negotiated_linkrate']:
@@ -427,12 +446,18 @@ class ServerMap(ResourceMap):
         """Read & Return the latest network status from sysfs files."""
         try:
             nw_status = nw_interface.get_operational_state(interface)
-        except Exception:
+        except NetworkError as err:
             nw_status = "UNKNOWN"
-            # Log the error when logging class is in place.
+            logger.error(self.log.svc_log(err))
+        except Exception as error:
+            nw_status = "UNKNOWN"
+            logger.exception(self.log.svc_log(err))
         try:
             nw_cable_conn_status = nw_interface.get_link_state(interface)
-        except Exception:
+        except NetworkError as err:
             nw_cable_conn_status = "UNKNOWN"
-            # Log the error when logging class is in place.
+            logger.exception(self.log.svc_log(err))
+        except Exception as err:
+            nw_cable_conn_status = "UNKNOWN"
+            logger.exception(self.log.svc_log(err))
         return nw_status, nw_cable_conn_status

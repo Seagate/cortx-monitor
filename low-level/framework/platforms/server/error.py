@@ -36,6 +36,14 @@ class InterfaceError(Exception):
         return "error(%d): %s" % (self._rc, self._desc)
 
 
+class NetworkError(InterfaceError):
+    """Error Handling for Network related errors."""
+
+    def __init__(self, rc, message, *message_args):
+        """Initialize the Error information."""
+        super(NetworkError, self).__init__(rc, message, *message_args)
+
+
 class SASError(InterfaceError):
     """Error Handling for SAS related errors."""
 
