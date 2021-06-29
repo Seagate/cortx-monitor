@@ -27,8 +27,7 @@ import json
 import time
 
 from framework.utils.conf_utils import (
-    GLOBAL_CONF, SRVNODE, Conf, STORAGE_TYPE_KEY, NODE_TYPE_KEY, SITE_ID_KEY,
-    RACK_ID_KEY, NODE_ID_KEY, CLUSTER_ID_KEY, RELEASE, TARGET_BUILD)
+    GLOBAL_CONF, Conf, STORAGE_TYPE_KEY)
 from error import ResourceMapError
 from resource_map import ResourceMap
 from framework.base.sspl_constants import HEALTH_UNDESIRED_VALS, HEALTH_SVC_NAME
@@ -55,7 +54,7 @@ class StorageMap(ResourceMap):
             "nw_ports": self.get_nw_ports_info,
             "disks": self.get_drives_info,
             "sas_ports": self.get_sas_ports_info,
-            "fanmodules": self.get_fanmodules_info,
+            "fan_modules": self.get_fanmodules_info,
         }
 
     def validate_storage_type_support(self):
@@ -130,21 +129,15 @@ class StorageMap(ResourceMap):
             for fan_module in fanmoduels_data:
                 uid = fan_module.get('durable-id', 'NA')
                 health = fan_module.get('health')
-                fan_module_resp = {
-                    "uid": uid,
-                    "fru": "true",
-                    "last_updated": int(time.time()),
-                    "health": {
-                        "status": health,
-                        "description": f"FAN is in {'good' if health=='OK' else 'bad'} health",
-                        "recommendation": fan_module.get('health-recommendation', 'NA'),
-                        "specifics": [self.get_fan_specfics(fan) for fan in fan_module['fan']],
-                    }
-                }
+                fan_module_resp = self.get_health_template(uid, is_fru=True)
+                specifics = [self.get_fan_specfics(fan) for fan in fan_module['fan']]
+                description = f"FAN is in {'good' if health=='OK' else 'bad'} health"
+                recommendation = fan_module.get('health-recommendation', 'NA'),
+                self.set_health_data(
+                    fan_module_resp, health, description, recommendation, specifics)
                 response.append(fan_module_resp)
         else:
-            # TODO log error
-            pass
+            logger.error(self.log.svc_log("No reponse received from fan modules"))
         return response
 
     def get_controllers_info(self):
