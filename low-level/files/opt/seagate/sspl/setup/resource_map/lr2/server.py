@@ -107,14 +107,6 @@ class ServerMap(ResourceMap):
         resource_found = False
         nodes = rpath.strip().split(">")
         leaf_node, _ = self.get_node_details(nodes[-1])
-        try:
-            build_instance = BuildInfo()
-            info["name"] = build_instance.get_attribute("NAME")
-            info["version"] = build_instance.get_attribute("VERSION")
-            info["build"] = build_instance.get_attribute("BUILD")
-        except Exception as err:
-            logger.error(self.log.svc_log(
-                f"Unable to get build info due to {err}"))
 
         # Fetch health information for all sub nodes
         if leaf_node == "compute":
@@ -174,6 +166,14 @@ class ServerMap(ResourceMap):
         info = {}
         info["make"] = server_details["Board Mfg"]
         info["model"]= server_details["Product Name"]
+        try:
+            build_instance = BuildInfo()
+            info["product_family"] = build_instance.get_attribute("NAME")
+            info["version"] = build_instance.get_attribute("VERSION")
+            info["build"] = build_instance.get_attribute("BUILD")
+        except Exception as err:
+            logger.error(self.log.svc_log(
+                f"Unable to get build info due to {err}"))
         info["resource_usage"] = {}
         info["resource_usage"]["cpu_usage"] = self.get_cpu_overall_usage()
         info["resource_usage"]["disk_usage"] = self.get_disk_overall_usage()

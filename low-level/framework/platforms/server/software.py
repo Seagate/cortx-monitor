@@ -31,14 +31,18 @@ class BuildInfo:
     """ Provides information for Cortx build, version, kernel etc. """
 
     name = "BuildInfo"
-    _conf = None
+    _conf_loaded = False
 
     def __init__(self):
         """Initialize the class."""
         self.cortx_build_info_file_path = "%s://%s" % (
             CONFIG_SPEC_TYPE, CORTX_RELEASE_FACTORY_INFO)
-        if os.path.isfile(CORTX_RELEASE_FACTORY_INFO) and BuildInfo._conf is None:
-            Conf.load("cortx_build_info", self.cortx_build_info_file_path)
+        if not BuildInfo._conf_loaded:
+            if os.path.exists(CORTX_RELEASE_FACTORY_INFO):
+                Conf.load("cortx_build_info", self.cortx_build_info_file_path)
+                BuildInfo._conf_loaded = True
+            else:
+                raise Exception("Build information file is unavailable")
 
     @staticmethod
     def get_attribute(attribute):
