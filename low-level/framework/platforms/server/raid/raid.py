@@ -59,12 +59,12 @@ class RAID:
         _, _, returncode = SimpleProcess(f"mdadm --detail --test {self.raid}").run()
         if returncode == 0:
             return ("OK", "The array is in good health")
-        elif returncode == 4:
-            return ("Fault", "There was an error while trying to get information about the array.")
         elif returncode == 2:
             return ("Failed", "The array has multiple failed devices such that it is unusable.")
         elif returncode == 1:
             return ("Degraded", "The array has at least one failed device.")
+        else:
+            return ("Fault", "There was an error while trying to get information about the array.")
 
     def get_data_integrity_status(self):
         status = {
@@ -86,6 +86,9 @@ class RAIDs:
 
     @classmethod
     def get_configured_raids(self):
-        with open(MDADM_PATH) as f:
-            mdadm = f.read()
-        return [RAID(re.sub(r"\/(?=\d)", "", device.groups()[0])) for device in re.finditer(r"ARRAY\s*(\S*)", mdadm)]
+        try:
+            with open(MDADM_PATH) as f:
+                mdadm = f.read()
+            return [RAID(re.sub(r"\/(?=\d)", "", device.groups()[0])) for device in re.finditer(r"ARRAY\s*(\S*)", mdadm)]
+        except Exception:
+            return []

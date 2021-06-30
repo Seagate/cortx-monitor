@@ -41,13 +41,20 @@ class Disk:
         health_data = {}
         if re.findall("SMART support is: Available - device has SMART capability", response):
             health_data["SMART_available"] = True
+        else:
+            health_data["SMART_available"] = False
         if re.findall("SMART support is: Enabled", response):
             health_data["SMART_support"] = "Enabled"
+        else:
+            health_data["SMART_support"] = "NA"
         # Get smart health attributes
         cmd = f"{smartctl} --all {self.device} --json"
         response, _, _ = SimpleProcess(cmd).run()
         response = json.loads(response)
-        smart_test_status = "PASSED" if response['smart_status']['passed'] else "FAILED"
+        try:
+            smart_test_status = "PASSED" if response['smart_status']['passed'] else "FAILED"
+        except KeyError:
+            smart_test_status = "NA"
         health_data["SMART_health"] = smart_test_status
         smart_required_attributes = set(["Reallocated_Sector_Ct", "Spin_Retry_Count", "Current_Pending_Sector", "Offline_Uncorrectable"])
         try:

@@ -20,7 +20,6 @@ import re
 import socket
 import time
 from pathlib import Path
-from socket import AF_INET
 
 import psutil
 from cortx.utils.process import SimpleProcess
@@ -30,8 +29,8 @@ from framework.base.sspl_constants import (CPU_PATH, DEFAULT_RECOMMENDATION,
                                            SERVICE_IFACE, SYSTEMD_BUS,
                                            UNIT_IFACE)
 from framework.platforms.server.disk import Disk
-from framework.platforms.server.error import (BuildInfoError, NetworkError,
-                                              SASError, ServiceError)
+from framework.platforms.server.error import (NetworkError, SASError,
+                                              ServiceError)
 from framework.platforms.server.network import Network
 from framework.platforms.server.platform import Platform
 from framework.platforms.server.raid.raid import RAIDs
@@ -71,13 +70,13 @@ class ServerMap(ResourceMap):
             'nw_ports': self.get_nw_ports_info,
             'sas_hba': self.get_sas_hba_info,
             'sas_ports': self.get_sas_ports_info,
-            'raid': self.get_raid_info,
             'disks': self.get_disks_info,
             'psus': self.get_psu_info
         }
         sw_resources = {
             'cortx_sw_services': self.get_cortx_service_info,
-            'external_sw_services': self.get_external_service_info
+            'external_sw_services': self.get_external_service_info,
+            'raid': self.get_raid_info
         }
         self.server_resources = {
             "hw": hw_resources,
@@ -308,17 +307,6 @@ class ServerMap(ResourceMap):
         logger.debug(self.log.svc_log(
             f"Disk Health Data:{disk_data}"))
         return disk_data
-
-    def get_disk_overall_usage(self):
-        """Returns Disk overall usage."""
-        overall_usage = None
-        disk_data = self.get_disk_info(add_overall_usage=True)
-        if disk_data[0].get("overall_usage"):
-            overall_usage = disk_data[0].get("overall_usage")
-        else:
-            logger.error(
-                self.log.svc_log("Failed to get overall disk usage"))
-        return overall_usage
 
     def format_ipmi_platform_sensor_reading(self, reading):
         """builds json resposne from ipmi tool response.
@@ -756,7 +744,7 @@ class ServerMap(ResourceMap):
             uid = disk.path if disk.path else disk.id
             disk_health = self.get_health_template(uid, True)
             health_data = disk.get_health()
-            health = "OK" if health_data['SMART_health'] else "Fault"
+            health = "OK" if (health_data['SMART_health'] == "PASSED") else "Fault"
             self.set_health_data(disk_health, health, specifics=[{"SMART": health_data}])
             disks.append(disk_health)
         logger.debug(self.log.svc_log(
