@@ -72,6 +72,8 @@ class SSPLPostInstall:
                 "server_node>%s>bmc>ip" % machine_id)
         enclosure_id = Utility.get_config_value(consts.PRVSNR_CONFIG_INDEX,
             "server_node>%s>storage>enclosure_id" % machine_id)
+        enclosure_type = Utility.get_config_value(consts.PRVSNR_CONFIG_INDEX,
+            "storage_enclosure>%s>type" % enclosure_id)
         primary_ip = Utility.get_config_value(consts.PRVSNR_CONFIG_INDEX,
             "storage_enclosure>%s>controller>primary>ip" % enclosure_id)
         secondary_ip = Utility.get_config_value(consts.PRVSNR_CONFIG_INDEX,
@@ -174,6 +176,12 @@ class SSPLPostInstall:
         # Create and load sspl config
         self.create_sspl_conf()
         Conf.load(consts.SSPL_CONFIG_INDEX, consts.sspl_config_path)
+
+        # Update sspl.conf with provisioner supplied input config copy
+        Conf.set(
+            consts.SSPL_CONFIG_INDEX, "SYSTEM_INFORMATION>global_config_copy_url",
+            consts.global_config_path)
+        Conf.save(consts.SSPL_CONFIG_INDEX)
 
         self.create_user()
         self.create_directories_and_ownership()

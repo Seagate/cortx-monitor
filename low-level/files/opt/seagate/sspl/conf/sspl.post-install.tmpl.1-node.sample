@@ -25,3 +25,4 @@ storage_enclosure:
         port: '80'
       type: Gallium
       user: admin
+    type: RBOD

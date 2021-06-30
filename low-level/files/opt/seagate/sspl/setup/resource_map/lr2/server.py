@@ -64,14 +64,15 @@ class ServerMap(ResourceMap):
             'memory': self.get_mem_info,
             'fans': self.get_fans_info,
             'nw_ports': self.get_nw_ports_info,
-            'cortx_sw_services': self.get_cortx_service_info,
-            'external_sw_services': self.get_external_service_info,
             'sas_hba': self.get_sas_hba_info,
             'sas_ports': self.get_sas_ports_info,
             'nw_ports': self.get_nw_ports_info,
             'raid': self.get_raid_info
         }
-        sw_resources = {}
+        sw_resources = {
+            'cortx_sw_services': self.get_cortx_service_info,
+            'external_sw_services': self.get_external_service_info
+        }
         self.server_resources = {
             "hw": hw_resources,
             "sw": sw_resources
@@ -106,12 +107,12 @@ class ServerMap(ResourceMap):
         resource_found = False
         nodes = rpath.strip().split(">")
         leaf_node, _ = self.get_node_details(nodes[-1])
-        build_instance = BuildInfo()
         try:
+            build_instance = BuildInfo()
             info["name"] = build_instance.get_attribute("NAME")
             info["version"] = build_instance.get_attribute("VERSION")
             info["build"] = build_instance.get_attribute("BUILD")
-        except BuildInfoError as err:
+        except Exception as err:
             logger.error(self.log.svc_log(
                 f"Unable to get build info due to {err}"))
 

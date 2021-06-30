@@ -31,25 +31,20 @@ class BuildInfo:
     """ Provides information for Cortx build, version, kernel etc. """
 
     name = "BuildInfo"
+    _conf = None
 
     def __init__(self):
         """Initialize the class."""
         self.cortx_build_info_file_path = "%s://%s" % (
             CONFIG_SPEC_TYPE, CORTX_RELEASE_FACTORY_INFO)
-        if os.path.isfile(CORTX_RELEASE_FACTORY_INFO):
+        if os.path.isfile(CORTX_RELEASE_FACTORY_INFO) and BuildInfo._conf is None:
             Conf.load("cortx_build_info", self.cortx_build_info_file_path)
 
     @staticmethod
     def get_attribute(attribute):
         """Get specific attribute from build info."""
-        result = "NA"
-        try:
-            result = Conf.get("cortx_build_info", attribute)
-        except ConfError as err:
-            raise BuildInfoError(
-                err.errno, ("Unable to fetch '%s' due to Error: '%s, %s'"),
-                attribute, err.strerror, err.filename)
-        return result
+        result = Conf.get("cortx_build_info", attribute)
+        return result if result else "NA"
 
 
 class Service:
