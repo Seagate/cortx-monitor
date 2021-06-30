@@ -152,7 +152,11 @@ class SSPLPrepare:
 
     def process(self):
         """Configure SSPL at prepare stage."""
-        pass
+        # Update sspl.conf with provisioner supplied input config copy
+        Conf.set(
+            consts.SSPL_CONFIG_INDEX, "SYSTEM_INFORMATION>global_config_copy_url",
+            consts.global_config_path)
+        Conf.save(consts.SSPL_CONFIG_INDEX)
 
     def validate_nw_cable_connection(self, interfaces):
         """Check network interface links are up.

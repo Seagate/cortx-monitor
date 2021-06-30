@@ -45,6 +45,7 @@ storage_enclosure:
         port: '80'
       type: Gallium
       user: admin
+    type: RBOD
   enc40512e5ae6df9f1ea02327bab45e499e:
     controller:
       secret: "gAAAAABgbfiX3MkzGmtbG9alJPoyTIOdveqBHMLAg6B2TqPADdLeQMMmTF-R02DeGQesapBwn54PVYxBelDXJG5_Il5Bgw7OuQ=="
@@ -56,6 +57,7 @@ storage_enclosure:
         port: '80'
       type: Gallium
       user: admin
+    type: RBOD
   enc50512e5ae6df9f1ea02327bab45e499f:
     controller:
       secret: "gAAAAABgbfiX3MkzGmtbG9alJPoyTIOdveqBHMLAg6B2TqPADdLeQMMmTF-R02DeGQesapBwn54PVYxBelDXJG5_Il5Bgw7OuQ=="
@@ -67,3 +69,4 @@ storage_enclosure:
         port: '80'
       type: Gallium
       user: admin
+    type: RBOD

@@ -25,3 +25,4 @@ storage_enclosure:
         port: TMPL_SECONDARY_CONTROLLER_PORT
       type: TMPL_CONTROLLER_TYPE
       user: TMPL_CONTROLLER_USER
+    type: TMPL_ENCLOSURE_TYPE
