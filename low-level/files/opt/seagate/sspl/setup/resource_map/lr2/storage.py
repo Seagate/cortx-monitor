@@ -27,8 +27,7 @@ import json
 import time
 
 from framework.utils.conf_utils import (
-    GLOBAL_CONF, SRVNODE, Conf, STORAGE_TYPE_KEY, NODE_TYPE_KEY, SITE_ID_KEY,
-    RACK_ID_KEY, NODE_ID_KEY, CLUSTER_ID_KEY, RELEASE, TARGET_BUILD)
+    GLOBAL_CONF, Conf, STORAGE_TYPE_KEY)
 from error import ResourceMapError
 from resource_map import ResourceMap
 from framework.base.sspl_constants import HEALTH_UNDESIRED_VALS, HEALTH_SVC_NAME
@@ -45,69 +44,180 @@ class StorageMap(ResourceMap):
         super().__init__()
         self.log = CustomLog(HEALTH_SVC_NAME)
         self.validate_storage_type_support()
-        self.storage_frus = {
+        hw_resources = {
             "controllers": self.get_controllers_info,
             "psus": self.get_psu_info,
             "platform_sensors": self.get_platform_sensors_info,
-            "logical_volumes": self.get_logical_volumes_info,
-            "disk_groups": self.get_disk_groups_info,
             "sideplane_expanders": self.get_sideplane_expanders_info,
             "nw_ports": self.get_nw_ports_info,
-            "disks": self.get_drives_info
+            "disks": self.get_drives_info,
+            "sas_ports": self.get_sas_ports_info,
+            "fan_modules": self.get_fanmodules_info,
+            }
+        fw_resources = {
+            "logical_volumes": self.get_logical_volumes_info,
+            "disk_groups": self.get_disk_groups_info
+            }
+        self.storage_resources = {
+            "hw": hw_resources,
+            "fw": fw_resources
         }
 
     def validate_storage_type_support(self):
         """Check for supported storage type."""
-        storage_type = Conf.get(GLOBAL_CONF, STORAGE_TYPE_KEY, "virtual").lower()
-        logger.debug(self.log.svc_log(
-            f"Storage Type:{storage_type}"))
+        storage_type = Conf.get(
+            GLOBAL_CONF, STORAGE_TYPE_KEY, "virtual").lower()
+        logger.debug(self.log.svc_log(f"Storage Type:{storage_type}"))
         supported_types = ["5u84", "rbod", "pods", "corvault"]
         if storage_type not in supported_types:
             msg = f"Health provider is not supported for storage type {storage_type}"
             logger.error(self.log.svc_log(msg))
-            raise ResourceMapError(
-                errno.EINVAL, msg)
+            raise ResourceMapError(errno.EINVAL, msg)
 
     def get_health_info(self, rpath):
         """
-        Fetch health information for given FRU.
+        Fetch health information for given rpath
 
-        rpath: Resouce path (Example: nodes[0]>storage[0]>hw>controllers)
+        rpath: Resource path to fetch its health
+               Examples:
+                    node>storage[0]
+                    node>storage[0]>fw
+                    node>storage[0]>fw>logical_volumes
         """
         logger.info(self.log.svc_log(
             f"Get Health data for rpath:{rpath}"))
         info = {}
-        fru_found = False
+        resource_found = False
         nodes = rpath.strip().split(">")
         leaf_node, _ = self.get_node_details(nodes[-1])
+
+        # Fetch health information for all sub nodes
         if leaf_node == "storage":
-            for fru in self.storage_frus:
+            resource_found = True
+            info = self.get_storage_health_info()
+        elif leaf_node in self.storage_resources:
+            resource_found = True
+            for resource, method in self.storage_resources[leaf_node].items():
                 try:
-                    info.update({fru: self.storage_frus[fru]()})
-                except:
-                    # TODO: Log the exception
-                    info.update({fru: None})
-            info["last_updated"] = int(time.time())
-            fru_found = True
+                    info.update({resource: method()})
+                    resource_found = True
+                except Exception as err:
+                    logger.error(
+                        self.log.svc_log(f"{err.__class__.__name__}:{err}"))
+                    info = None
         else:
-            fru = None
-            fru_found = False
             for node in nodes:
-                fru, _ = self.get_node_details(node)
-                if self.storage_frus.get(fru):
-                    fru_found = True
+                resource, _ = self.get_node_details(node)
+                for res_type in self.storage_resources:
+                    method = self.storage_resources[res_type].get(resource)
+                    if not method:
+                        logger.error(
+                            self.log.svc_log(
+                                f"No mapping function found for {res_type}"))
+                        continue
                     try:
-                        info = self.storage_frus[fru]()
-                    except:
-                        # TODO: Log the exception
+                        resource_found = True
+                        info = method()
+                        break
+                    except Exception as err:
+                        logger.error(
+                            self.log.svc_log(f"{err.__class__.__name__}: {err}"))
                         info = None
+
+                if resource_found:
                     break
-        if not fru_found:
-            msg = f"Health provider doesn't have support for'{rpath}'."
-            logger.error(self.log.svc_log(msg))
-            raise ResourceMapError(
-                errno.EINVAL, msg)
+
+        if not resource_found:
+            msg = f"Invalid rpath or health provider doesn't have support for'{rpath}'."
+            logger.error(self.log.svc_log(f"{msg}"))
+            raise ResourceMapError(errno.EINVAL, msg)
+
         return info
+
+    @staticmethod
+    def get_fan_specfics(fan):
+        return {
+            "uid": fan.get("durable-id", "NA"),
+            "location": fan.get("location", "NA"),
+            "status": fan.get("status", "NA"),
+            "speed": fan.get("speed", "NA"),
+            "serial-number": fan.get("serial-number", "N/A"),
+            "part-number": fan.get("part-number", "N/A"),
+            "health": fan.get("health", "OK"),
+        }
+
+    def get_fanmodules_info(self):
+        """Returns fan modules health data."""
+        response = []
+        fanmodules_data = self.get_realstor_encl_data("fan-modules")
+        if fanmodules_data:
+            for fan_module in fanmodules_data:
+                uid = fan_module.get('durable-id', 'NA')
+                health = fan_module.get('health')
+                fan_module_resp = self.get_health_template(uid, is_fru=True)
+                specifics = [self.get_fan_specfics(fan) for fan in fan_module['fan']]
+                self.set_health_data(fan_module_resp, health, specifics=specifics)
+                response.append(fan_module_resp)
+            logger.debug(self.log.svc_log(f"Fan modules health Data:{response}"))
+        else:
+            logger.error(self.log.svc_log("No response received from fan modules"))
+        return response
+
+    def get_storage_health_info(self):
+        """Get overall storage enclosure information"""
+        enclosures = self.get_enclosures_info()
+        storage = []
+        for encl in enclosures:
+            info = {}
+            info["uid"] = encl["uid"]
+            encl_health = encl["health"]
+            encl_specifics = encl_health["specifics"][0]
+            info["make"] = encl_specifics.get("vendor")
+            info["model"] = encl_specifics.get("model")
+            info["health"] = {}
+            info["health"]["status"] = encl_health["status"]
+            info["health"]["description"] = encl_health["description"]
+            info["health"]["recommendation"] = encl_health["recommendation"]
+            info["health"]["specifics"] = []
+            for res_type in self.storage_resources:
+                info.update({res_type: {}})
+                for fru, method in self.storage_resources[res_type].items():
+                    try:
+                        info[res_type].update({fru: method()})
+                    except Exception as err:
+                        logger.error(
+                            self.log.svc_log(f"{err.__class__.__name__}: {err}"))
+                        info[res_type].update({fru: None})
+            info["last_updated"] = int(time.time())
+            storage.append(info)
+        return storage
+
+    def get_enclosures_info(self):
+        """Update and return enclosure information in specific format."""
+        data = []
+        enclosures = self.get_realstor_encl_data("enclosures")
+        for encl in enclosures:
+            uid = encl.get("durable-id")
+            status = encl.get("health", "NA")
+            description = encl.get("description", "NA")
+            recommendation = encl.get("health-recommendation", "NA")
+            specifics = [{
+                "vendor": encl.get("vendor", "NA"),
+                "model": encl.get("model", "NA"),
+                "platform-type": encl.get("platform-type", "NA"),
+                "board-model": encl.get("board-model", "NA"),
+                "fru-location": encl.get("fru-location", "NA"),
+                "rack-number": encl.get("rack-number", "NA"),
+                "rack-position": encl.get("rack-position", "NA"),
+                "midplane-type": encl.get("midplane-type", "NA"),
+                "locator-led": encl.get("locator-led", "NA"),
+                "part-number": encl.get("part-number", "NA")
+            }]
+            encl_dict = self.get_health_template(uid, is_fru=True)
+            self.set_health_data(
+                encl_dict, status, description, recommendation, specifics)
+            data.append(encl_dict)
+        return data
 
     def get_controllers_info(self):
         """Update and return controller information in specific format"""
@@ -210,6 +320,8 @@ class StorageMap(ResourceMap):
                                 single_sensor_data)
                         else:
                             sensors_data[platform_sensor] = [single_sensor_data]
+        else:
+            logger.error(self.log.svc_log("No response received for platform sensors"))
         return sensors_data
 
     def get_logical_volumes_info(self):
@@ -418,7 +530,9 @@ class StorageMap(ResourceMap):
             "disk-groups": ENCL.URI_CLIAPI_SHOWDISKGROUPS,
             "enclosures": ENCL.URI_CLIAPI_SHOWENCLOSURE,
             "network-parameters": ENCL.URI_CLIAPI_NETWORKHEALTHSTATUS,
-            "drives": ENCL.URI_CLIAPI_SHOWDISKS
+            "drives": ENCL.URI_CLIAPI_SHOWDISKS,
+            "expander-ports": ENCL.URI_CLIAPI_SASHEALTHSTATUS,
+            "fan-modules": ENCL.URI_CLIAPI_SHOWFANMODULES,
         }
         url = ENCL.build_url(fru_uri_map.get(fru))
         response = ENCL.ws_request(url, ENCL.ws.HTTP_GET)
@@ -450,3 +564,22 @@ class StorageMap(ResourceMap):
         logger.debug(self.log.svc_log(
             f"Network ports Health data:{nw_data}"))
         return nw_data
+
+    def get_sas_ports_info(self):
+        """Return SAS ports current health."""
+        data = []
+        sas_ports = self.get_realstor_encl_data("expander-ports")
+        for sas_port in sas_ports:
+            port_data = self.get_health_template(sas_port.get("durable-id"),
+                                                 False)
+            specifics = [{
+                "sas-port-type": sas_port.get("sas-port-type"),
+                "controller": sas_port.get("controller"),
+                "status": sas_port.get("status")
+            }]
+            self.set_health_data(
+                port_data, sas_port.get("health"),
+                sas_port.get("health-reason"),
+                sas_port.get("health-recommendation"), specifics)
+            data.append(port_data)
+        return data

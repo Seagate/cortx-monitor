@@ -85,6 +85,12 @@ class SSPLConfig:
 
     def process(self):
         """Configure sensor monitoring and log level setting."""
+        # Update sspl.conf with provisioner supplied input config copy
+        Conf.set(
+            consts.SSPL_CONFIG_INDEX, "SYSTEM_INFORMATION>global_config_copy_url",
+            consts.global_config_path)
+        Conf.save(consts.SSPL_CONFIG_INDEX)
+
         if os.path.isfile(consts.SSPL_CONFIGURED):
             os.remove(consts.SSPL_CONFIGURED)
 

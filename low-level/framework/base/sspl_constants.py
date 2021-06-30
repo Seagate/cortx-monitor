@@ -88,8 +88,14 @@ DEFAULT_SN = "DEFAULT_SN01"
 DEFAULT_CLUSTER = "DEFAULT_CC01"
 CPU_PATH = "devices/system/cpu/"
 BLOCK_DIR = "/block/"
+UNIT_IFACE = "org.freedesktop.systemd1.Unit"
+SERVICE_IFACE = "org.freedesktop.systemd1.Service"
+MANAGER_IFACE = 'org.freedesktop.systemd1.Manager'
+SYSTEMD_BUS = "org.freedesktop.systemd1"
+CORTX_RELEASE_FACTORY_INFO = "/etc/yum.repos.d/RELEASE_FACTORY.INFO"
 DEFAULT_RECOMMENDATION = 'Please Contact Seagate Support.'
 HEALTH_SVC_NAME = 'node-health'
+SAS_RESOURCE_ID = "SASHBA-"
 
 IVT_TEST_PLANS = ("full", "performance", "regression", "sanity",  "scalability")
 NOT_IMPLEMENTED_TEST_PLANS = ("full", "performance", "regression", "scalability")

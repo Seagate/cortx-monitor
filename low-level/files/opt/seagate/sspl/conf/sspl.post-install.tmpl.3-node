@@ -45,6 +45,7 @@ storage_enclosure:
         port: TMPL_SECONDARY_CONTROLLER_PORT_1
       type: TMPL_CONTROLLER_TYPE_1
       user: TMPL_CONTROLLER_USER_1
+    type: TMPL_ENCLOSURE_TYPE_1
   TMPL_ENCLOSURE_ID_2:
     controller:
       secret: TMPL_CONTROLLER_SECRET_2
@@ -56,6 +57,7 @@ storage_enclosure:
         port: TMPL_SECONDARY_CONTROLLER_PORT_2
       type: TMPL_CONTROLLER_TYPE_2
       user: TMPL_CONTROLLER_USER_2
+    type: TMPL_ENCLOSURE_TYPE_2
   TMPL_ENCLOSURE_ID_3:
     controller:
       secret: TMPL_CONTROLLER_SECRET_3
@@ -67,3 +69,4 @@ storage_enclosure:
         port: TMPL_SECONDARY_CONTROLLER_PORT_3
       type: TMPL_CONTROLLER_TYPE_3
       user: TMPL_CONTROLLER_USER_3
+    type: TMPL_ENCLOSURE_TYPE_3
