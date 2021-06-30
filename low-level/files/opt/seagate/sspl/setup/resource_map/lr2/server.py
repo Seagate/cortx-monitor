@@ -15,29 +15,35 @@
 # For any questions about this software or licensing,
 # please email opensource@seagate.com or cortx-questions@seagate.com
 
-import time
 import errno
-import psutil
+import re
 import socket
+import time
 from pathlib import Path
-from dbus import (Interface, PROPERTIES_IFACE, DBusException)
+
+import psutil
+from cortx.utils.process import SimpleProcess
+from dbus import PROPERTIES_IFACE, DBusException, Interface
+from framework.base.sspl_constants import (CPU_PATH, DEFAULT_RECOMMENDATION,
+                                           HEALTH_SVC_NAME, SAS_RESOURCE_ID,
+                                           SERVICE_IFACE, SYSTEMD_BUS,
+                                           UNIT_IFACE)
+from framework.platforms.server.disk import Disk
+from framework.platforms.server.error import (NetworkError, SASError,
+                                              ServiceError)
+from framework.platforms.server.network import Network
+from framework.platforms.server.platform import Platform
+from framework.platforms.server.raid.raid import RAIDs
+from framework.platforms.server.sas import SAS
+from framework.platforms.server.software import BuildInfo, Service
+from framework.utils.conf_utils import (GLOBAL_CONF, NODE_TYPE_KEY, SSPL_CONF,
+                                        Conf)
+from framework.utils.ipmi_client import IpmiFactory
+from framework.utils.service_logging import CustomLog, logger
+from framework.utils.tool_factory import ToolFactory
 
 from error import ResourceMapError
 from resource_map import ResourceMap
-from framework.base.sspl_constants import (
-    CPU_PATH, DEFAULT_RECOMMENDATION, UNIT_IFACE, SERVICE_IFACE,
-    SYSTEMD_BUS, SAS_RESOURCE_ID, HEALTH_SVC_NAME)
-from framework.platforms.server.raid.raid import RAIDs
-from framework.platforms.server.software import BuildInfo, Service
-from framework.platforms.server.network import Network
-from framework.platforms.server.error import (
-    SASError, NetworkError, BuildInfoError, ServiceError)
-from framework.platforms.server.platform import Platform
-from framework.platforms.server.sas import SAS
-from framework.utils.conf_utils import (GLOBAL_CONF, NODE_TYPE_KEY, Conf, SSPL_CONF)
-from framework.utils.service_logging import CustomLog, logger
-from framework.utils.ipmi_client import IpmiFactory
-from framework.utils.tool_factory import ToolFactory
 
 
 class ServerMap(ResourceMap):
@@ -64,11 +70,13 @@ class ServerMap(ResourceMap):
             'nw_ports': self.get_nw_ports_info,
             'sas_hba': self.get_sas_hba_info,
             'sas_ports': self.get_sas_ports_info,
-            'raid': self.get_raid_info
+            'disks': self.get_disks_info,
+            'psus': self.get_psu_info
         }
         sw_resources = {
             'cortx_sw_services': self.get_cortx_service_info,
-            'external_sw_services': self.get_external_service_info
+            'external_sw_services': self.get_external_service_info,
+            'raid': self.get_raid_info
         }
         self.server_resources = {
             "hw": hw_resources,
@@ -299,17 +307,6 @@ class ServerMap(ResourceMap):
         logger.debug(self.log.svc_log(
             f"Disk Health Data:{disk_data}"))
         return disk_data
-
-    def get_disk_overall_usage(self):
-        """Returns Disk overall usage."""
-        overall_usage = None
-        disk_data = self.get_disk_info(add_overall_usage=True)
-        if disk_data[0].get("overall_usage"):
-            overall_usage = disk_data[0].get("overall_usage")
-        else:
-            logger.error(
-                self.log.svc_log("Failed to get overall disk usage"))
-        return overall_usage
 
     def format_ipmi_platform_sensor_reading(self, reading):
         """builds json resposne from ipmi tool response.
@@ -728,3 +725,61 @@ class ServerMap(ResourceMap):
             self.set_health_data(raid_data, health, specifics=specifics, description=description)
             raids_data.append(raid_data)
         return raids_data
+
+    @staticmethod
+    def get_disk_overall_usage():
+        units_factor_GB = 1000000000
+        overall_usage = {
+                "totalSpace": f'{int(psutil.disk_usage("/")[0])//int(units_factor_GB)} GB',
+                "usedSpace": f'{int(psutil.disk_usage("/")[1])//int(units_factor_GB)} GB',
+                "freeSpace": f'{int(psutil.disk_usage("/")[2])//int(units_factor_GB)} GB',
+                "diskUsedPercentage": psutil.disk_usage("/")[3],
+            }
+        return overall_usage
+
+    def get_disks_info(self):
+        """Update and return server drive information in specific format."""
+        disks = []
+        for disk in Disk.get_disks():
+            uid = disk.path if disk.path else disk.id
+            disk_health = self.get_health_template(uid, True)
+            health_data = disk.get_health()
+            health = "OK" if (health_data['SMART_health'] == "PASSED") else "Fault"
+            self.set_health_data(disk_health, health, specifics=[{"SMART": health_data}])
+            disks.append(disk_health)
+        logger.debug(self.log.svc_log(
+            f"Disk Health Data:{disks}"))
+        return disks
+
+    def get_psu_info(self):
+        """Update and return PSU information in specific format."""
+        psus_health_data = []
+        for psu in self.get_psus():
+            data = self.get_health_template(f'{psu["Location"]}', True)
+            health = "OK" if (psu["Status"] == "Present, OK") else "Fault"
+            self.set_health_data(data, health, specifics=psu)
+            psus_health_data.append(data)
+        logger.debug(self.log.svc_log(
+            f"PSU Health Data:{psus_health_data}"))
+        return psus_health_data
+
+    @staticmethod
+    def get_psus():
+        response, _, _ = SimpleProcess("dmidecode -t 39").run()
+        matches = re.findall("System Power Supply|Power Unit Group:.*|"
+                             "Location:.*|Name:.*|Serial Number:.*|"
+                             "Max Power Capacity:.*|Status: .*|"
+                             "Plugged:.*|Hot Replaceable:.*", response.decode())
+        psus = []
+        stack = []
+        while matches:
+            item = matches.pop()
+            while item != "System Power Supply":
+                stack.append(item)
+                item = matches.pop()
+            psu = {}
+            while stack:
+                key, value = stack.pop().strip().split(":")
+                psu[key] = value.strip()
+            psus.append(psu)
+        return psus
