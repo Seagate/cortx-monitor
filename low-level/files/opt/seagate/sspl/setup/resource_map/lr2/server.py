@@ -30,12 +30,10 @@ from framework.base.sspl_constants import (
 from framework.platforms.server.raid.raid import RAIDs
 from framework.platforms.server.software import BuildInfo, Service
 from framework.platforms.server.network import Network
-from framework.platforms.server.sas import SAS
 from framework.platforms.server.error import (
     SASError, NetworkError, BuildInfoError, ServiceError)
 from framework.platforms.server.platform import Platform
 from framework.platforms.server.sas import SAS
-from framework.platforms.server.error import SASError, NetworkError
 from framework.utils.conf_utils import (GLOBAL_CONF, NODE_TYPE_KEY, Conf, SSPL_CONF)
 from framework.utils.service_logging import CustomLog, logger
 from framework.utils.ipmi_client import IpmiFactory
@@ -50,7 +48,7 @@ class ServerMap(ResourceMap):
     name = "server"
 
     def __init__(self):
-        """Initialize server"""
+        """Initialize server."""
         super().__init__()
         self.log = CustomLog(HEALTH_SVC_NAME)
         self.validate_server_type_support()
@@ -66,7 +64,6 @@ class ServerMap(ResourceMap):
             'nw_ports': self.get_nw_ports_info,
             'sas_hba': self.get_sas_hba_info,
             'sas_ports': self.get_sas_ports_info,
-            'nw_ports': self.get_nw_ports_info,
             'raid': self.get_raid_info
         }
         sw_resources = {
@@ -93,7 +90,7 @@ class ServerMap(ResourceMap):
 
     def get_health_info(self, rpath):
         """
-        Fetch health information for given rpath
+        Fetch health information for given rpath.
 
         rpath: Resource path to fetch its health
                Examples:
@@ -148,8 +145,9 @@ class ServerMap(ResourceMap):
 
         return info
 
-    def _is_any_resource_unhealthy(self, fru, data):
-        """Check for any unhealthy resource at child level"""
+    @staticmethod
+    def _is_any_resource_unhealthy(fru, data):
+        """Check for any unhealthy resource at child level."""
         for child in data[fru]:
             if isinstance(child, dict):
                 if child.get("health") and \
@@ -274,7 +272,7 @@ class ServerMap(ResourceMap):
         return cpu_data
 
     def get_cpu_overall_usage(self):
-        """Returns CPU overall usage"""
+        """Returns CPU overall usage."""
         overall_usage = None
         cpu_data = self.get_cpu_info(add_overall_usage=True)
         if cpu_data[0].get("overall_usage"):
@@ -303,7 +301,7 @@ class ServerMap(ResourceMap):
         return disk_data
 
     def get_disk_overall_usage(self):
-        """Returns Disk overall usage"""
+        """Returns Disk overall usage."""
         overall_usage = None
         disk_data = self.get_disk_info(add_overall_usage=True)
         if disk_data[0].get("overall_usage"):
@@ -343,7 +341,7 @@ class ServerMap(ResourceMap):
         return resp
 
     def get_platform_sensors_info(self):
-        """Get the sensor information based on sensor_type and instance"""
+        """Get the sensor information based on sensor_type and instance."""
         response = {sensor: [] for sensor in self.platform_sensor_list}
         for sensor in self.platform_sensor_list:
             sensor_reading = self._ipmi.get_sensor_list_by_type(sensor)
@@ -359,7 +357,7 @@ class ServerMap(ResourceMap):
         return response
 
     def get_mem_info(self):
-        """Collect & return system memory info in specific format """
+        """Collect & return system memory info in specific format."""
         default_mem_usage_threshold = int(Conf.get(SSPL_CONF,
             "NODEDATAMSGHANDLER>host_memory_usage_threshold",
             80))
@@ -381,7 +379,7 @@ class ServerMap(ResourceMap):
         return data
 
     def prepare_mem_json(self, status, description):
-        """Update and return memory information dict """
+        """Update and return memory information dict."""
         total_memory = {}
         for key, value in self.mem_info.items():
             if key == 'percent':
@@ -411,7 +409,7 @@ class ServerMap(ResourceMap):
         return memory_dict
 
     def get_memory_overall_usage(self):
-        """Returns Memory overall usage"""
+        """Returns Memory overall usage."""
         overall_usage = None
         mem_info = self.get_mem_info()
         if mem_info[0].get("health"):

@@ -25,6 +25,7 @@ class Platform:
     """provides information about server."""
 
     def __init__(self):
+        """Initialize instance."""
         self._ipmi = IpmiFactory().get_implementor("ipmitool")
 
     @staticmethod
@@ -56,7 +57,8 @@ class Platform:
         return manufacturer
 
     def get_server_details(self):
-        """Returns a dictionary of server information.
+        """
+        Returns a dictionary of server information.
 
         Grep 'FRU device description on ID 0' information using
         ipmitool command.

@@ -72,7 +72,7 @@ class SSPLPostInstall:
                 "server_node>%s>bmc>ip" % machine_id)
         enclosure_id = Utility.get_config_value(consts.PRVSNR_CONFIG_INDEX,
             "server_node>%s>storage>enclosure_id" % machine_id)
-        enclosure_type = Utility.get_config_value(consts.PRVSNR_CONFIG_INDEX,
+        Utility.get_config_value(consts.PRVSNR_CONFIG_INDEX,
             "storage_enclosure>%s>type" % enclosure_id)
         primary_ip = Utility.get_config_value(consts.PRVSNR_CONFIG_INDEX,
             "storage_enclosure>%s>controller>primary>ip" % enclosure_id)
