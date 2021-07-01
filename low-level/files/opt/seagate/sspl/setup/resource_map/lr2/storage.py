@@ -30,7 +30,7 @@ from framework.utils.conf_utils import (
     GLOBAL_CONF, Conf, STORAGE_TYPE_KEY)
 from error import ResourceMapError
 from resource_map import ResourceMap
-from framework.base.sspl_constants import HEALTH_UNDESIRED_VALS, HEALTH_SVC_NAME
+from framework.base import sspl_constants as const
 from framework.utils.service_logging import CustomLog, logger
 
 
@@ -42,7 +42,7 @@ class StorageMap(ResourceMap):
     def __init__(self):
         """Initialize storage."""
         super().__init__()
-        self.log = CustomLog(HEALTH_SVC_NAME)
+        self.log = CustomLog(const.HEALTH_SVC_NAME)
         self.validate_storage_type_support()
         hw_resources = {
             "controllers": self.get_controllers_info,
@@ -71,8 +71,7 @@ class StorageMap(ResourceMap):
             msg = "ConfigError: storage type is unknown."
             logger.error(self.log.svc_log(msg))
             raise ResourceMapError(errno.EINVAL, msg)
-        supported_types = ["rbod", "jbod", "ebod"]
-        if storage_type.lower() not in supported_types:
+        if storage_type.lower() not in const.RESOURCE_MAP["storage_type_supported"]:
             msg = f"Health provider is not supported for storage type '{storage_type}'"
             logger.error(self.log.svc_log(msg))
             raise ResourceMapError(errno.EINVAL, msg)
@@ -335,7 +334,7 @@ class StorageMap(ResourceMap):
             for logicalvolume in logicalvolumes:
                 uid = logicalvolume.get("volume-name", "NA")
                 health = logicalvolume.get("health", "NA")
-                if health in HEALTH_UNDESIRED_VALS:
+                if health in const.HEALTH_UNDESIRED_VALS:
                     health = "NA"
                 description = logicalvolume.get("volume-description", "NA")
                 recommendation = logicalvolume.get(

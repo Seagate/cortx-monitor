@@ -24,10 +24,7 @@ from pathlib import Path
 import psutil
 from cortx.utils.process import SimpleProcess
 from dbus import PROPERTIES_IFACE, DBusException, Interface
-from framework.base.sspl_constants import (CPU_PATH, DEFAULT_RECOMMENDATION,
-                                           HEALTH_SVC_NAME, SAS_RESOURCE_ID,
-                                           SERVICE_IFACE, SYSTEMD_BUS,
-                                           UNIT_IFACE)
+from framework.base import sspl_constants as const
 from framework.platforms.server.disk import Disk
 from framework.platforms.server.error import (NetworkError, SASError,
                                               ServiceError)
@@ -56,12 +53,12 @@ class ServerMap(ResourceMap):
     def __init__(self):
         """Initialize server."""
         super().__init__()
-        self.log = CustomLog(HEALTH_SVC_NAME)
+        self.log = CustomLog(const.HEALTH_SVC_NAME)
         self.validate_server_type_support()
         self.sysfs = ToolFactory().get_instance('sysfs')
         self.sysfs.initialize()
         self.sysfs_base_path = self.sysfs.get_sysfs_base_path()
-        self.cpu_path = self.sysfs_base_path + CPU_PATH
+        self.cpu_path = self.sysfs_base_path + const.CPU_PATH
         hw_resources = {
             'cpu': self.get_cpu_info,
             'platform_sensors': self.get_platform_sensors_info,
@@ -93,8 +90,7 @@ class ServerMap(ResourceMap):
             msg = "ConfigError: server type is unknown."
             logger.error(self.log.svc_log(msg))
             raise ResourceMapError(errno.EINVAL, msg)
-        supported_types = ["hw", "vm"]
-        if server_type.lower() not in supported_types:
+        if server_type.lower() not in const.RESOURCE_MAP["server_type_supported"]:
             msg = f"Health provider is not supported for server type '{server_type}'"
             logger.error(self.log.svc_log(msg))
             raise ResourceMapError(errno.EINVAL, msg)
@@ -206,7 +202,7 @@ class ServerMap(ResourceMap):
         info["health"]["status"] = "OK" if not unhealthy_resource_found else "Degraded"
         health_desc = 'good' if info["health"]["status"] == 'OK' else 'bad'
         info["health"]["description"] = f"Server is in {health_desc} health."
-        info["health"]["recommendation"] = DEFAULT_RECOMMENDATION \
+        info["health"]["recommendation"] = const.DEFAULT_RECOMMENDATION \
             if info["health"]["status"] != "OK" else "NA"
         info["health"]["specifics"] = []
         server.append(info)
@@ -325,7 +321,7 @@ class ServerMap(ResourceMap):
         status = 'OK' if reading[2] == 'ok' else 'NA'
         health_desc = 'good' if status == 'OK' else 'bad'
         description = f"{uid} sensor is in {health_desc} health."
-        recommendation = DEFAULT_RECOMMENDATION if status != 'OK' else 'NA'
+        recommendation = const.DEFAULT_RECOMMENDATION if status != 'OK' else 'NA'
         specifics = [
             {
                 "Sensor Reading": f"{reading[-1]}",
@@ -464,7 +460,7 @@ class ServerMap(ResourceMap):
             logger.exception(self.log.svc_log(err))
 
         for host in hosts:
-            host_id = SAS_RESOURCE_ID + host.replace('host', '')
+            host_id = const.SAS_RESOURCE_ID + host.replace('host', '')
             host_data = self.get_health_template(host_id, False)
             try:
                 ports = sas_instance.get_port_list(host)
@@ -628,13 +624,13 @@ class ServerMap(ResourceMap):
         """Get info of specified service using dbus API."""
         try:
             unit = Service()._bus.get_object(
-                SYSTEMD_BUS, Service()._manager.LoadUnit(service_name))
+                const.SYSTEMD_BUS, Service()._manager.LoadUnit(service_name))
             properties_iface = Interface(unit, dbus_interface=PROPERTIES_IFACE)
         except DBusException as err:
             logger.error(self.log.svc_log(
                 f"Unable to initialize {service_name} due to {err}"))
             return None
-        path_array = properties_iface.Get(SERVICE_IFACE, 'ExecStart')
+        path_array = properties_iface.Get(const.SERVICE_IFACE, 'ExecStart')
         try:
             command_line_path = str(path_array[0][0])
         except IndexError as err:
@@ -643,8 +639,8 @@ class ServerMap(ResourceMap):
             command_line_path = "NA"
 
         is_installed = True if command_line_path != "NA" or 'invalid' in properties_iface.Get(
-            UNIT_IFACE, 'UnitFileState') else False
-        uid = str(properties_iface.Get(UNIT_IFACE, 'Id'))
+            const.UNIT_IFACE, 'UnitFileState') else False
+        uid = str(properties_iface.Get(const.UNIT_IFACE, 'Id'))
         if not is_installed:
             health_status = "NA"
             health_description = f"Software enabling {uid} is not installed"
@@ -667,13 +663,13 @@ class ServerMap(ResourceMap):
             service_license = "NA"
             version = "NA"
             service_description = str(
-                properties_iface.Get(UNIT_IFACE, 'Description'))
-            state = str(properties_iface.Get(UNIT_IFACE, 'ActiveState'))
-            substate = str(properties_iface.Get(UNIT_IFACE, 'SubState'))
+                properties_iface.Get(const.UNIT_IFACE, 'Description'))
+            state = str(properties_iface.Get(const.UNIT_IFACE, 'ActiveState'))
+            substate = str(properties_iface.Get(const.UNIT_IFACE, 'SubState'))
             service_status = 'enabled' if 'disabled' not in properties_iface.Get(
-                UNIT_IFACE, 'UnitFileState') else 'disabled'
+                const.UNIT_IFACE, 'UnitFileState') else 'disabled'
             pid = "NA" if state == "inactive" else str(
-                properties_iface.Get(SERVICE_IFACE, 'ExecMainPID'))
+                properties_iface.Get(const.SERVICE_IFACE, 'ExecMainPID'))
             try:
                 version = Service().get_service_info_from_rpm(
                     uid, "VERSION")
@@ -709,7 +705,7 @@ class ServerMap(ResourceMap):
             else:
                 health_status = state
                 health_description = f"{uid} is not in good health"
-                recommendation = DEFAULT_RECOMMENDATION
+                recommendation = const.DEFAULT_RECOMMENDATION
 
         service_info = self.get_health_template(uid, is_fru=False)
         self.set_health_data(service_info, health_status,
