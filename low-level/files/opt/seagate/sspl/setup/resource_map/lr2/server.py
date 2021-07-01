@@ -87,12 +87,15 @@ class ServerMap(ResourceMap):
 
     def validate_server_type_support(self):
         """Check for supported server type."""
-        server_type = Conf.get(GLOBAL_CONF, NODE_TYPE_KEY).lower()
-        # TODO Add support for 'virtual' type server.
+        server_type = Conf.get(GLOBAL_CONF, NODE_TYPE_KEY)
         logger.debug(self.log.svc_log(f"Server Type:{server_type}"))
-        supported_types = ["physical"]
-        if server_type not in supported_types:
-            msg = f"Health provider is not supported for server type:{server_type}"
+        if not server_type:
+            msg = "ConfigError: server type is unknown."
+            logger.error(self.log.svc_log(msg))
+            raise ResourceMapError(errno.EINVAL, msg)
+        supported_types = ["hw", "vm"]
+        if server_type.lower() not in supported_types:
+            msg = f"Health provider is not supported for server type '{server_type}'"
             logger.error(self.log.svc_log(msg))
             raise ResourceMapError(errno.EINVAL, msg)
 

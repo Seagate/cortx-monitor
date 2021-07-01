@@ -65,12 +65,15 @@ class StorageMap(ResourceMap):
 
     def validate_storage_type_support(self):
         """Check for supported storage type."""
-        storage_type = Conf.get(
-            GLOBAL_CONF, STORAGE_TYPE_KEY, "virtual").lower()
+        storage_type = Conf.get(GLOBAL_CONF, STORAGE_TYPE_KEY)
         logger.debug(self.log.svc_log(f"Storage Type:{storage_type}"))
-        supported_types = ["5u84", "rbod", "pods", "corvault"]
-        if storage_type not in supported_types:
-            msg = f"Health provider is not supported for storage type {storage_type}"
+        if not storage_type:
+            msg = "ConfigError: storage type is unknown."
+            logger.error(self.log.svc_log(msg))
+            raise ResourceMapError(errno.EINVAL, msg)
+        supported_types = ["rbod", "jbod", "ebod"]
+        if storage_type.lower() not in supported_types:
+            msg = f"Health provider is not supported for storage type '{storage_type}'"
             logger.error(self.log.svc_log(msg))
             raise ResourceMapError(errno.EINVAL, msg)
 
