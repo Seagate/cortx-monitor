@@ -455,9 +455,8 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 self.high_usage['memory'] = True
 
                 # Create the memory data message and hand it over to the egress processor to transmit
-                fault_event = "Host memory usage increased to %s, beyond configured threshold of %s for more than %s seconds" \
-                            %(self._node_sensor.total_memory["percent"], self._host_memory_usage_threshold,
-                                self._high_memory_usage_wait_threshold)
+                fault_event = "Host memory usage has increased to {}%, beyond the configured threshold of {}% for more than {} seconds.".format(
+                    self._node_sensor.total_memory["percent"], self._host_memory_usage_threshold, self._high_memory_usage_wait_threshold)
 
                 logger.warning(fault_event)
 
@@ -490,9 +489,8 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 self.persist_state_data('memory', 'MEMORY_USAGE_DATA')
             else:
                 # Create the memory data message and hand it over to the egress processor to transmit
-                fault_resolved_event = "Host memory usage decreased to %s, lesser than configured threshold of %s" \
-                                        %(self._node_sensor.total_memory["percent"],
-                                        self._host_memory_usage_threshold)
+                fault_resolved_event = "Host memory usage has decreased to {}%, lesser than the configured threshold of {}%.".format(
+                    self._node_sensor.total_memory["percent"], self._host_memory_usage_threshold)
                 logger.warning(fault_resolved_event)
                 logged_in_users = []
 
@@ -589,9 +587,8 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 self.high_usage['cpu'] = True
 
                 # Create the cpu usage data message and hand it over to the egress processor to transmit
-                fault_event = "CPU usage increased to %s, beyond configured threshold of %s for more than %s seconds" \
-                                %(self._node_sensor.cpu_usage, self._cpu_usage_threshold,
-                                    self._high_cpu_usage_wait_threshold)
+                fault_event = "CPU usage has increased to {}%, beyond the configured threshold of {}% for more than {} seconds.".format(
+                    self._node_sensor.cpu_usage, self._cpu_usage_threshold, self._high_cpu_usage_wait_threshold)
                 logger.warning(fault_event)
 
                 # Create the cpu usage update message and hand it over to the egress processor to transmit
@@ -629,8 +626,8 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 self.persist_state_data('cpu', 'CPU_USAGE_DATA')
             else:
                 # Create the cpu usage data message and hand it over to the egress processor to transmit
-                fault_resolved_event = "CPU usage decreased to %s, lesser than configured threshold of %s" \
-                    %(self._node_sensor.cpu_usage, self._cpu_usage_threshold)
+                fault_resolved_event = "CPU usage has decreased to {}%, lesser than the configured threshold of {}%.".format(
+                    self._node_sensor.cpu_usage, self._cpu_usage_threshold)
                 logger.warning(fault_resolved_event)
 
                 # Create the cpu usage update message and hand it over to the egress processor to transmit
@@ -853,9 +850,8 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
             self.high_usage['disk'] = True
             # Create the disk space data message and hand it over to the egress processor to transmit
-            fault_event = "Disk usage increased to %s, beyond configured threshold of %s" \
-                          %(self._node_sensor.disk_used_percentage,
-                            self._disk_usage_threshold)
+            fault_event = "Disk usage has increased to {}%, beyond the configured threshold of {}%.".format(
+                self._node_sensor.disk_used_percentage, self._disk_usage_threshold)
             logger.warning(fault_event)
             diskSpaceAlertMsg = DiskSpaceAlertMsg(self._node_sensor.host_id,
                                     self._epoch_time,
@@ -881,8 +877,8 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
            and self.high_usage['disk']:
 
             # Create the disk space data message and hand it over to the egress processor to transmit
-            fault_resolved_event = "Disk usage decreased to %s, lesser than configured threshold of %s" \
-                                %(self._node_sensor.disk_used_percentage, self._disk_usage_threshold)
+            fault_resolved_event = "Disk usage has decreased to {}%, lesser than the configured threshold of {}%.".format(
+                self._node_sensor.disk_used_percentage, self._disk_usage_threshold)
             logger.warning(fault_resolved_event)
             diskSpaceAlertMsg = DiskSpaceAlertMsg(self._node_sensor.host_id,
                                     self._epoch_time,
