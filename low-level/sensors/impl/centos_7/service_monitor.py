@@ -446,7 +446,7 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
             if self.services[service].is_nonactive_for_threshold_time():
                 self.services[service].new_service_state(FailedState)
                 self.raise_alert(self.get_alert(self.services[service],
-                                                FailedAlert))
+                                                InactiveAlert))
 
     def raise_iem(self, service, alert_type):
         """Raise iem alert for kafka service."""
