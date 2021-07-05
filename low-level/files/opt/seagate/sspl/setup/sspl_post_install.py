@@ -168,11 +168,12 @@ class SSPLPostInstall:
             # No processes to check in VM environment
 
     def configure_sspl_setup_log(self):
-        """Configure sspl-setup log file in rsyslog
-        and update logrotate config file."""
+        """Configure sspl-setup log file in rsyslog and update logrotate file."""
         from cortx.utils.service import DbusServiceHandler
         self.dbus_service = DbusServiceHandler()
 
+        # Create and load sspl config
+        self.create_sspl_conf()
         Conf.load(consts.SSPL_CONFIG_INDEX, consts.sspl_config_path)
 
         # SSPL Setup log configuration
@@ -201,9 +202,6 @@ class SSPLPostInstall:
         # dbus module import is implicit in cortx utils. Keeping this
         # after dependency validation will enrich the use of
         # validate_dependencies() method.
-
-        # Create and load sspl config
-        self.create_sspl_conf()
 
         # Update sspl.conf with provisioner supplied input config copy
         Conf.set(
