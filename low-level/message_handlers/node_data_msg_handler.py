@@ -489,38 +489,39 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             if not self.high_usage['memory']:
                 self.persist_state_data('memory', 'MEMORY_USAGE_DATA')
             else:
-                # Create the memory data message and hand it over to the egress processor to transmit
-                fault_resolved_event = "Host memory usage decreased to %s, lesser than configured threshold of %s" \
-                                        %(self._node_sensor.total_memory["percent"],
-                                        self._host_memory_usage_threshold)
-                logger.warning(fault_resolved_event)
-                logged_in_users = []
+                if self.usage_time_map['memory'] - previous_check_time >= self._high_memory_usage_wait_threshold:
+                    # Create the memory data message and hand it over to the egress processor to transmit
+                    fault_resolved_event = "Host memory usage decreased to %s, lesser than configured threshold of %s" \
+                                            %(self._node_sensor.total_memory["percent"],
+                                            self._host_memory_usage_threshold)
+                    logger.warning(fault_resolved_event)
+                    logged_in_users = []
 
-                # Create the host update message and hand it over to the egress processor to transmit
-                hostUpdateMsg = HostUpdateMsg(self._node_sensor.host_id,
-                                        self._epoch_time,
-                                        self._node_sensor.boot_time,
-                                        self._node_sensor.up_time,
-                                        self._node_sensor.uname, self._units,
-                                        self._node_sensor.total_memory,
-                                        self._node_sensor.logged_in_users,
-                                        self._node_sensor.process_count,
-                                        self._node_sensor.running_process_count,
-                                        self.FAULT_RESOLVED,
-                                        fault_resolved_event
-                                        )
+                    # Create the host update message and hand it over to the egress processor to transmit
+                    hostUpdateMsg = HostUpdateMsg(self._node_sensor.host_id,
+                                            self._epoch_time,
+                                            self._node_sensor.boot_time,
+                                            self._node_sensor.up_time,
+                                            self._node_sensor.uname, self._units,
+                                            self._node_sensor.total_memory,
+                                            self._node_sensor.logged_in_users,
+                                            self._node_sensor.process_count,
+                                            self._node_sensor.running_process_count,
+                                            self.FAULT_RESOLVED,
+                                            fault_resolved_event
+                                            )
 
-                # Add in uuid if it was present in the json request
-                if self._uuid is not None:
-                    hostUpdateMsg.set_uuid(self._uuid)
-                jsonMsg = hostUpdateMsg.getJson()
-                # Transmit it to message processor
-                self.host_sensor_data = jsonMsg
-                self.os_sensor_type["memory_usage"] = self.host_sensor_data
-                self._write_internal_msgQ(EgressProcessor.name(), jsonMsg)
-                self.high_usage['memory'] = False
-                self.usage_time_map['memory'] = int(-1)
-                self.persist_state_data('memory', 'MEMORY_USAGE_DATA')
+                    # Add in uuid if it was present in the json request
+                    if self._uuid is not None:
+                        hostUpdateMsg.set_uuid(self._uuid)
+                    jsonMsg = hostUpdateMsg.getJson()
+                    # Transmit it to message processor
+                    self.host_sensor_data = jsonMsg
+                    self.os_sensor_type["memory_usage"] = self.host_sensor_data
+                    self._write_internal_msgQ(EgressProcessor.name(), jsonMsg)
+                    self.high_usage['memory'] = False
+                    self.usage_time_map['memory'] = int(-1)
+                    self.persist_state_data('memory', 'MEMORY_USAGE_DATA')
 
     def _generate_local_mount_data(self):
         """Create & transmit a local_mount_data message as defined
@@ -628,42 +629,43 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             if not self.high_usage['cpu']:
                 self.persist_state_data('cpu', 'CPU_USAGE_DATA')
             else:
-                # Create the cpu usage data message and hand it over to the egress processor to transmit
-                fault_resolved_event = "CPU usage decreased to %s, lesser than configured threshold of %s" \
-                    %(self._node_sensor.cpu_usage, self._cpu_usage_threshold)
-                logger.warning(fault_resolved_event)
+                if self.usage_time_map['cpu'] - previous_check_time >= self._high_cpu_usage_wait_threshold:
+                    # Create the cpu usage data message and hand it over to the egress processor to transmit
+                    fault_resolved_event = "CPU usage decreased to %s, lesser than configured threshold of %s" \
+                        %(self._node_sensor.cpu_usage, self._cpu_usage_threshold)
+                    logger.warning(fault_resolved_event)
 
-                # Create the cpu usage update message and hand it over to the egress processor to transmit
-                cpuDataMsg = CPUdataMsg(self._node_sensor.host_id,
-                                    self._epoch_time,
-                                    self._node_sensor.csps,
-                                    self._node_sensor.idle_time,
-                                    self._node_sensor.interrupt_time,
-                                    self._node_sensor.iowait_time,
-                                    self._node_sensor.nice_time,
-                                    self._node_sensor.softirq_time,
-                                    self._node_sensor.steal_time,
-                                    self._node_sensor.system_time,
-                                    self._node_sensor.user_time,
-                                    self._node_sensor.cpu_core_data,
-                                    self._node_sensor.cpu_usage,
-                                    self.FAULT_RESOLVED,
-                                    fault_resolved_event
-                                )
+                    # Create the cpu usage update message and hand it over to the egress processor to transmit
+                    cpuDataMsg = CPUdataMsg(self._node_sensor.host_id,
+                                        self._epoch_time,
+                                        self._node_sensor.csps,
+                                        self._node_sensor.idle_time,
+                                        self._node_sensor.interrupt_time,
+                                        self._node_sensor.iowait_time,
+                                        self._node_sensor.nice_time,
+                                        self._node_sensor.softirq_time,
+                                        self._node_sensor.steal_time,
+                                        self._node_sensor.system_time,
+                                        self._node_sensor.user_time,
+                                        self._node_sensor.cpu_core_data,
+                                        self._node_sensor.cpu_usage,
+                                        self.FAULT_RESOLVED,
+                                        fault_resolved_event
+                                    )
 
-                # Add in uuid if it was present in the json request
-                if self._uuid is not None:
-                    cpuDataMsg.set_uuid(self._uuid)
-                jsonMsg = cpuDataMsg.getJson()
-                self.cpu_sensor_data = jsonMsg
-                self.os_sensor_type["cpu_usage"] = self.cpu_sensor_data
+                    # Add in uuid if it was present in the json request
+                    if self._uuid is not None:
+                        cpuDataMsg.set_uuid(self._uuid)
+                    jsonMsg = cpuDataMsg.getJson()
+                    self.cpu_sensor_data = jsonMsg
+                    self.os_sensor_type["cpu_usage"] = self.cpu_sensor_data
 
-                # Transmit it to message processor
-                self._write_internal_msgQ(EgressProcessor.name(), jsonMsg)
-                self.high_usage['cpu'] = False
-                self.usage_time_map['cpu'] = int(-1)
-                # Store the state to Persistent Cache.
-                self.persist_state_data('cpu', 'CPU_USAGE_DATA')
+                    # Transmit it to message processor
+                    self._write_internal_msgQ(EgressProcessor.name(), jsonMsg)
+                    self.high_usage['cpu'] = False
+                    self.usage_time_map['cpu'] = int(-1)
+                    # Store the state to Persistent Cache.
+                    self.persist_state_data('cpu', 'CPU_USAGE_DATA')
 
     def _send_ifdata_json_msg(self, sensor_type, resource_id, resource_type, state, severity, event=""):
         """A resuable method for transmitting IFDataMsg to RMQ and IEM logging"""
