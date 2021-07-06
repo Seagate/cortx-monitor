@@ -57,30 +57,34 @@ class SSPLTestCmd:
             "cortx-sspl-test": None
             }
         # python 3rd party package dependency
-        pip3_3ps_packages_dep = {
+        pip3_packages_dep = {
             "Flask": "1.1.1",
             "coverage": "5.5"
             }
+        if not self.coverage_enabled:
+            pip3_packages_dep.pop("coverage")
         # Collect installed python pkg from dependency list.
         installed_pip3_pkgs = {}
         for pkg in pkg_resources.working_set:
-            if pkg.project_name in pip3_3ps_packages_dep:
+            if pkg.project_name in pip3_packages_dep:
                 installed_pip3_pkgs[pkg.project_name] = pkg.version
         # Validate pip3 python pkg with required version.
-        for pkg, version in pip3_3ps_packages_dep.items():
-            if pkg == "coverage" and not self.coverage_enabled:
-                continue
+        for pkg, version in pip3_packages_dep.items():
             if pkg not in installed_pip3_pkgs or \
                installed_pip3_pkgs[pkg] != version:
                 if pkg in installed_pip3_pkgs:
                     cmd = f'pip3 uninstall -y {pkg}'
                     _, err, ret = SimpleProcess(cmd).run()
                     if ret:
-                        logger.exception(err)
+                        logger.exception(
+                            "Failed to uninstall the pip3 pkg: %s(v%s), "
+                            "due to an Error: %s" % (pkg, version, err))
                 cmd = f'pip3 install {pkg}=={version}'
                 _, err, ret = SimpleProcess(cmd).run()
                 if ret:
-                    logger.exception(err)
+                    logger.exception(
+                        "Failed to install the pip3 pkg: %s(v%s), "
+                        "due to an Error: %s" % (pkg, version, err))
             logger.info(f"Ensured Package Dependency: {pkg}(v{version}).")
         # Validate rpm dependencies
         pkg_validator = PkgV()
