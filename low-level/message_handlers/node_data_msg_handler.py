@@ -454,7 +454,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             if self.usage_time_map['memory'] - previous_check_time >= self._high_memory_usage_wait_threshold:
                 self.high_usage['memory'] = True
 
-                # Create the memory data message and hand it over 
+                # Create the memory data message and hand it over
                 # to the egress processor to transmit
                 fault_event = "Host memory usage has increased to {}%,"\
                     "beyond the configured threshold of {}% "\
