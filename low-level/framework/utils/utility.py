@@ -28,6 +28,7 @@ import time
 from cortx.utils.conf_store import Conf
 from cortx.utils.conf_store.error import ConfError
 from framework.utils.service_logging import logger
+from framework.base import sspl_constants as const
 
 
 class Utility(object):
@@ -165,6 +166,48 @@ class Utility(object):
     def get_current_time():
         """Returns the time as integer number in seconds since the epoch in UTC."""
         return int(time.time())
+
+    @staticmethod
+    def validate_storage_type_support(log, Error, storage_type):
+        """Check for supported storage type."""
+        logger.debug(log.svc_log(f"Storage Type:{storage_type}"))
+        if not storage_type:
+            msg = "ConfigError: storage type is unknown."
+            logger.error(log.svc_log(msg))
+            raise Error(errno.EINVAL, msg)
+        if storage_type.lower() not in const.RESOURCE_MAP["storage_type_supported"]:
+            msg = f"{log.service} provider is not supported for storage type '{storage_type}'"
+            logger.error(log.svc_log(msg))
+            raise Error(errno.EINVAL, msg)
+
+    @staticmethod
+    def validate_server_type_support(log, Error, server_type):
+        """Check for supported server type."""
+        logger.debug(log.svc_log(f"Server Type:{server_type}"))
+        if not server_type:
+            msg = "ConfigError: server type is unknown."
+            logger.error(log.svc_log(msg))
+            raise Error(errno.EINVAL, msg)
+        if server_type.lower() not in const.RESOURCE_MAP["server_type_supported"]:
+            msg = f"{log.service} provider is not supported for server type '{server_type}'"
+            logger.error(log.svc_log(msg))
+            raise Error(errno.EINVAL, msg)
+
+    @staticmethod
+    def get_node_details(node):
+        """
+        Parse node information and returns left string and instance.
+        Example
+            "storage"    -> ("storage", "*")
+            "storage[0]" -> ("storage", "0")
+
+            "compute"    -> ("compute", "*")
+            "compute[0]" -> ("compute", "0")
+        """
+        res = re.search(r"(\w+)\[([\d]+)\]|(\w+)", node)
+        inst = res.groups()[1] if res.groups()[1] else "*"
+        node = res.groups()[0] if res.groups()[1] else res.groups()[2]
+        return node, inst
 
 def errno_to_str_mapping(err_no):
     """Convert numerical errno to its meaning."""

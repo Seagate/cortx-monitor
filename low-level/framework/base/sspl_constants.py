@@ -95,7 +95,6 @@ CORTX_RELEASE_FACTORY_INFO = "/etc/yum.repos.d/RELEASE_FACTORY.INFO"
 DEFAULT_RECOMMENDATION = 'Please Contact Seagate Support.'
 HEALTH_SVC_NAME = 'node-health'
 SAS_RESOURCE_ID = "SASHBA-"
-MANIFEST_SVC_NAME = 'node-manifest'
 
 IVT_TEST_PLANS = ("full", "performance", "regression", "sanity",  "scalability")
 NOT_IMPLEMENTED_TEST_PLANS = ("full", "performance", "regression", "scalability")
@@ -111,6 +110,11 @@ SSPL_SB_REQUEST = f"{SB_DATA_PATH}/sspl-sb-req.txt"
 
 # required only for system health
 HEALTH_UNDESIRED_VALS = ["N/A", ""]
+
+# required only for manifest
+MANIFEST_SVC_NAME = 'node-manifest'
+LSHW_FILE = f'{DATA_PATH}lshw.json'
+MANIFEST_OUTPUT_FILE = f'{DATA_PATH}manifest_output.json'
 
 # required only for init
 component = 'sspl/config'

@@ -96,8 +96,6 @@ SSPL_DIR=/opt/seagate/%{product_family}/sspl
     ln -sf $SSPL_DIR/low-level/manifest_support_bundle /usr/bin/manifest_support_bundle
     ln -sf $SSPL_DIR/low-level/framework $SSPL_DIR/low-level/files/opt/seagate/sspl/setup/resource_map/lr2/
     ln -sf $SSPL_DIR/low-level/files/opt/seagate/sspl/setup/resource_map $SSPL_DIR/bin/resource_map
-    ln -sf $SSPL_DIR/low-level/framework $SSPL_DIR/low-level/files/opt/seagate/sspl/setup/cortx_manifest/lr2/
-    ln -sf $SSPL_DIR/low-level/files/opt/seagate/sspl/setup/cortx_manifest $SSPL_DIR/bin/cortx_manifest
 }
 
 # upgrade conf
@@ -139,7 +137,6 @@ rm -f /etc/polkit-1/rules.d/sspl-ll_dbus_policy.rules
 rm -f /etc/dbus-1/system.d/sspl-ll_dbus_policy.conf
 rm -f /usr/bin/resource_health_view /usr/bin/sspl_bundle_generate /usr/bin/manifest_support_bundle
 rm -f $SSPL_DIR/bin/resource_map
-rm -f $SSPL_DIR/bin/cortx_manifest
 
 %files
 %defattr(-,root,root,-)

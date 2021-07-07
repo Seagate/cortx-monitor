@@ -46,22 +46,6 @@ class ResourceMap(metaclass=ABCMeta):
         pass
 
     @staticmethod
-    def get_node_details(node):
-        """
-        Parse node information and returns left string and instance.
-        Example
-            "storage"    -> ("storage", "*")
-            "storage[0]" -> ("storage", "0")
-
-            "compute"    -> ("compute", "*")
-            "compute[0]" -> ("compute", "0")
-        """
-        res = re.search(r"(\w+)\[([\d]+)\]|(\w+)", node)
-        inst = res.groups()[1] if res.groups()[1] else "*"
-        node = res.groups()[0] if res.groups()[1] else res.groups()[2]
-        return node, inst
-
-    @staticmethod
     def get_health_template(uid, is_fru: bool):
         """Returns health template."""
         return {
@@ -95,3 +79,24 @@ class ResourceMap(metaclass=ABCMeta):
             "recommendation": recommendation,
             "specifics": specifics
         })
+
+
+class CortxManifest(metaclass=ABCMeta):
+    """Abstract class for all other manifest types."""
+
+    name = "manifest"
+
+    def __init__(self):
+        """Initialize manifest."""
+        logging_level = Conf.get(SSPL_CONF,
+            f"{SYSTEM_INFORMATION}>{LOG_LEVEL}", "INFO")
+        init_logging('node-manifest', logging_level)
+
+    @abstractmethod
+    def get_manifest_info(self, rpath):
+        """
+        Get technical information of fru in given manifest id.
+
+        rpath: manifest id (Example: compute>system)
+        """
+        pass

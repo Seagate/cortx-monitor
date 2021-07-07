@@ -3,7 +3,7 @@ from socket import AF_INET
 from unittest.mock import patch
 from collections import namedtuple
 
-from files.opt.seagate.sspl.setup.resource_map.lr2.server import ServerMap
+from files.opt.seagate.sspl.setup.resource_map.lr2.server_health import ServerHealth
 
 snetio = namedtuple('snetio', ['bytes_sent', 'bytes_recv', 'packets_sent',
                                'packets_recv', 'errin', 'errout', 'dropin',
@@ -78,18 +78,18 @@ def get_sdr_type_response(cmd):
         )
 
 
-class TestServerMap(unittest.TestCase):
-    _server_map = None
+class TestServerHealth(unittest.TestCase):
+    _server_health = None
 
     @classmethod
-    def create_server_obj(cls):
-        if cls._server_map is None:
-            cls._server_map = ServerMap()
-        return cls._server_map
+    def create_server_health_obj(cls):
+        if cls._server_health is None:
+            cls._server_health = ServerHealth()
+        return cls._server_health
 
     @patch("framework.utils.ipmi_client.IPMITool._run_ipmitool_subcommand")
     def test_build_platform_sensor_data_temperature(self, sdr_type):
-        server_map = self.create_server_obj()
+        server_map = self.create_server_health_obj()
         sdr_type.side_effect = get_sdr_type_response
         resp = server_map.get_platform_sensors_info()
         assert resp["Temperature"][0]["uid"] == "CPU1_Temp"
@@ -113,7 +113,7 @@ class TestServerMap(unittest.TestCase):
 
     @patch("framework.utils.ipmi_client.IPMITool._run_ipmitool_subcommand")
     def test_build_platform_sensor_voltage(self, sdr_type):
-        server_map = self.create_server_obj()
+        server_map = self.create_server_health_obj()
         sdr_type.side_effect = get_sdr_type_response
         resp = server_map.get_platform_sensors_info()
         assert resp["Voltage"][0]["uid"] == "12V"
@@ -134,14 +134,14 @@ class TestServerMap(unittest.TestCase):
 
     @patch("framework.utils.ipmi_client.IPMITool._run_ipmitool_subcommand")
     def test_build_platform_sensor_data_current(self, sdr_type):
-        server_map = self.create_server_obj()
+        server_map = self.create_server_health_obj()
         sdr_type.side_effect = get_sdr_type_response
         resp = server_map.get_platform_sensors_info()
         assert resp["Current"] == []
 
     @patch("framework.utils.ipmi_client.IPMITool._run_ipmitool_subcommand")
     def test_build_fan_fru(self, sdr_type):
-        server_map = self.create_server_obj()
+        server_map = self.create_server_health_obj()
         resp = {}
         sdr_type.side_effect = get_sdr_type_response
         data = server_map.get_fans_info()
@@ -178,7 +178,7 @@ class TestServerMap(unittest.TestCase):
     @patch("framework.platforms.server.sas.SAS.get_port_list")
     @patch("framework.platforms.server.sas.SAS.get_host_list")
     def test_get_sas_hba_info(self, host_list, port_list, port_data):
-        server_map = self.create_server_obj()
+        server_map = self.create_server_health_obj()
         host_list.return_value = ['host1']
         port_list.return_value = ['port-1:0']
         port_data.return_value = {
@@ -202,7 +202,7 @@ class TestServerMap(unittest.TestCase):
     @patch("framework.platforms.server.sas.SAS.get_phy_list_for_port")
     @patch("framework.platforms.server.sas.SAS.get_port_list")
     def test_get_sas_ports_info(self, port_list, phy_list, phy_data):
-        server_map = self.create_server_obj()
+        server_map = self.create_server_health_obj()
         port_list.return_value = ['port-1:0']
         phy_list.return_value = ['phy-1:0']
         phy_data.return_value = {
@@ -222,12 +222,12 @@ class TestServerMap(unittest.TestCase):
         assert phy['state'] == "enabled"
         assert phy['negotiated_linkrate'] == "12.0 Gbit"
 
-    @patch(("files.opt.seagate.sspl.setup.resource_map.lr2.server."
-            "ServerMap.get_nw_status"))
+    @patch(("files.opt.seagate.sspl.setup.resource_map.lr2.server_health."
+            "ServerHealth.get_nw_status"))
     @patch("psutil.net_if_addrs")
     @patch("psutil.net_io_counters")
     def test_get_nw_ports_info(self, io_counter, if_addrs, nw_status):
-        server_map = self.create_server_obj()
+        server_map = self.create_server_health_obj()
         io_counter.return_value = NET_IO_COUNTERS
         if_addrs.return_value = NET_IF_ADDRESS
         nw_status.return_value = ("UP", "CONNECTED")

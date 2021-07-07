@@ -23,72 +23,59 @@
 """
 
 import errno
-import json
-import re
 import time
 
 from framework.utils.conf_utils import GLOBAL_CONF, Conf, STORAGE_TYPE_KEY
-from manifest_error import ManifestError
-from cortx_manifest import CortxManifest
+from error import ManifestError
+from resource_map import CortxManifest
 from framework.base.sspl_constants import MANIFEST_SVC_NAME
 from framework.utils.service_logging import CustomLog, logger
 from framework.platforms.realstor.realstor_enclosure import (
     singleton_realstorencl as ENCL)
+from framework.utils.utility import Utility
 
 
-class ManifestStorage(CortxManifest):
+class StorageManifest(CortxManifest):
     """Provides storage manifest related information."""
 
-    name = "manifest_storage"
+    name = "storage_manifest"
 
     def __init__(self):
         """Initialize storage."""
         super().__init__()
         self.log = CustomLog(MANIFEST_SVC_NAME)
-        self.validate_storage_type_support()
+        storage_type = Conf.get(GLOBAL_CONF, STORAGE_TYPE_KEY)
+        Utility.validate_storage_type_support(self.log, ManifestError, storage_type)
         self.storage_frus = {
             "enclosures": self.get_enclosures_info,
             "controllers": self.get_controllers_info,
             "power-supplies": self.get_psu_info,
             "fan-modules": self.get_fan_modules_info,
-            "drives": self.get_drives_info,
+            "disks": self.get_drives_info,
             "sideplane": self.get_sideplane_expander_info
         }
 
-    def validate_storage_type_support(self):
-        """Check for supported storage type."""
-        storage_type = Conf.get(GLOBAL_CONF, STORAGE_TYPE_KEY, "virtual").lower()
-        logger.debug(self.log.svc_log(
-            f"Storage Type:{storage_type}"))
-        supported_types = ["5u84", "rbod", "pods", "corvault"]
-        if storage_type not in supported_types:
-            msg = f"Manifest provider is not supported for storage type {storage_type}"
-            logger.error(self.log.svc_log(msg))
-            raise ManifestError(errno.EINVAL, msg)
-
     def get_manifest_info(self, rpath):
         """
-        Fetch Manifest information for given rpath
-
-        rpath: Manifest path to fetch its information
-               Examples:
-                    node>storage[0]
-                    node>storage[0]>controllers
+        Fetch Manifest information for given rpath.
         """
         logger.info(self.log.svc_log(
             f"Get Manifest data for rpath:{rpath}"))
         info = {}
         resource_found = False
         nodes = rpath.strip().split(">")
-        leaf_node, _ = self.get_node_details(nodes[-1])
+        leaf_node, _ = Utility.get_node_details(nodes[-1])
 
         # Fetch manifest information for all sub nodes
         if leaf_node == "storage":
             resource_found = True
+            info = [{'hw': self.get_storage_manifest_info()}]
+        elif leaf_node == "hw":
+            resource_found = True
             info = self.get_storage_manifest_info()
         elif leaf_node in self.storage_frus:
             resource_found = True
-            info = {leaf_node: self.storage_frus[leaf_node]()}
+            info = self.storage_frus[leaf_node]()
 
         if not resource_found:
             msg = f"Invalid rpath or manifest provider doesn't have support for'{rpath}'."
@@ -98,8 +85,7 @@ class ManifestStorage(CortxManifest):
         return info
 
     def get_storage_manifest_info(self):
-        """Get storage enclosure information"""
-        storage = []
+        """Get storage enclosure information."""
         info = {}
         for fru, method in self.storage_frus.items():
             try:
@@ -107,20 +93,20 @@ class ManifestStorage(CortxManifest):
             except Exception as err:
                 msg = f"Unable to get data for '{fru}' resource.: {err}"
                 logger.error(self.log.svc_log(msg))
-                info.update({fru: None})
-        storage.append(info)
-        return storage
+                info.update({fru: []})
+        return info
 
     def get_enclosures_info(self):
-        """Update and return enclosure information in specific format"""
+        """Update and return enclosure information in specific format."""
         data = []
         chassis_serial_no = "NA"
-        enclosure = self.get_realstor_encl_data("enclosures")
-        frus = self.get_realstor_encl_data("frus")
+        enclosure = ENCL.get_realstor_encl_data("enclosures")
+        frus = ENCL.get_realstor_encl_data("frus")
         if frus:
             for fru in frus:
                 if fru["name"] == "CHASSIS_MIDPLANE":
                     chassis_serial_no = fru.get("serial-number", "NA")
+                    break
         for encl in enclosure:
             encl_dict = {
                 "uid": encl.get("durable-id", "NA"),
@@ -152,9 +138,9 @@ class ManifestStorage(CortxManifest):
         return data
 
     def get_controllers_info(self):
-        """Update and return controller information in specific format"""
+        """Update and return controller information in specific format."""
         data = []
-        controllers = self.get_realstor_encl_data("controllers")
+        controllers = ENCL.get_realstor_encl_data("controllers")
         for controller in controllers:
             controller_dict = {
                 "uid": controller.get("durable-id", "NA"),
@@ -184,9 +170,9 @@ class ManifestStorage(CortxManifest):
         return data
 
     def get_psu_info(self):
-        """Update and return power supplies information in specific format"""
+        """Update and return power supplies information in specific format."""
         data = []
-        psus = self.get_realstor_encl_data("power-supplies")
+        psus = ENCL.get_realstor_encl_data("power-supplies")
         for psu in psus:
             psu_dict = {
                 "uid": psu.get("durable-id", "NA"),
@@ -216,10 +202,13 @@ class ManifestStorage(CortxManifest):
         return data
 
     def get_drives_info(self):
-        """Update and return drives information in specific format"""
+        """Update and return drives information in specific format."""
         data = []
-        drives = self.get_realstor_encl_data("disks")
+        drives = ENCL.get_realstor_encl_data("drives")
         for drive in drives:
+            slot = drive.get("slot", -1)
+            if slot == -1:
+                continue
             drive_dict = {
                 "uid": drive.get("durable-id", "NA"),
                 "type": drive.get("type", "NA"),
@@ -233,7 +222,7 @@ class ManifestStorage(CortxManifest):
                 "specifics": [{
                     "drive-serial-number": drive.get("serial-number")[:8],
                     "model": drive.get("model", "NA"),
-                    "slot": drive.get("slot", "NA"),
+                    "slot": slot,
                     "architecture": drive.get("architecture", "NA"),
                     "interface": drive.get("interface", "NA"),
                     "usage": drive.get("usage", "NA"),
@@ -264,7 +253,7 @@ class ManifestStorage(CortxManifest):
             "serial_number": fan.get("serial-number", "NA"),
             "version": fan.get("hardware-version", "NA"),
             "part_number": fan.get("part-number", "NA"),
-            "specifics":[{
+            "specifics": [{
                 "status": fan.get("status", "NA"),
                 "speed": fan.get("speed", "NA"),
                 "location": fan.get("location", "NA")
@@ -272,9 +261,9 @@ class ManifestStorage(CortxManifest):
         }
 
     def get_fan_modules_info(self):
-        """Update and return fan modules information in specific format"""
+        """Update and return fan modules information in specific format."""
         data = []
-        fanmoduels_data = self.get_realstor_encl_data("fan-modules")
+        fanmoduels_data = ENCL.get_realstor_encl_data("fan-modules")
         if fanmoduels_data:
             for fan_module in fanmoduels_data:
                 fan_module_resp = {
@@ -294,7 +283,8 @@ class ManifestStorage(CortxManifest):
                     f"Fan Manifest Data:{data}"))
         return data
 
-    def get_expander_data(self, expander):
+    @staticmethod
+    def get_expander_data(expander):
         """Returns expander data in specific format."""
         return {
             "uid": expander.get("durable-id", "NA"),
@@ -305,7 +295,7 @@ class ManifestStorage(CortxManifest):
             "serial_number": expander.get("serial-number", "NA"),
             "version": expander.get("hardware-version", "NA"),
             "part_number": expander.get("part-number", "NA"),
-            "specifics":[{
+            "specifics": [{
                 "name": expander.get("name", "NA"),
                 "location": expander.get("location", "NA"),
                 "drawer_id": expander.get("drawer-id", "NA"),
@@ -318,9 +308,9 @@ class ManifestStorage(CortxManifest):
         """Update and return sideplane information in specific format."""
         sideplane_expander_list = []
         data = []
-        enclosures = self.get_realstor_encl_data("enclosures")
+        enclosures = ENCL.get_realstor_encl_data("enclosures")
         #TODO : Handle CORVAULT sideplane expander data without expecting drawers
-        encl_drawers = enclosures[0].get("drawers")
+        encl_drawers = enclosures[0].get("drawers") if enclosures else []
         if encl_drawers:
             for drawer in encl_drawers:
                 sideplanes = drawer.get("sideplanes")
@@ -349,33 +339,3 @@ class ManifestStorage(CortxManifest):
             logger.debug(self.log.svc_log(
                 f"Sideplane Manifest Data:{data}"))
         return data
-
-    @staticmethod
-    def get_realstor_encl_data(fru: str):
-        """Fetch fru information through webservice API."""
-        fru_data = []
-        fru_uri_map = {
-            "enclosures": ENCL.URI_CLIAPI_SHOWENCLOSURE,
-            "controllers": ENCL.URI_CLIAPI_SHOWCONTROLLERS,
-            "power-supplies": ENCL.URI_CLIAPI_SHOWPSUS,
-            "fan-modules": ENCL.URI_CLIAPI_SHOWFANMODULES,
-            "disks": ENCL.URI_CLIAPI_SHOWDISKS,
-            "frus": ENCL.URI_CLIAPI_SHOWFRUS
-        }
-        url = ENCL.build_url(fru_uri_map.get(fru))
-        response = ENCL.ws_request(url, ENCL.ws.HTTP_GET)
-        if fru == "frus":
-            fru = "enclosure-fru"
-        elif fru == "disks":
-            fru = "drives"
-        if not response or response.status_code != ENCL.ws.HTTP_OK:
-            return []
-        elif response or response.status_code == ENCL.ws.HTTP_OK:
-            response_data = json.loads(response.text)
-            fru_data = response_data.get(fru)
-        return fru_data
-
-# if __name__ == "__main__":
-#     storage = ManifestStorage()
-#     manifest_data = storage.get_manifest_info(rpath="nodes>storage[0]")
-#     print(json.dumps(manifest_data))

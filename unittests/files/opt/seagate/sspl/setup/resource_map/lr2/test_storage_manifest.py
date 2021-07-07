@@ -3,30 +3,30 @@ import json
 
 from unittest.mock import patch
 
-from files.opt.seagate.sspl.setup.cortx_manifest.lr2.manifest_storage import ManifestStorage
+from files.opt.seagate.sspl.setup.resource_map.lr2.storage_manifest import StorageManifest
 
 from encl_api_response import (ENCLOSURE_RESPONSE, CONTROLLER_RESPONSE,
     DRIVE_RESPONSE, PSU_RESPONSE, FAN_MODULE_RESPONSE)
 
 
-class TestStorage(unittest.TestCase):
-    _storage = None
+class TestStorageManifest(unittest.TestCase):
+    _storage_manifest = None
 
     @classmethod
-    def create_storage_obj(cls):
-        if cls._storage is None:
-            cls._storage = ManifestStorage()
-        return cls._storage
+    def create_storage_manifest_obj(cls):
+        if cls._storage_manifest is None:
+            cls._storage_manifest = StorageManifest()
+        return cls._storage_manifest
 
     @patch(
-        "files.opt.seagate.sspl.setup.cortx_manifest.lr2."
-        "manifest_storage.ManifestStorage.get_realstor_encl_data"
+        "framework.platforms.realstor.realstor_enclosure.RealStorEnclosure"
+        ".get_realstor_encl_data"
     )
     def test_get_enclosures_info(self, encl_response):
-        manifest_storage = self.create_storage_obj()
+        storage_manifest = self.create_storage_manifest_obj()
         encl_response.return_value = json.loads(
             ENCLOSURE_RESPONSE)['api-response']['enclosures']
-        resp = manifest_storage.get_enclosures_info()
+        resp = storage_manifest.get_enclosures_info()
         assert resp[0]['uid'] == 'enclosure_0'
         assert resp[0]['product'] == 'enclosures'
         assert resp[0]['serial_number'] == 'NA'
@@ -36,14 +36,14 @@ class TestStorage(unittest.TestCase):
         assert specifics[0]['board_model'] == 'Gallium Raidhead-12G'
 
     @patch(
-        "files.opt.seagate.sspl.setup.cortx_manifest.lr2."
-        "manifest_storage.ManifestStorage.get_realstor_encl_data"
+        "framework.platforms.realstor.realstor_enclosure.RealStorEnclosure"
+        ".get_realstor_encl_data"
     )
     def test_get_sideplane_expander_info(self, encl_response):
-        manifest_storage = self.create_storage_obj()
+        storage_manifest = self.create_storage_manifest_obj()
         encl_response.return_value = json.loads(
             ENCLOSURE_RESPONSE)['api-response']['enclosures']
-        resp = manifest_storage.get_sideplane_expander_info()
+        resp = storage_manifest.get_sideplane_expander_info()
         assert resp[0]['uid'] == 'sideplane_0.D0.B'
         assert resp[0]['product'] == 'sideplanes'
         specifics = resp[0]['specifics']
@@ -60,14 +60,14 @@ class TestStorage(unittest.TestCase):
         assert expander_specifics[0]['drawer_id'] == 0
 
     @patch(
-        "files.opt.seagate.sspl.setup.cortx_manifest."
-        "lr2.manifest_storage.ManifestStorage.get_realstor_encl_data"
+        "framework.platforms.realstor.realstor_enclosure.RealStorEnclosure"
+        ".get_realstor_encl_data"
     )
     def test_get_controllers(self, encl_response):
-        manifest_storage = self.create_storage_obj()
+        storage_manifest = self.create_storage_manifest_obj()
         encl_response.return_value = json.loads(
             CONTROLLER_RESPONSE)['api-response']['controllers']
-        resp = manifest_storage.get_controllers_info()
+        resp = storage_manifest.get_controllers_info()
         assert resp[0]['uid'] == 'controller_a'
         assert resp[0]['product'] == 'controllers'
         assert resp[0]['serial_number'] == 'DHSIFTJ-18253C638B'
@@ -79,14 +79,14 @@ class TestStorage(unittest.TestCase):
         assert specifics['virtual_disks'] == 2
 
     @patch(
-        "files.opt.seagate.sspl.setup.cortx_manifest.lr2."
-        "manifest_storage.ManifestStorage.get_realstor_encl_data"
+        "framework.platforms.realstor.realstor_enclosure.RealStorEnclosure"
+        ".get_realstor_encl_data"
     )
     def test_get_drives(self, encl_response):
-        manifest_storage = self.create_storage_obj()
+        storage_manifest = self.create_storage_manifest_obj()
         encl_response.return_value = json.loads(
             DRIVE_RESPONSE)['api-response']['drives']
-        resp = manifest_storage.get_drives_info()
+        resp = storage_manifest.get_drives_info()
         assert resp[0]['uid'] == 'disk_00.00'
         assert resp[0]['product'] == 'drive'
         assert resp[0]['serial_number'] == 'Z4H099ZE0000R6375N70'
@@ -97,14 +97,14 @@ class TestStorage(unittest.TestCase):
         assert specifics['location'] == '0.0'
 
     @patch(
-        "files.opt.seagate.sspl.setup.cortx_manifest."
-        "lr2.manifest_storage.ManifestStorage.get_realstor_encl_data"
+        "framework.platforms.realstor.realstor_enclosure.RealStorEnclosure"
+        ".get_realstor_encl_data"
     )
     def get_psu_info(self, encl_response):
-        manifest_storage = self.create_storage_obj()
+        storage_manifest = self.create_storage_manifest_obj()
         encl_response.return_value = json.loads(
             PSU_RESPONSE)['api-response']['controllers']
-        resp = manifest_storage.get_psu_info()
+        resp = storage_manifest.get_psu_info()
         assert resp[0]['uid'] == 'psu_0.0'
         assert resp[0]['product'] == 'power-supplies'
         assert resp[0]['serial_number'] == ''
@@ -115,14 +115,14 @@ class TestStorage(unittest.TestCase):
         assert specifics['status'] == 'Up'
 
     @patch(
-        "files.opt.seagate.sspl.setup.cortx_manifest.lr2."
-        "manifest_storage.ManifestStorage.get_realstor_encl_data"
+        "framework.platforms.realstor.realstor_enclosure.RealStorEnclosure"
+        ".get_realstor_encl_data"
     )
     def test_get_fan_modules_info(self, encl_response):
-        manifest_storage = self.create_storage_obj()
+        storage_manifest = self.create_storage_manifest_obj()
         encl_response.return_value = json.loads(
             FAN_MODULE_RESPONSE)['api-response']['fan-modules']
-        resp = manifest_storage.get_fan_modules_info()
+        resp = storage_manifest.get_fan_modules_info()
         assert resp[0]['uid'] == 'fan_module_0.0'
         assert resp[0]['product'] == 'fan-modules'
         specifics = resp[0]['specifics']

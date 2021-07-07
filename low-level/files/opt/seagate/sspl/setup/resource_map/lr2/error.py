@@ -25,3 +25,11 @@ class ResourceMapError(BaseError):
         """Initialize ResourceMapError."""
         super(ResourceMapError, self).__init__(
               rc, 'SSPL: %s' % desc, message_id, message_args)
+
+class ManifestError(BaseError):
+    """Generic Exception with error code and output."""
+
+    def __init__(self, rc=0, desc=None, message_id=None, message_args=None):
+        """Initialize ManifestError."""
+        super(ManifestError, self).__init__(
+              rc, 'SSPL: %s' % desc, message_id, message_args)
