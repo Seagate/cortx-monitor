@@ -49,8 +49,6 @@ class SSPLPostInstall:
         consts.SSPL_LOG_PATH = "/var/log/%s/sspl/" % consts.PRODUCT_FAMILY
         consts.SSPL_BUNDLE_PATH = "/var/%s/sspl/bundle/" % consts.PRODUCT_FAMILY
         self.state_file = "%s/state.txt" % consts.DATA_PATH
-        # configure sspl-setup log dir before validation stage.
-        self.configure_sspl_setup_log()
 
     def validate(self):
         """Check below requirements are met in setup.
@@ -85,15 +83,16 @@ class SSPLPostInstall:
         if self.product not in consts.enabled_products:
             msg = "Product '%s' is not in sspl supported product list: %s" % (
                 self.product, consts.enabled_products)
-            logger.error(msg)
             raise SetupError(errno.EINVAL, msg)
 
         # Validate setup support
         if self.setup not in consts.setups:
             msg = "Setup '%s' is not in sspl supported setup list: %s" % (
                 self.setup, consts.setups)
-            logger.error(msg)
             raise SetupError(errno.EINVAL, msg)
+
+        # configure sspl-setup log dir.
+        self.configure_sspl_setup_log()
 
         # Validate required pip3s and rpms are installed
         self.validate_dependencies(self.setup)
