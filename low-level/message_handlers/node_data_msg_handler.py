@@ -666,7 +666,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     self.fault_resolved_iterations['cpu'] = fault_resolved_iters
                     self.persist_state_data('cpu', 'CPU_USAGE_DATA')
                 elif fault_resolved_iters >= iteration_limit:
-                
+
                     # Create the cpu usage data message and hand it over to the egress processor to transmit
                     fault_resolved_event = "CPU usage decreased to %s, lesser than configured threshold of %s" \
                         %(self._node_sensor.cpu_usage, self._cpu_usage_threshold)
