@@ -17,8 +17,8 @@ jobs:
       - name: Create PR to sync stable branch
         uses: sudoStatus200/create-sync-pr@0.3.1
         with:
-          pr_title: "Sync main and stable" # Title of pull request
-          pr_body: ":Sync: *An automated PR*"              # Full markdown support, requires pr_title to be set
-          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+          pr_title: "Sync main and stable"             # Title of pull request
+          pr_body: ":Sync: *An automated PR*"          # Full markdown support, requires pr_title to be set
+          GITHUB_TOKEN: ${{secrets.STABLE_TOKEN}}
           SOURCE_BRANCH: "main"
           TARGET_BRANCH: "stable"
