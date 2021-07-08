@@ -79,6 +79,9 @@ class TestServiceMonitor(unittest.TestCase):
     @patch(
         'sensors.impl.centos_7.service_monitor.Service.is_nonactive_for_threshold_time',
         new=Mock(return_value=True))
+    @patch(
+        'sensors.impl.centos_7.service_monitor.Service.is_enabled',
+        new=Mock(return_value=True))
     def test_fault_alert_if_service_is_inactive_at_start(self):
         self.mocked_properties_value["ActiveState"] = "inactive"
         self.service_monitor.initialize(Mock(), Mock(), Mock())
@@ -103,6 +106,9 @@ class TestServiceMonitor(unittest.TestCase):
     @patch(
         'sensors.impl.centos_7.service_monitor.Service.is_nonactive_for_threshold_time',
         new=Mock(return_value=True))
+    @patch(
+        'sensors.impl.centos_7.service_monitor.Service.is_enabled',
+        new=Mock(return_value=True))
     def test_fault_alert_if_service_is_failed_at_start(self):
         self.fail_service_at_start()
         self.assert_failed_fault_is_raised()
@@ -119,6 +125,9 @@ class TestServiceMonitor(unittest.TestCase):
         self.service_monitor_run_iteration()
         self.assert_failed_fault_is_raised()
 
+    @patch(
+        'sensors.impl.centos_7.service_monitor.Service.is_enabled',
+        new=Mock(return_value=True))
     def test_fault_alert_if_service_change_state_from_active_to_inactive(
             self):
         self.mocked_properties_value["ActiveState"] = "active"
@@ -140,6 +149,9 @@ class TestServiceMonitor(unittest.TestCase):
             fault_alert["sensor_request_type"]["service_status_alert"][
                 "specific_info"]["previous_state"], "active")
 
+    @patch(
+         'sensors.impl.centos_7.service_monitor.Service.is_enabled',
+         new=Mock(return_value=True))
     def test_fault_resolved_if_service_change_state_from_failed_to_active(self):
         self.fail_service_at_start()
         self.assert_fault_is_raised()
@@ -182,6 +194,9 @@ class TestServiceMonitor(unittest.TestCase):
         self.assertNotIn("spam.service", Service.non_active)
         self.service_monitor._write_internal_msgQ.assert_not_called()
 
+    @patch(
+        'sensors.impl.centos_7.service_monitor.Service.is_enabled',
+        new=Mock(return_value=True))
     def service_active_at_start(self):
         self.mocked_properties_value["ActiveState"] = "active"
         self.service_monitor.initialize(Mock(), Mock(), Mock())
@@ -193,6 +208,9 @@ class TestServiceMonitor(unittest.TestCase):
 
     @patch(
         'sensors.impl.centos_7.service_monitor.Service.cache_exists',
+        new=Mock(return_value=True))
+    @patch(
+        'sensors.impl.centos_7.service_monitor.Service.is_enabled',
         new=Mock(return_value=True))
     def test_fault_alert_if_service_is_inactive_in_cache(self):
         store.get = Mock(return_value={
@@ -211,6 +229,7 @@ class TestServiceMonitor(unittest.TestCase):
     def test_no_alert_for_disabled_service(self):
         self.mocked_properties_value["UnitFileState"] = "disabled"
         self.mocked_properties_value["ActiveState"] = "failed"
+        self.mocked_properties_value["ExecStart"] = "/usr/bin/spam.service"
         self.service_monitor.initialize(Mock(), Mock(), Mock())
         self.assertIs(self.service_monitor.services[
                           "spam.service"]._unit_state,
@@ -235,6 +254,9 @@ class TestServiceMonitor(unittest.TestCase):
         if signal == "PropertiesChanged":
             raise dbus.exceptions.DBusException
 
+    @patch(
+        'sensors.impl.centos_7.service_monitor.Service.is_enabled',
+        new=Mock(return_value=True))
     def test_service_enters_into_monitoring_disabled_state_if_signal_reg_failed(
             self):
         Interface.connect_to_signal = Mock(
