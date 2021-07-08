@@ -467,7 +467,8 @@ class RealStorEnclosure(StorageEnclosure):
             "drives": self.URI_CLIAPI_SHOWDISKS,
             "expander-ports": self.URI_CLIAPI_SASHEALTHSTATUS,
             "fan-modules": self.URI_CLIAPI_SHOWFANMODULES,
-            "frus": self.URI_CLIAPI_SHOWFRUS
+            "frus": self.URI_CLIAPI_SHOWFRUS,
+            "versions": self.URI_CLIAPI_SHOWVERSION
         }
         url = self.build_url(fru_uri_map.get(fru))
         response = self.ws_request(url, self.ws.HTTP_GET)

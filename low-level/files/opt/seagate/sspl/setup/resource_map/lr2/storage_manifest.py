@@ -46,13 +46,20 @@ class StorageManifest(CortxManifest):
         self.log = CustomLog(MANIFEST_SVC_NAME)
         storage_type = Conf.get(GLOBAL_CONF, STORAGE_TYPE_KEY)
         Utility.validate_storage_type_support(self.log, ManifestError, storage_type)
-        self.storage_frus = {
+        hw_resources = {
             "enclosures": self.get_enclosures_info,
             "controllers": self.get_controllers_info,
             "power-supplies": self.get_psu_info,
             "fan-modules": self.get_fan_modules_info,
             "disks": self.get_drives_info,
             "sideplane": self.get_sideplane_expander_info
+        }
+        fw_resources = {
+            "versions": self.get_versions_info,
+        }
+        self.storage_resources = {
+            "hw": hw_resources,
+            "fw": fw_resources
         }
 
     def get_manifest_info(self, rpath):
@@ -66,35 +73,65 @@ class StorageManifest(CortxManifest):
         nodes = rpath.strip().split(">")
         leaf_node, _ = Utility.get_node_details(nodes[-1])
 
-        # Fetch manifest information for all sub nodes
+        # Fetch health information for all sub nodes
         if leaf_node == "storage":
             resource_found = True
-            info = [{'hw': self.get_storage_manifest_info()}]
-        elif leaf_node == "hw":
-            resource_found = True
             info = self.get_storage_manifest_info()
-        elif leaf_node in self.storage_frus:
+        elif leaf_node in self.storage_resources:
             resource_found = True
-            info = self.storage_frus[leaf_node]()
+            for resource, method in self.storage_resources[leaf_node].items():
+                try:
+                    info.update({resource: method()})
+                    resource_found = True
+                except Exception as err:
+                    logger.error(
+                        self.log.svc_log(f"{err.__class__.__name__}:{err}"))
+                    info = None
+        else:
+            for node in nodes:
+                resource, _ = Utility.get_node_details(node)
+                for res_type in self.storage_resources:
+                    method = self.storage_resources[res_type].get(resource)
+                    if not method:
+                        logger.error(
+                            self.log.svc_log(
+                                f"No mapping function found for {res_type}"))
+                        continue
+                    try:
+                        resource_found = True
+                        info = method()
+                        break
+                    except Exception as err:
+                        logger.error(
+                            self.log.svc_log(f"{err.__class__.__name__}: {err}"))
+                        info = None
+
+                if resource_found:
+                    break
 
         if not resource_found:
             msg = f"Invalid rpath or manifest provider doesn't have support for'{rpath}'."
-            logger.error(self.log.svc_log(msg))
-            raise ManifestError(
-                errno.EINVAL, msg)
+            logger.error(self.log.svc_log(f"{msg}"))
+            raise ManifestError(errno.EINVAL, msg)
+
         return info
 
     def get_storage_manifest_info(self):
         """Get storage enclosure information."""
+        storage = []
         info = {}
-        for fru, method in self.storage_frus.items():
-            try:
-                info.update({fru: method()})
-            except Exception as err:
-                msg = f"Unable to get data for '{fru}' resource.: {err}"
-                logger.error(self.log.svc_log(msg))
-                info.update({fru: []})
-        return info
+        for res_type in self.storage_resources:
+            info.update({res_type: {}})
+            for fru, method in self.storage_resources[res_type].items():
+                try:
+                    info[res_type].update({fru: method()})
+                except Exception as err:
+                    logger.error(
+                        self.log.svc_log(f"{err.__class__.__name__}: {err}"))
+                    info[res_type].update({fru: None})
+        info["last_updated"] = int(time.time())
+        storage.append(info)
+        return storage
 
     def get_enclosures_info(self):
         """Update and return enclosure information in specific format."""
@@ -338,4 +375,52 @@ class StorageManifest(CortxManifest):
             data.append(sideplane_dict)
             logger.debug(self.log.svc_log(
                 f"Sideplane Manifest Data:{data}"))
+        return data
+
+    def get_versions_info(self):
+        """Update and return versions information in specific format."""
+        data = []
+        versions = ENCL.get_realstor_encl_data("versions")
+        for version in versions:
+            version_dict = {
+                "uid": version.get("object-name", "NA"),
+                "type": version.get("sc-cpu-type", "NA"),
+                "description": version.get("description", "NA"),
+                "product": version.get("object-name", "NA"),
+                "manufacturer": version.get("vendor", "NA"),
+                "serial_number": version.get("serial-number", "NA"),
+                "version": version.get("bundle-version", "NA"),
+                "part_number": version.get("part-number", "NA"),
+                "last_updated": int(time.time()),
+                "specifics": [{
+                    "sc_cpu_type": version.get("sc-cpu-type", "NA"),
+                    "bundle_version": version.get("bundle-version", "NA"),
+                    "bundle_base_version": version.get("bundle-base-version", "NA"),
+                    "build_date": version.get("build-date", "NA"),
+                    "sc_fw": version.get("sc-fw", "NA"),
+                    "sc_baselevel": version.get("sc-baselevel", "NA"),
+                    "sc_memory": version.get("sc-memory", "NA"),
+                    "sc_fu_version": version.get("sc-fu-version", "NA"),
+                    "sc_loader": version.get("sc-loader", "NA"),
+                    "capi_version": version.get("capi-version", "NA"),
+                    "mc_fw": version.get("mc-fw", "NA"),
+                    "mc_loader": version.get("mc-loader", "NA"),
+                    "mc_base_fw": version.get("mc-base-fw", "NA"),
+                    "fw_default_platform_brand": version.get("fw-default-platform-brand", "NA"),
+                    "ec_fw": version.get("ec-fw", "NA"),
+                    "pld_rev": version.get("pld-rev", "NA"),
+                    "prm_version": version.get("prm-version", "NA"),
+                    "hw_rev": version.get("hw-rev", "NA"),
+                    "him_rev": version.get("him-rev", "NA"),
+                    "him_model": version.get("him-model", "NA"),
+                    "backplane_type": version.get("backplane-type", "NA"),
+                    "host_channel_revision": version.get("host-channel_revision", "NA"),
+                    "disk_channel_revision": version.get("disk-channel_revision", "NA"),
+                    "mrc_version": version.get("mrc-version", "NA"),
+                    "ctk_version": version.get("ctk-version", "NA")
+                }]
+            }
+            data.append(version_dict)
+            logger.debug(self.log.svc_log(
+                f"Controller firmware Manifest Data:{data}"))
         return data
