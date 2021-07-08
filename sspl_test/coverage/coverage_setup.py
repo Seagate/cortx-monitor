@@ -70,7 +70,8 @@ PATCH_4 = """\
 
 
 def coverage_setup():
-    """Creates required files for code coverage.
+    """
+    Create required files for code coverage.
 
     Creates a temporary sspl_ll_d file and injects different patches of code
     to enable code coverage tracking. Also creates target directory for code

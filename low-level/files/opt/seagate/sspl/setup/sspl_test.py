@@ -15,7 +15,7 @@
 import shutil
 import os
 import socket
-import pkg_resources
+from pkg_resources import Requirement, working_set, VersionConflict
 
 from cortx.utils.process import SimpleProcess
 from cortx.utils.conf_store import Conf
@@ -63,29 +63,36 @@ class SSPLTestCmd:
             }
         if not self.coverage_enabled:
             pip3_packages_dep.pop("coverage")
-        # Collect installed python pkg from dependency list.
-        installed_pip3_pkgs = {}
-        for pkg in pkg_resources.working_set:
-            if pkg.project_name in pip3_packages_dep:
-                installed_pip3_pkgs[pkg.project_name] = pkg.version
+
         # Validate pip3 python pkg with required version.
         for pkg, version in pip3_packages_dep.items():
-            if pkg not in installed_pip3_pkgs or \
-               installed_pip3_pkgs[pkg] != version:
-                if pkg in installed_pip3_pkgs:
-                    cmd = f'pip3 uninstall -y {pkg}'
-                    _, err, ret = SimpleProcess(cmd).run()
-                    if ret:
-                        logger.exception(
-                            "Failed to uninstall the pip3 pkg: %s(v%s), "
-                            "due to an Error: %s" % (pkg, version, err))
+            installed_pkg = None
+            uninstalled_pkg = False
+            try:
+                pkg_req = Requirement.parse(f"{pkg}=={version}")
+                installed_pkg = working_set.find(pkg_req)
+            except VersionConflict:
+                cmd = f'pip3 uninstall -y {pkg}'
+                _, err, ret = SimpleProcess(cmd).run()
+                if ret:
+                    raise TestException(
+                        "Failed to uninstall the pip3 pkg: %s(v%s), "
+                        "due to an Error: %s" % (pkg, version, err))
+                uninstalled_pkg = True
+            except Exception as err:
+                raise TestException(
+                    "Failed at verification of pip3 pkg: %s, "
+                    "due to an Error: %s" % (pkg, err))
+
+            if not installed_pkg or uninstalled_pkg:
                 cmd = f'pip3 install {pkg}=={version}'
                 _, err, ret = SimpleProcess(cmd).run()
                 if ret:
-                    logger.exception(
+                    raise TestException(
                         "Failed to install the pip3 pkg: %s(v%s), "
                         "due to an Error: %s" % (pkg, version, err))
             logger.info(f"Ensured Package Dependency: {pkg}(v{version}).")
+
         # Validate rpm dependencies
         pkg_validator = PkgV()
         pkg_validator.validate_rpm_pkgs(
