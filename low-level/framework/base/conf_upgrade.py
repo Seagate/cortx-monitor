@@ -13,12 +13,10 @@
 # about this software or licensing, please email opensource@seagate.com or
 # cortx-questions@seagate.com.
 
-import sys
 import os
 import shutil
 
 from cortx.utils.conf_store import Conf
-from cortx.utils.conf_store.error import ConfError
 from cortx.utils.kv_store.kv_payload import KvPayload
 
 
@@ -91,25 +89,3 @@ class ConfUpgrade:
         """Remove tmp files created for merging config."""
         os.remove(self.merged_path)
         os.removedirs(self.merged_path_dir)
-
-
-if __name__ == "__main__":
-    new_conf_url = 'yaml:///opt/seagate/cortx/sspl/conf/sspl.conf.LR2.yaml'
-    existing_conf_url = 'yaml:///etc/sspl.conf'
-    merged_conf_url = 'yaml:///opt/seagate/cortx/sspl/tmp/merged.conf'
-    # Only proceed if both existing and new config path are present
-    for filepath in [existing_conf_url, new_conf_url]:
-        if not os.path.exists(filepath.split(":/")[1]):
-            print("Exiting, File %s does not exists" % filepath)
-            sys.exit(0)
-    conf_upgrade = ConfUpgrade(existing_conf_url, new_conf_url,
-                               merged_conf_url)
-    try:
-        conf_upgrade.create_merged_config()
-    except ConfError as e:
-        print("Error: %s while upgrading config file, existing config"
-              "file is retained" % e)
-    else:
-        conf_upgrade.upgrade_existing_config()
-    finally:
-        conf_upgrade.remove_merged_config()
