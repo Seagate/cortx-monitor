@@ -83,6 +83,7 @@ class ServerHealth(ResourceMap):
         }
         self._ipmi = IpmiFactory().get_implementor("ipmitool")
         self.platform_sensor_list = ['Temperature', 'Voltage', 'Current']
+        self.service = Service()
 
     def get_health_info(self, rpath):
         """Fetch health information for given rpath."""
@@ -584,115 +585,28 @@ class ServerHealth(ResourceMap):
 
     def get_cortx_service_info(self):
         """Get cortx service info in required format."""
-        service_info = []
-        cortx_services = Service().get_cortx_service_list()
-        for service in cortx_services:
-            response = self.get_systemd_service_info(service)
-            if response is not None:
-                service_info.append(response)
-        return service_info
+        cortx_services = self.service.get_cortx_service_list()
+        cortx_service_info = self.get_service_into(cortx_services)
+        return cortx_service_info
 
     def get_external_service_info(self):
         """Get external service info in required format."""
-        service_info = []
-        external_services = Service().get_external_service_list()
-        for service in external_services:
-            response = self.get_systemd_service_info(service)
+        external_services = self.service.get_external_service_list()
+        external_service_info = self.get_service_into(external_services)
+        return external_service_info
+
+    def get_service_into(self, services):
+        services_info = []
+        for service in services:
+            response = self.service.get_systemd_service_info(self.log, service)
             if response is not None:
-                service_info.append(response)
-        return service_info
-
-    def get_systemd_service_info(self, service_name):
-        """Get info of specified service using dbus API."""
-        try:
-            unit = Service()._bus.get_object(
-                const.SYSTEMD_BUS, Service()._manager.LoadUnit(service_name))
-            properties_iface = Interface(unit, dbus_interface=PROPERTIES_IFACE)
-        except DBusException as err:
-            logger.error(self.log.svc_log(
-                f"Unable to initialize {service_name} due to {err}"))
-            return None
-        path_array = properties_iface.Get(const.SERVICE_IFACE, 'ExecStart')
-        try:
-            command_line_path = str(path_array[0][0])
-        except IndexError as err:
-            logger.error(self.log.svc_log(
-                f"Unable to find {service_name} path due to {err}"))
-            command_line_path = "NA"
-
-        is_installed = True if command_line_path != "NA" or 'invalid' in properties_iface.Get(
-            const.UNIT_IFACE, 'UnitFileState') else False
-        uid = str(properties_iface.Get(const.UNIT_IFACE, 'Id'))
-        if not is_installed:
-            health_status = "NA"
-            health_description = f"Software enabling {uid} is not installed"
-            recommendation = "NA"
-            specifics = [
-                {
-                    "service_name": uid,
-                    "description": "NA",
-                    "installed": str(is_installed).lower(),
-                    "pid": "NA",
-                    "state": "NA",
-                    "substate": "NA",
-                    "status": "NA",
-                    "license": "NA",
-                    "version": "NA",
-                    "command_line_path": "NA"
-                }
-            ]
-        else:
-            service_license = "NA"
-            version = "NA"
-            service_description = str(
-                properties_iface.Get(const.UNIT_IFACE, 'Description'))
-            state = str(properties_iface.Get(const.UNIT_IFACE, 'ActiveState'))
-            substate = str(properties_iface.Get(const.UNIT_IFACE, 'SubState'))
-            service_status = 'enabled' if 'disabled' not in properties_iface.Get(
-                const.UNIT_IFACE, 'UnitFileState') else 'disabled'
-            pid = "NA" if state == "inactive" else str(
-                properties_iface.Get(const.SERVICE_IFACE, 'ExecMainPID'))
-            try:
-                version = Service().get_service_info_from_rpm(
-                    uid, "VERSION")
-            except ServiceError as err:
-                logger.error(self.log.svc_log(
-                    f"Unable to get service version due to {err}"))
-            try:
-                service_license = Service().get_service_info_from_rpm(
-                    uid, "LICENSE")
-            except ServiceError as err:
-                logger.error(self.log.svc_log(
-                    f"Unable to get service license due to {err}"))
-
-            specifics = [
-                {
-                    "service_name": uid,
-                    "description": service_description,
-                    "installed": str(is_installed).lower(),
-                    "pid": pid,
-                    "state": state,
-                    "substate": substate,
-                    "status": service_status,
-                    "license": service_license,
-                    "version": version,
-                    "command_line_path": command_line_path
-                }
-            ]
-            if service_status == 'enabled' and state == 'active' \
-                    and substate == 'running':
-                health_status = 'OK'
-                health_description = f"{uid} is in good health"
-                recommendation = "NA"
-            else:
-                health_status = state
-                health_description = f"{uid} is not in good health"
-                recommendation = const.DEFAULT_RECOMMENDATION
-
-        service_info = self.get_health_template(uid, is_fru=False)
-        self.set_health_data(service_info, health_status,
-                             health_description, recommendation, specifics)
-        return service_info
+                uid, health_status, health_description, recommendation, \
+                    specifics = response
+                service_info = self.get_health_template(uid, is_fru=False)
+                self.set_health_data(service_info, health_status,
+                    health_description, recommendation, specifics)
+                services_info.append(service_info)
+        return services_info
 
     def get_raid_info(self):
         raids_data = []

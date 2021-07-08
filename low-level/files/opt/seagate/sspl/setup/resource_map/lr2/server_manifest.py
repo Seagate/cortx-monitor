@@ -29,6 +29,7 @@ from framework.base.sspl_constants import (MANIFEST_SVC_NAME, LSHW_FILE,
 from framework.utils.service_logging import CustomLog, logger
 from framework.utils.utility import Utility
 from cortx.utils.kv_store import KvStoreFactory
+from framework.platforms.server.software import Service
 
 
 class ServerManifest(CortxManifest):
@@ -72,6 +73,15 @@ class ServerManifest(CortxManifest):
             'power': 'hw>powers[%s]>%s'
         }
         self.kv_dict = {}
+        sw_resources = {
+            'cortx_sw_services': self.get_cortx_service_info,
+            'external_sw_services': self.get_external_service_info
+        }
+        self.server_resources = {
+            "hw": self.get_server_lshw_info,
+            "sw": sw_resources
+        }
+        self.service = Service()
 
     def get_manifest_info(self, rpath):
         """
@@ -79,23 +89,83 @@ class ServerManifest(CortxManifest):
         """
         logger.info(self.log.svc_log(
             f"Get Manifest data for rpath:{rpath}"))
-        info = []
+        info = {}
         resource_found = False
+        nodes = rpath.strip().split(">")
+        leaf_node, _ = Utility.get_node_details(nodes[-1])
 
-        # Fetch server manifest information from lshw
-        if "compute" in rpath:
+        # Fetch health information for all sub nodes
+        if leaf_node == "compute":
             info = self.get_server_manifest_info()
             resource_found = True
+        elif leaf_node == "hw":
+            info = self.get_server_lshw_info()
+            resource_found = True
+        elif leaf_node == "sw":
+            for resource, method in self.server_resources[leaf_node].items():
+                try:
+                    info.update({resource: method()})
+                    resource_found = True
+                except Exception as err:
+                    logger.error(
+                        self.log.svc_log(f"{err.__class__.__name__}: {err}"))
+                    info = None
+        else:
+            for node in nodes:
+                resource, _ = Utility.get_node_details(node)
+                for res_type in self.server_resources:
+                    if res_type == "hw":
+                        method = self.server_resources.get(resource)
+                    else:
+                        method = self.server_resources[res_type].get(resource)
+                    if not method:
+                        logger.error(
+                            self.log.svc_log(
+                                f"No mapping function found for {res_type}"))
+                        continue
+                    try:
+                        info = method()
+                        resource_found = True
+                    except Exception as err:
+                        logger.error(
+                            self.log.svc_log(f"{err.__class__.__name__}: {err}"))
+                        info = None
+                if resource_found:
+                    break
 
         if not resource_found:
             msg = f"Invalid rpath or manifest provider doesn't have support for'{rpath}'."
-            logger.error(self.log.svc_log(msg))
+            logger.error(self.log.svc_log(f"{msg}"))
             raise ManifestError(errno.EINVAL, msg)
+
         return info
 
     def get_server_manifest_info(self):
         """Get server manifest information."""
         server = []
+        info = {}
+        for res_type in self.server_resources:
+            info.update({res_type: {}})
+            if res_type == "hw":
+                try:
+                    info[res_type].update(self.server_resources[res_type]()["hw"])
+                except Exception as err:
+                    logger.error(
+                        self.log.svc_log(f"{err.__class__.__name__}:{err}"))
+                    info[res_type].update({})
+            else:
+                for fru, method in self.server_resources[res_type].items():
+                    try:
+                        info[res_type].update({fru: method()})
+                    except Exception as err:
+                        logger.error(
+                            self.log.svc_log(f"{err.__class__.__name__}:{err}"))
+                        info[res_type].update({fru: []})
+        server.append(info)
+        return server
+    
+    def get_server_lshw_info(self):
+        """Get server manifest information."""
         cls_res_cnt = {}
         data, kvs_dst = self.set_lshw_input_data()
         for kv_key in data.get_keys():
@@ -114,7 +184,7 @@ class ServerManifest(CortxManifest):
         kvs_dst.set(self.kv_dict.keys(), self.kv_dict.values())
         server = self.get_manifest_output_data()
         return server
-    
+
     def set_lshw_input_data(self):
         """Fetch lshw data and update it into a file for further execution."""
         kvs_src = None
@@ -170,4 +240,36 @@ class ServerManifest(CortxManifest):
         except OSError as ex:
             msg = f"Failed in manifest tmp files cleanup. Error:{str(ex)}"
             logger.warn(self.log.svc_log(msg))
-        return [data]
+        return data
+
+    def get_cortx_service_info(self):
+        """Get cortx service info in required format."""
+        cortx_services = self.service.get_cortx_service_list()
+        cortx_service_info = self.get_service_into(cortx_services)
+        return cortx_service_info
+
+    def get_external_service_info(self):
+        """Get external service info in required format."""
+        external_services = self.service.get_external_service_list()
+        external_service_info = self.get_service_into(external_services)
+        return external_service_info
+
+    def get_service_into(self, services):
+        services_info = []
+        for service in services:
+            response = self.service.get_systemd_service_info(self.log, service)
+            if response is not None:
+                uid, _, health_description, _, specifics = response
+                service_info = {
+                    "uid": uid,
+                    "type": "NA",
+                    "description": health_description,
+                    "product": specifics[0].pop("service_name"),
+                    "manufacturer": "NA",
+                    "serial_number": "NA",
+                    "part_number": "NA",
+                    "version": specifics[0].pop("version"),
+                    "specifics": specifics
+                }
+                services_info.append(service_info)
+        return services_info

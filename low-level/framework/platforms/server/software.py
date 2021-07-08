@@ -24,7 +24,10 @@ from cortx.utils.service.service_handler import DbusServiceHandler
 from framework.platforms.server.error import BuildInfoError, ServiceError
 from framework.utils.conf_utils import SSPL_CONF, Conf
 from framework.base.sspl_constants import (CORTX_RELEASE_FACTORY_INFO,
-                                           CONFIG_SPEC_TYPE)
+    CONFIG_SPEC_TYPE, SYSTEMD_BUS, SERVICE_IFACE, UNIT_IFACE,
+    DEFAULT_RECOMMENDATION)
+from framework.utils.service_logging import logger
+from dbus import PROPERTIES_IFACE, DBusException, Interface
 
 
 class BuildInfo:
@@ -140,3 +143,92 @@ class Service:
                     return result
                 break
         return result
+    
+    def get_systemd_service_info(self, log, service_name):
+        """Get info of specified service using dbus API."""
+        try:
+            unit = self._bus.get_object(
+                SYSTEMD_BUS, self._manager.LoadUnit(service_name))
+            properties_iface = Interface(unit, dbus_interface=PROPERTIES_IFACE)
+        except DBusException as err:
+            logger.error(log.svc_log(
+                f"Unable to initialize {service_name} due to {err}"))
+            return None
+        path_array = properties_iface.Get(SERVICE_IFACE, 'ExecStart')
+        try:
+            command_line_path = str(path_array[0][0])
+        except IndexError as err:
+            logger.error(log.svc_log(
+                f"Unable to find {service_name} path due to {err}"))
+            command_line_path = "NA"
+
+        is_installed = True if command_line_path != "NA" or 'invalid' in properties_iface.Get(
+            UNIT_IFACE, 'UnitFileState') else False
+        uid = str(properties_iface.Get(UNIT_IFACE, 'Id'))
+        if not is_installed:
+            health_status = "NA"
+            health_description = f"Software enabling {uid} is not installed"
+            recommendation = "NA"
+            specifics = [
+                {
+                    "service_name": uid,
+                    "description": "NA",
+                    "installed": str(is_installed).lower(),
+                    "pid": "NA",
+                    "state": "NA",
+                    "substate": "NA",
+                    "status": "NA",
+                    "license": "NA",
+                    "version": "NA",
+                    "command_line_path": "NA"
+                }
+            ]
+        else:
+            service_license = "NA"
+            version = "NA"
+            service_description = str(
+                properties_iface.Get(UNIT_IFACE, 'Description'))
+            state = str(properties_iface.Get(UNIT_IFACE, 'ActiveState'))
+            substate = str(properties_iface.Get(UNIT_IFACE, 'SubState'))
+            service_status = 'enabled' if 'disabled' not in properties_iface.Get(
+                UNIT_IFACE, 'UnitFileState') else 'disabled'
+            pid = "NA" if state == "inactive" else str(
+                properties_iface.Get(SERVICE_IFACE, 'ExecMainPID'))
+            try:
+                version = self.get_service_info_from_rpm(
+                    uid, "VERSION")
+            except ServiceError as err:
+                logger.error(log.svc_log(
+                    f"Unable to get service version due to {err}"))
+            try:
+                service_license = self.get_service_info_from_rpm(
+                    uid, "LICENSE")
+            except ServiceError as err:
+                logger.error(log.svc_log(
+                    f"Unable to get service license due to {err}"))
+
+            specifics = [
+                {
+                    "service_name": uid,
+                    "description": service_description,
+                    "installed": str(is_installed).lower(),
+                    "pid": pid,
+                    "state": state,
+                    "substate": substate,
+                    "status": service_status,
+                    "license": service_license,
+                    "version": version,
+                    "command_line_path": command_line_path
+                }
+            ]
+            if service_status == 'enabled' and state == 'active' \
+                    and substate == 'running':
+                health_status = 'OK'
+                health_description = f"{uid} is in good health"
+                recommendation = "NA"
+            else:
+                health_status = state
+                health_description = f"{uid} is not in good health"
+                recommendation = DEFAULT_RECOMMENDATION
+
+        return uid, health_status, health_description, recommendation, specifics
