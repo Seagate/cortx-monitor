@@ -148,6 +148,9 @@ class TestServiceMonitor(unittest.TestCase):
             side_effect=partial(self.service_monitor.services[
                                     "spam.service"].properties_changed_handler,
                                 "", "", ""))
+        self.service_monitor.services[
+            "spam.service"].is_active_for_threshold_time = Mock(
+            return_value=True)
         self.service_monitor_run_iteration()
         self.assertEqual(self.service_monitor._write_internal_msgQ.call_count,
                          2)
@@ -195,7 +198,8 @@ class TestServiceMonitor(unittest.TestCase):
         store.get = Mock(return_value={
             "service_state": "inactive",
             "service_monitor_state": InactiveState,
-            "nonactive_enter_timestamp": time.time() - 999
+            "nonactive_enter_timestamp": time.time() - 999,
+            "active_enter_timestamp": time.time()
         })
         self.service_monitor.initialize(Mock(), Mock(), Mock())
         self.assertIs(
