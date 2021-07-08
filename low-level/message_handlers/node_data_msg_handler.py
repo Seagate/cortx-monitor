@@ -497,7 +497,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 # Create the memory data message and hand it over
                 # to the egress processor to transmit
                 fault_resolved_event = "Host memory usage has decreased to {}%, "\
-                    "lesser than the configured threshold of {}%.".format(
+                    "lower than the configured threshold of {}%.".format(
                         self._node_sensor.total_memory["percent"],
                         self._host_memory_usage_threshold
                     )
@@ -644,7 +644,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 # Create the cpu usage data message and hand it over
                 # to the egress processor to transmit
                 fault_resolved_event = "CPU usage has decreased to {}%, "\
-                    "lesser than the configured threshold of {}%.".format(
+                    "lower than the configured threshold of {}%.".format(
                         self._node_sensor.cpu_usage,
                         self._cpu_usage_threshold
                     )
@@ -903,7 +903,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             # Create the disk space data message and hand it over
             # to the egress processor to transmit
             fault_resolved_event = "Disk usage has decreased to {}%, "\
-                "lesser than the configured threshold of {}%.".format(
+                "lower than the configured threshold of {}%.".format(
                     self._node_sensor.disk_used_percentage,
                     self._disk_usage_threshold
                 )
