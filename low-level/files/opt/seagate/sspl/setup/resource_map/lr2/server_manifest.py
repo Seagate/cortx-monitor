@@ -18,9 +18,10 @@
 import errno
 import time
 import json
-import subprocess
 import os
 
+from cortx.utils.process import SimpleProcess
+from cortx.utils.kv_store import KvStoreFactory
 from framework.utils.conf_utils import GLOBAL_CONF, Conf, NODE_TYPE_KEY
 from error import ManifestError
 from resource_map import CortxManifest
@@ -28,8 +29,8 @@ from framework.base.sspl_constants import (MANIFEST_SVC_NAME, LSHW_FILE,
     MANIFEST_OUTPUT_FILE)
 from framework.utils.service_logging import CustomLog, logger
 from framework.utils.utility import Utility
-from cortx.utils.kv_store import KvStoreFactory
 from framework.platforms.server.software import Service
+from framework.platforms.server.platform import Platform
 
 
 class ServerManifest(CortxManifest):
@@ -75,13 +76,19 @@ class ServerManifest(CortxManifest):
         self.kv_dict = {}
         sw_resources = {
             'cortx_sw_services': self.get_cortx_service_info,
-            'external_sw_services': self.get_external_service_info
+            'external_sw_services': self.get_external_service_info,
+            'os': self.get_os_server_info
+        }
+        fw_resources = {
+            'bmc': self.get_bmc_version_info
         }
         self.server_resources = {
             "hw": self.get_server_lshw_info,
-            "sw": sw_resources
+            "sw": sw_resources,
+            "fw": fw_resources
         }
         self.service = Service()
+        self.platform = Platform()
 
     def get_manifest_info(self, rpath):
         """
@@ -161,6 +168,7 @@ class ServerManifest(CortxManifest):
                         logger.error(
                             self.log.svc_log(f"{err.__class__.__name__}:{err}"))
                         info[res_type].update({fru: []})
+        info["last_updated"] = int(time.time())
         server.append(info)
         return server
     
@@ -189,15 +197,14 @@ class ServerManifest(CortxManifest):
         """Fetch lshw data and update it into a file for further execution."""
         kvs_src = None
         kvs_dst = None
-        proc = subprocess.Popen(['lshw', '-json'], stdout=subprocess.PIPE)
-        str_dict, err = proc.communicate()
-        if err:
+        response, err, returncode = SimpleProcess("lshw -json").run()
+        if returncode:
             msg = f"Failed to capture Node support data. Error:{str(err)}"
             logger.error(self.log.svc_log(msg))
             raise ManifestError(errno.EINVAL, msg)
         try:
             with open(LSHW_FILE, 'w+') as fp:
-                json.dump(json.loads(str_dict.decode("utf-8")), fp,  indent=4)
+                json.dump(json.loads(response.decode("utf-8")), fp,  indent=4)
             with open(MANIFEST_OUTPUT_FILE, 'w+') as fp:
                 json.dump({}, fp,  indent=4)
             kvs_src = KvStoreFactory.get_instance(f'json://{LSHW_FILE}').load()
@@ -269,7 +276,65 @@ class ServerManifest(CortxManifest):
                     "serial_number": "NA",
                     "part_number": "NA",
                     "version": specifics[0].pop("version"),
+                    "last_updated": int(time.time()),
                     "specifics": specifics
                 }
                 services_info.append(service_info)
         return services_info
+
+    def get_bmc_version_info(self):
+        bmc_data = []
+        specifics = {}
+        cmd = "bmc info"
+        out, _, retcode = self.platform._ipmi._run_ipmitool_subcommand(cmd)
+        if retcode == 0:
+            out_lst = out.split("\n")
+            for line in out_lst:
+                data = line.split(':')
+                if len(data)>1 and data[1].strip() != "":
+                    key = data[0].strip().lower().replace(" ","_")
+                    value = data[1].strip()
+                    specifics.update({key: value})
+            bmc = {
+                "uid": 'bmc',
+                "type": "NA",
+                "description": "BMC and IPMI version information",
+                "product": specifics.get("product_name", "NA"),
+                "manufacturer": specifics.get("manufacturer_name", "NA"),
+                "serial_number": "NA",
+                "part_number": "NA",
+                "version": specifics.get("firmware_revision", "NA"),
+                "last_updated": int(time.time()),
+                "specifics": [specifics]
+            }
+            bmc_data.append(bmc)
+        return bmc_data
+    
+    def get_os_server_info(self):
+        os_release = ""
+        os_data = []
+        specifics = {}
+        with open("/etc/os-release") as f:
+            os_release = f.read()
+        if os_release:
+            os_lst = os_release.split("\n")
+            for line in os_lst:
+                data = line.split('=')
+                if len(data)>1 and data[1].strip() != "":
+                    key = data[0].strip().lower().replace(" ","_")
+                    value = data[1].strip().replace("\"","")
+                    specifics.update({key: value})
+            os_info = {
+                "uid": specifics.get("id", "NA"),
+                "type": "os",
+                "description": "OS information",
+                "product": specifics.get("pretty_name", "NA"),
+                "manufacturer": specifics.get("manufacturer_name", "NA"),
+                "serial_number": "NA",
+                "part_number": "NA",
+                "version": specifics.get("version", "NA"),
+                "last_updated": int(time.time()),
+                "specifics": [specifics]
+            }
+            os_data.append(os_info)
+        return os_data
