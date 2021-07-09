@@ -187,20 +187,10 @@ class Service:
 
     @property
     def is_enabled(self):
-        path_array = self.properties_iface.Get(SERVICE_IFACE, 'ExecStart')
-        # check if service is configured on system,
-        # if yes then check if it is in enabled state.
-        try:
-            command_line_path = str(path_array[0][0])
-        except IndexError as err:
-            logger.error(
-                "Unable to find %s path due to %s" % (self.name, err))
-            command_line_path = "NA"
-        if command_line_path != "NA":
+        if self.properties_iface.Get(UNIT_IFACE, 'UnitFileState'):
             return 'disabled' not in self.properties_iface.Get(
                 UNIT_IFACE, 'UnitFileState')
-        else:
-            return False
+        return False
 
     def is_nonactive_for_threshold_time(self):
         return time.time() - self.nonactive_enter_timestamp > self.nonactive_threshold
