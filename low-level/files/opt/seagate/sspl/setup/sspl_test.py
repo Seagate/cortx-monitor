@@ -40,7 +40,7 @@ class SSPLTestCmd:
     def __init__(self, args: list):
         self.args = args
         self.name = "sspl_test"
-        self.plan = "self"
+        self.plan = "sanity"
         self.coverage_enabled = self.args.coverage
 
         self.dbus_service = DbusServiceHandler()
