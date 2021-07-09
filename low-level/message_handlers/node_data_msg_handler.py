@@ -471,7 +471,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
             if self.usage_time_map['memory'] - previous_check_time >= self._high_memory_usage_wait_threshold:
                 self.high_usage['memory'] = True
-
+                self.fault_resolved_iterations['memory'] = 0
                 # Create the memory data message and hand it over
                 # to the egress processor to transmit
                 fault_event = "Host memory usage has increased to {}%,"\
@@ -629,6 +629,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             if self.usage_time_map['cpu'] - previous_check_time >= self._high_cpu_usage_wait_threshold:
 
                 self.high_usage['cpu'] = True
+                self.fault_resolved_iterations['cpu'] = 0
                 # Create the cpu usage data message and hand it over
                 # to the egress processor to transmit
                 fault_event = "CPU usage has increased to {}%, "\
