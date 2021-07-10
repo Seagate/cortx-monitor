@@ -83,16 +83,15 @@ class SSPLPostInstall:
         if self.product not in consts.enabled_products:
             msg = "Product '%s' is not in sspl supported product list: %s" % (
                 self.product, consts.enabled_products)
+            logger.error(msg)
             raise SetupError(errno.EINVAL, msg)
 
         # Validate setup support
         if self.setup not in consts.setups:
             msg = "Setup '%s' is not in sspl supported setup list: %s" % (
                 self.setup, consts.setups)
+            logger.error(msg)
             raise SetupError(errno.EINVAL, msg)
-
-        # configure sspl-setup log dir.
-        self.configure_sspl_setup_log()
 
         # Validate required pip3s and rpms are installed
         self.validate_dependencies(self.setup)
@@ -166,41 +165,17 @@ class SSPLPostInstall:
             pkg_validator.validate("rpms", vm_dependency_rpms)
             # No processes to check in VM environment
 
-    def configure_sspl_setup_log(self):
-        """Configure sspl-setup log file in rsyslog and update logrotate file."""
+    def process(self):
+        """Create SSPL user and required config files."""
+        # dbus module import is implicit in cortx utils. Keeping this
+        # after dependency validation will enrich the use of
+        # validate_dependencies() method.
         from cortx.utils.service import DbusServiceHandler
         self.dbus_service = DbusServiceHandler()
 
         # Create and load sspl config
         self.create_sspl_conf()
         Conf.load(consts.SSPL_CONFIG_INDEX, consts.sspl_config_path)
-
-        # SSPL Setup log configuration
-        system_files_root = "%s/low-level/files" % consts.SSPL_BASE_DIR
-        sspl_log_file_path = Utility.get_config_value(consts.SSPL_CONFIG_INDEX,
-            "SYSTEM_INFORMATION>sspl_log_file_path")
-        setup_log_file_path = sspl_log_file_path.replace("/sspl.log","/sspl-setup.log")
-        if not os.path.exists(consts.RSYSLOG_SETUP_CONF):
-            shutil.copyfile("%s/%s" % (system_files_root, consts.RSYSLOG_SETUP_CONF),
-                consts.RSYSLOG_SETUP_CONF)
-        # Update log location as per sspl.conf
-        Utility.replace_expr(consts.RSYSLOG_SETUP_CONF, 'File.*[=,"]',
-            'File="%s"' % setup_log_file_path)
-
-        # configure logrotate
-        os.makedirs(consts.LOGROTATE_DIR, exist_ok=True)
-        Utility.replace_expr("%s/etc/logrotate.d/sspl_setup_logs" % system_files_root,
-            0, setup_log_file_path)
-
-        shutil.copy2("%s/etc/logrotate.d/sspl_setup_logs" % system_files_root,
-            consts.SETUP_LOGROTATE_CONF)
-        self.dbus_service.restart('rsyslog.service')
-
-    def process(self):
-        """Create SSPL user and required config files."""
-        # dbus module import is implicit in cortx utils. Keeping this
-        # after dependency validation will enrich the use of
-        # validate_dependencies() method.
 
         # Update sspl.conf with provisioner supplied input config copy
         Conf.set(

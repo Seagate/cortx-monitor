@@ -18,6 +18,8 @@
 # ****************************************************************************
 
 import logging
+from framework.utils.utility import Utility
+from framework.base.sspl_constants import SETUP_LOG_PATH
 import sys
 
 logger_facility = "sspl-setup"
@@ -27,11 +29,17 @@ def init_logging(syslog_host="localhost", syslog_port=514, console_output=False)
     """Initialize logging for sspl-setup."""
     _logger.setLevel(logging.INFO)
     # set Logging Handlers
-    handler = logging.handlers.SysLogHandler(
-                address=(syslog_host, syslog_port))
-    syslog_format = "%(name)s[%(process)d]: " \
-                    "%(levelname)s %(message)s (%(filename)s:%(lineno)d)"
-    formatter = logging.Formatter(syslog_format)
+    Utility().create_file(SETUP_LOG_PATH)
+
+    handler = logging.handlers.RotatingFileHandler(
+        SETUP_LOG_PATH,
+        mode='a',
+        maxBytes=2000000,
+        backupCount=5)
+
+    fformat = "%(asctime)s %(name)s[%(process)d]: " \
+                "%(levelname)s %(message)s (%(filename)s:%(lineno)d)"
+    formatter = logging.Formatter(fformat, datefmt='%b %d %H:%M:%S')
     handler.setFormatter(formatter)
     _logger.addHandler(handler)
     if console_output:
