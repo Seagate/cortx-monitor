@@ -59,33 +59,33 @@ class ServerManifest(CortxManifest):
             'version': 'version'
         }
         self.class_mapping = {
-            'disk': 'hw>disks[%s]>%s',
-            'network': 'hw>networks[%s]>%s',
+            'memory': 'hw>memory[%s]>%s',
+            'disk': 'hw>disk[%s]>%s',
+            'storage': 'hw>storage[%s]>%s',
+            'system': 'hw>system[%s]>%s',
+            'processor': 'hw>processor[%s]>%s',
+            'network': 'hw>network[%s]>%s',
+            'power': 'hw>power[%s]>%s',
             'volume': 'hw>volumes[%s]>%s',
-            'bus': 'hw>buses[%s]>%s',
-            'memory': 'hw>memorys[%s]>%s',
-            'processor': 'hw>processors[%s]>%s',
-            'bridge': 'hw>bridges[%s]>%s',
-            'generic': 'hw>generics[%s]>%s',
-            'storage': 'hw>storages[%s]>%s',
-            'input': 'hw>inputs[%s]>%s',
-            'display': 'hw>displays[%s]>%s',
-            'system': 'hw>systems[%s]>%s',
-            'power': 'hw>powers[%s]>%s'
+            'bus': 'hw>bus[%s]>%s',
+            'bridge': 'hw>bridge[%s]>%s',
+            'display': 'hw>display[%s]>%s',
+            'generic': 'hw>generic[%s]>%s',
+            'input': 'hw>input[%s]>%s'
         }
         self.kv_dict = {}
         sw_resources = {
+            'os': self.get_os_server_info,
             'cortx_sw_services': self.get_cortx_service_info,
-            'external_sw_services': self.get_external_service_info,
-            'os': self.get_os_server_info
+            'external_sw_services': self.get_external_service_info
         }
         fw_resources = {
             'bmc': self.get_bmc_version_info
         }
         self.server_resources = {
-            "hw": self.get_server_lshw_info,
+            "fw": fw_resources,
             "sw": sw_resources,
-            "fw": fw_resources
+            "hw": self.get_server_lshw_info
         }
         self.service = Service()
         self.platform = Platform()
@@ -175,6 +175,7 @@ class ServerManifest(CortxManifest):
     def get_server_lshw_info(self):
         """Get server manifest information."""
         cls_res_cnt = {}
+        server = {"hw":{}}
         data, kvs_dst = self.set_lshw_input_data()
         for kv_key in data.get_keys():
             if kv_key.endswith('class'):
@@ -190,7 +191,11 @@ class ServerManifest(CortxManifest):
                         self.map_manifest_server_data(field, manifest_key, data, kv_key)
         # Adding data to kv
         kvs_dst.set(self.kv_dict.keys(), self.kv_dict.values())
-        server = self.get_manifest_output_data()
+        server_unsorted = self.get_manifest_output_data()
+        # Sorting dictionary according to priority.
+        for server_type in self.class_mapping.keys():
+            if server_type in server_unsorted["hw"]:
+                server["hw"][server_type] = server_unsorted["hw"][server_type]
         return server
 
     def set_lshw_input_data(self):
