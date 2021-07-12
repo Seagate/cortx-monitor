@@ -74,9 +74,15 @@ class EgressAccumulatedMsgsProcessor(ScheduledModuleThread, InternalMsgQ):
         self.store_queue = StoreQueue()
         self._read_config()
         producer_initialized.wait()
-        self._producer = MessageProducer(producer_id="acuumulated processor",
-                                         message_type=self._message_type,
-                                         method=self._method)
+        self.create_MsgProducer_obj()
+
+    def create_MsgProducer_obj(self):
+        self._producer = None
+        try:
+            self._producer = MessageProducer(producer_id=self._producer_id,
+                message_type=self._message_type, method=self._method)
+        except Exception as err:
+            logger.error('Instance creation for MessageProducer class failed due to %s' % err)
 
     def read_data(self):
         """This method is part of interface. Currently it is not
@@ -122,7 +128,11 @@ class EgressAccumulatedMsgsProcessor(ScheduledModuleThread, InternalMsgQ):
                             continue
                     if "sensor_response_type" in dict_msg["message"]:
                         logger.info(f"Publishing Accumulated Alert: {message}")
-                    self._producer.send([message])
+                    if isinstance(self._producer, MessageProducer):
+                        self._producer.send([message])
+                        logger.error(f"Published Accumulated Message {message}")
+                    else:
+                        self.create_MsgProducer_obj()
         except MessageBusError as e:
             logger.error("EgressAccumulatedMsgsProcessor, run, %r" % e)
         except Exception as e:

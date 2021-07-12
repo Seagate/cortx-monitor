@@ -81,10 +81,16 @@ class EgressProcessor(ScheduledModuleThread, InternalMsgQ):
         self._request_shutdown = False
 
         self._read_config()
-        self._producer = MessageProducer(producer_id=self._producer_id,
-                                         message_type=self._message_type,
-                                         method=self._method)
+        self.create_MsgProducer_obj()
         producer_initialized.set()
+
+    def create_MsgProducer_obj(self):
+        self._producer = None
+        try:
+            self._producer = MessageProducer(producer_id=self._producer_id,
+                message_type=self._message_type, method=self._method)
+        except Exception as err:
+            logger.error('Instance creation for MessageProducer class failed due to %s' % err)
 
     def run(self):
         """Run the module periodically on its own thread. """
@@ -205,7 +211,10 @@ class EgressProcessor(ScheduledModuleThread, InternalMsgQ):
                          "actuator_response_type").get(
                          "thread_controller") is not None):
                 self._add_signature()
-                self._producer.send([json.dumps(self._jsonMsg)])
+                if isinstance(self._producer, MessageProducer):
+                    self._producer.send([json.dumps(self._jsonMsg)])
+                else:
+                    self.create_MsgProducer_obj()
                 logger.debug(
                     "_transmit_msg_on_exchange, Successfully Sent: %s" % self._jsonMsg)
             else:
@@ -213,8 +222,11 @@ class EgressProcessor(ScheduledModuleThread, InternalMsgQ):
                 jsonMsg = json.dumps(self._jsonMsg)
                 try:
                     if self.store_queue.is_empty():
-                        self._producer.send([jsonMsg])
-                        logger.info(f"Published Alert: {jsonMsg}")
+                        if isinstance(self._producer, MessageProducer):
+                            self._producer.send([jsonMsg])
+                            logger.info(f"Published Alert: {jsonMsg}")
+                        else:
+                            self.create_MsgProducer_obj()
                     else:
                         logger.info("'Accumulated msg queue' is not Empty." +
                                     " Adding the msg to the end of the queue")
