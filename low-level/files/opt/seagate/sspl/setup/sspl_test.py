@@ -15,6 +15,7 @@
 import shutil
 import os
 import socket
+from pkg_resources import Requirement, working_set, VersionConflict
 
 from cortx.utils.process import SimpleProcess
 from cortx.utils.conf_store import Conf
@@ -39,8 +40,8 @@ class SSPLTestCmd:
     def __init__(self, args: list):
         self.args = args
         self.name = "sspl_test"
-        self.plan = "self"
-        self.coverage_enabled = False
+        self.plan = "sanity"
+        self.coverage_enabled = self.args.coverage
 
         self.dbus_service = DbusServiceHandler()
         if args.config and args.config[0]:
@@ -56,14 +57,46 @@ class SSPLTestCmd:
             "cortx-sspl-test": None
             }
         # python 3rd party package dependency
-        pip3_3ps_packages_test = {
-            "Flask": "1.1.1"
+        pip3_packages_dep = {
+            "Flask": "1.1.1",
+            "coverage": "5.5"
             }
+        if not self.coverage_enabled:
+            pip3_packages_dep.pop("coverage")
+
+        # Validate pip3 python pkg with required version.
+        for pkg, version in pip3_packages_dep.items():
+            installed_pkg = None
+            uninstalled_pkg = False
+            try:
+                pkg_req = Requirement.parse(f"{pkg}=={version}")
+                installed_pkg = working_set.find(pkg_req)
+            except VersionConflict:
+                cmd = f'pip3 uninstall -y {pkg}'
+                _, err, ret = SimpleProcess(cmd).run()
+                if ret:
+                    raise TestException(
+                        "Failed to uninstall the pip3 pkg: %s(v%s), "
+                        "due to an Error: %s" % (pkg, version, err))
+                uninstalled_pkg = True
+            except Exception as err:
+                raise TestException(
+                    "Failed at verification of pip3 pkg: %s, "
+                    "due to an Error: %s" % (pkg, err))
+
+            if not installed_pkg or uninstalled_pkg:
+                cmd = f'pip3 install {pkg}=={version}'
+                _, err, ret = SimpleProcess(cmd).run()
+                if ret:
+                    raise TestException(
+                        "Failed to install the pip3 pkg: %s(v%s), "
+                        "due to an Error: %s" % (pkg, version, err))
+            logger.info(f"Ensured Package Dependency: {pkg}(v{version}).")
+
+        # Validate rpm dependencies
         pkg_validator = PkgV()
-        pkg_validator.validate_pip3_pkgs(host=socket.getfqdn(),
-            pkgs=pip3_3ps_packages_test, skip_version_check=False)
-        pkg_validator.validate_rpm_pkgs(host=socket.getfqdn(),
-            pkgs=rpm_deps, skip_version_check=True)
+        pkg_validator.validate_rpm_pkgs(
+            host=socket.getfqdn(), pkgs=rpm_deps, skip_version_check=True)
         # Load global, sspl and test configs
         Conf.load(SSPL_CONFIG_INDEX, sspl_config_path)
         Conf.load(SSPL_TEST_CONFIG_INDEX, sspl_test_config_path)
@@ -86,7 +119,6 @@ class SSPLTestCmd:
     def process(self):
         """Run test using user requested test plan."""
         self.plan = self.args.plan[0]
-        self.coverage_enabled = self.args.coverage
 
         # if self.plan is other than "self"
         # then only config change and service restart is required.
