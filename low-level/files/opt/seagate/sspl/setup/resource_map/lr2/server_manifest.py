@@ -257,16 +257,16 @@ class ServerManifest(CortxManifest):
     def get_cortx_service_info(self):
         """Get cortx service info in required format."""
         cortx_services = self.service.get_cortx_service_list()
-        cortx_service_info = self.get_service_into(cortx_services)
+        cortx_service_info = self.get_service_info(cortx_services)
         return cortx_service_info
 
     def get_external_service_info(self):
         """Get external service info in required format."""
         external_services = self.service.get_external_service_list()
-        external_service_info = self.get_service_into(external_services)
+        external_service_info = self.get_service_info(external_services)
         return external_service_info
 
-    def get_service_into(self, services):
+    def get_service_info(self, services):
         services_info = []
         for service in services:
             response = self.service.get_systemd_service_info(self.log, service)
@@ -316,19 +316,9 @@ class ServerManifest(CortxManifest):
         return bmc_data
     
     def get_os_server_info(self):
-        os_release = ""
         os_data = []
-        specifics = {}
-        with open("/etc/os-release") as f:
-            os_release = f.read()
-        if os_release:
-            os_lst = os_release.split("\n")
-            for line in os_lst:
-                data = line.split('=')
-                if len(data)>1 and data[1].strip() != "":
-                    key = data[0].strip().lower().replace(" ","_")
-                    value = data[1].strip().replace("\"","")
-                    specifics.update({key: value})
+        specifics = self.platform.get_os_info()
+        if specifics:
             os_info = {
                 "uid": specifics.get("id", "NA"),
                 "type": "os",

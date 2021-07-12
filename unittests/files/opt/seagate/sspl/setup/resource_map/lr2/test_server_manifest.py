@@ -17,7 +17,7 @@ class TestServerManifest(unittest.TestCase):
     def test_get_server_manifest_info(self):
         server_map = self.create_server_manifest_obj()
         resp = server_map.get_server_manifest_info()
-        sys_resp = resp[0]["hw"]["systems"][0]
+        sys_resp = resp[0]["hw"]["system"][0]
         assert sys_resp["uid"] == socket.gethostname()
         assert sys_resp["type"] == "system"
 

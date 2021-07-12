@@ -19,6 +19,7 @@ import re
 
 from cortx.utils.process import SimpleProcess
 from framework.utils.ipmi_client import IpmiFactory
+from framework.utils.utility import Utility
 
 
 class Platform:
@@ -29,20 +30,21 @@ class Platform:
         self._ipmi = IpmiFactory().get_implementor("ipmitool")
 
     @staticmethod
-    def get_os():
-        """Returns os name({ID}{VERSION_ID}) from /etc/os-release."""
+    def get_os_info():
+        """Returns OS information from /etc/os-release."""
         os_release = ""
+        os_info = {}
         with open("/etc/os-release") as f:
             os_release = f.read()
         if os_release:
-            os_id = re.findall(
-                '^ID=(.*)\n', os_release, flags=re.MULTILINE)
-            os_version_id = re.findall(
-                '^VERSION_ID=(.*)\n', os_release, flags=re.MULTILINE)
-            if os_id and os_version_id:
-                os_info = [os_str.strip('"') for os_str in os_id+os_version_id]
-                return "".join(os_info)
-        return os_release
+            os_lst = os_release.split("\n")
+            for line in os_lst:
+                data = line.split('=')
+                if len(data)>1 and data[1].strip() != "":
+                    key = data[0].strip().lower().replace(" ","_")
+                    value = data[1].strip().replace("\"","")
+                    os_info.update({key: value})
+        return os_info
 
     def get_manufacturer_name(self):
         """Returns node server manufacturer name."""
@@ -70,7 +72,7 @@ class Platform:
             "Product Name": "",
             "Product Part Number": "",
             "Manufacturer": self.get_manufacturer_name(),
-            "OS": self.get_os()
+            "OS": Utility().get_os()
             }
         cmd = "fru print"
         prefix = "FRU Device Description : Builtin FRU Device (ID 0)"
