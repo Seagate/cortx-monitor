@@ -458,7 +458,8 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         else:
             fault_resolved_iters = 0
         try:
-            iteration_limit = int(self._high_memory_usage_wait_threshold/self._transmit_interval)
+            iteration_limit = int(
+                self._high_memory_usage_wait_threshold/self._transmit_interval)
         except ZeroDivisionError:
             iteration_limit = 0
         self.usage_time_map['memory'] = current_time
