@@ -229,9 +229,11 @@ class Service:
 
         if self.state != self.previous_state:
             if self.state == "active":
-                if self._service_state is FailedState and self.name not in Service.active_services:
+                if self._service_state is FailedState:
+                    self.new_service_state(ActiveState)
                     Service.active_services.add(self.name)
-                self.new_service_state(ActiveState)
+                if self._service_state is InactiveState:
+                    self.new_service_state(ActiveState)
             elif self.state == "failed":
                 if self._service_state is not FailedState:
                     Service.alerts.put(
