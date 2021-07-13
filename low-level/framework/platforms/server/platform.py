@@ -46,17 +46,20 @@ class Platform:
                     os_info.update({key: value})
         return os_info
 
-    def get_manufacturer_name(self):
-        """Returns node server manufacturer name."""
-        manufacturer = ""
+    def get_bmc_info(self):
+        """Returns node server bmc info."""
+        bmc_info = {}
         cmd = "bmc info"
         out, _, retcode = self._ipmi._run_ipmitool_subcommand(cmd)
         if retcode == 0:
-            search_res = re.search(
-                r"Manufacturer Name[\s]+:[\s]+([\w]+)(.*)", out)
-            if search_res:
-                manufacturer = search_res.groups()[0]
-        return manufacturer
+            out_lst = out.split("\n")
+            for line in out_lst:
+                data = line.split(':')
+                if len(data)>1 and data[1].strip() != "":
+                    key = data[0].strip().lower().replace(" ","_")
+                    value = data[1].strip()
+                    bmc_info.update({key: value})
+        return bmc_info
 
     def get_server_details(self):
         """
@@ -71,7 +74,7 @@ class Platform:
             "Board Part Number": "",
             "Product Name": "",
             "Product Part Number": "",
-            "Manufacturer": self.get_manufacturer_name(),
+            "Manufacturer": self._ipmi.get_manufacturer_name(),
             "OS": Utility().get_os()
             }
         cmd = "fru print"

@@ -61,5 +61,5 @@ class StorageMap():
         """
         from storage_manifest import StorageManifest
         storage = StorageManifest()
-        info = storage.get_manifest_info(rpath)
+        info = storage.get_data(rpath)
         return info

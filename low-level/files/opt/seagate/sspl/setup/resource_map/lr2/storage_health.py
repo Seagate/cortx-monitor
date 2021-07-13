@@ -28,6 +28,7 @@ from framework.utils.service_logging import CustomLog, logger
 from framework.utils.utility import Utility
 from framework.platforms.realstor.realstor_enclosure import (
     singleton_realstorencl as ENCL)
+from framework.platforms.storage.storage import Storage
 
 
 class StorageHealth(ResourceMap):
@@ -40,7 +41,7 @@ class StorageHealth(ResourceMap):
         super().__init__()
         self.log = CustomLog(const.HEALTH_SVC_NAME)
         storage_type = Conf.get(GLOBAL_CONF, STORAGE_TYPE_KEY)
-        Utility.validate_storage_type_support(self.log, ResourceMapError, storage_type)
+        Storage.validate_storage_type_support(self.log, ResourceMapError, storage_type)
         hw_resources = {
             "controllers": self.get_controllers_info,
             "psus": self.get_psu_info,

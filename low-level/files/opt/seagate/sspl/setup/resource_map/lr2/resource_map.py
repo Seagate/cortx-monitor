@@ -81,7 +81,7 @@ class ResourceMap(metaclass=ABCMeta):
         })
 
 
-class CortxManifest(metaclass=ABCMeta):
+class Manifest(metaclass=ABCMeta):
     """Abstract class for all other manifest types."""
 
     name = "manifest"
@@ -93,7 +93,7 @@ class CortxManifest(metaclass=ABCMeta):
         init_logging('node-manifest', logging_level)
 
     @abstractmethod
-    def get_manifest_info(self, rpath):
+    def get_data(self, rpath):
         """
         Get technical information of fru in given manifest id.
 

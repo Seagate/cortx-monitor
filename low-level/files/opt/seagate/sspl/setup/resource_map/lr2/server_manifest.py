@@ -24,16 +24,17 @@ from cortx.utils.process import SimpleProcess
 from cortx.utils.kv_store import KvStoreFactory
 from framework.utils.conf_utils import GLOBAL_CONF, Conf, NODE_TYPE_KEY
 from error import ManifestError
-from resource_map import CortxManifest
+from resource_map import Manifest
 from framework.base.sspl_constants import (MANIFEST_SVC_NAME, LSHW_FILE,
     MANIFEST_OUTPUT_FILE)
 from framework.utils.service_logging import CustomLog, logger
 from framework.utils.utility import Utility
 from framework.platforms.server.software import Service
 from framework.platforms.server.platform import Platform
+from framework.platforms.server.server import Server
 
 
-class ServerManifest(CortxManifest):
+class ServerManifest(Manifest):
     """ServerManifest class provides resource map and related information
     like health.
     """
@@ -45,7 +46,7 @@ class ServerManifest(CortxManifest):
         super().__init__()
         self.log = CustomLog(MANIFEST_SVC_NAME)
         server_type = Conf.get(GLOBAL_CONF, NODE_TYPE_KEY)
-        Utility.validate_server_type_support(self.log, ManifestError, server_type)
+        Server.validate_server_type_support(self.log, ManifestError, server_type)
         self.field_mapping = {
             'id': 'uid',
             'class': 'type',
@@ -55,23 +56,23 @@ class ServerManifest(CortxManifest):
             'vendor': 'manufacturer',
             'part_number': 'part_number',
             'model_number': 'model_number',
-            'physid': 'physid',
+            'physid': 'physical_id',
             'version': 'version'
         }
         self.class_mapping = {
-            'memory': 'hw>memory[%s]>%s',
-            'disk': 'hw>disk[%s]>%s',
-            'storage': 'hw>storage[%s]>%s',
-            'system': 'hw>system[%s]>%s',
-            'processor': 'hw>processor[%s]>%s',
-            'network': 'hw>network[%s]>%s',
-            'power': 'hw>power[%s]>%s',
+            'memory': 'hw>memories[%s]>%s',
+            'disk': 'hw>disks[%s]>%s',
+            'storage': 'hw>storages[%s]>%s',
+            'system': 'hw>systems[%s]>%s',
+            'processor': 'hw>processors[%s]>%s',
+            'network': 'hw>networks[%s]>%s',
+            'power': 'hw>powers[%s]>%s',
             'volume': 'hw>volumes[%s]>%s',
-            'bus': 'hw>bus[%s]>%s',
-            'bridge': 'hw>bridge[%s]>%s',
-            'display': 'hw>display[%s]>%s',
-            'generic': 'hw>generic[%s]>%s',
-            'input': 'hw>input[%s]>%s'
+            'bus': 'hw>buses[%s]>%s',
+            'bridge': 'hw>bridges[%s]>%s',
+            'display': 'hw>displays[%s]>%s',
+            'input': 'hw>inputs[%s]>%s',
+            'generic': 'hw>generics[%s]>%s'
         }
         self.kv_dict = {}
         sw_resources = {
@@ -82,15 +83,19 @@ class ServerManifest(CortxManifest):
         fw_resources = {
             'bmc': self.get_bmc_version_info
         }
+        # Extracting resource type for 'self.class_mapping' dictionary values
+        # and adding to hw_resources for function mapping.
+        hw_resources = {value[len('hw>'):-len('[%s]>%s')]: \
+            self.get_hw_manifest_info for value in self.class_mapping.values()}
         self.server_resources = {
             "fw": fw_resources,
             "sw": sw_resources,
-            "hw": self.get_server_lshw_info
+            "hw": hw_resources
         }
         self.service = Service()
         self.platform = Platform()
 
-    def get_manifest_info(self, rpath):
+    def get_data(self, rpath):
         """
         Fetch manifest information for given rpath.
         """
@@ -101,14 +106,16 @@ class ServerManifest(CortxManifest):
         nodes = rpath.strip().split(">")
         leaf_node, _ = Utility.get_node_details(nodes[-1])
 
-        # Fetch health information for all sub nodes
+        # Fetch manifest information for all sub nodes
         if leaf_node == "compute":
-            info = self.get_server_manifest_info()
+            server_hw_data = self.get_server_hw_info()
+            info = self.get_server_info(server_hw_data)
             resource_found = True
         elif leaf_node == "hw":
-            info = self.get_server_lshw_info()
+            server_hw_data = self.get_server_hw_info()
+            info = self.get_hw_manifest_info(server_hw_data, "hw")["hw"]
             resource_found = True
-        elif leaf_node == "sw":
+        elif leaf_node in ["sw", "fw"]:
             for resource, method in self.server_resources[leaf_node].items():
                 try:
                     info.update({resource: method()})
@@ -118,20 +125,21 @@ class ServerManifest(CortxManifest):
                         self.log.svc_log(f"{err.__class__.__name__}: {err}"))
                     info = None
         else:
+            server_hw_data = self.get_server_hw_info()
             for node in nodes:
                 resource, _ = Utility.get_node_details(node)
                 for res_type in self.server_resources:
-                    if res_type == "hw":
-                        method = self.server_resources.get(resource)
-                    else:
-                        method = self.server_resources[res_type].get(resource)
+                    method = self.server_resources[res_type].get(resource)
                     if not method:
                         logger.error(
                             self.log.svc_log(
                                 f"No mapping function found for {res_type}"))
                         continue
                     try:
-                        info = method()
+                        if res_type == "hw":
+                            info = method(server_hw_data, resource)
+                        else:
+                            info = method()
                         resource_found = True
                     except Exception as err:
                         logger.error(
@@ -147,36 +155,31 @@ class ServerManifest(CortxManifest):
 
         return info
 
-    def get_server_manifest_info(self):
+    def get_server_info(self, server_hw_data):
         """Get server manifest information."""
         server = []
         info = {}
         for res_type in self.server_resources:
             info.update({res_type: {}})
-            if res_type == "hw":
+            for fru, method in self.server_resources[res_type].items():
                 try:
-                    info[res_type].update(self.server_resources[res_type]()["hw"])
+                    if res_type == "hw":
+                        info[res_type].update({fru: method(server_hw_data, fru)})
+                    else:
+                        info[res_type].update({fru: method()})
                 except Exception as err:
                     logger.error(
                         self.log.svc_log(f"{err.__class__.__name__}:{err}"))
-                    info[res_type].update({})
-            else:
-                for fru, method in self.server_resources[res_type].items():
-                    try:
-                        info[res_type].update({fru: method()})
-                    except Exception as err:
-                        logger.error(
-                            self.log.svc_log(f"{err.__class__.__name__}:{err}"))
-                        info[res_type].update({fru: []})
+                    info[res_type].update({fru: []})
         info["last_updated"] = int(time.time())
         server.append(info)
         return server
-    
-    def get_server_lshw_info(self):
-        """Get server manifest information."""
+
+    def get_server_hw_info(self):
+        """Get server hw information."""
         cls_res_cnt = {}
-        server = {"hw":{}}
-        data, kvs_dst = self.set_lshw_input_data()
+        lshw_data = {}
+        data, output_file = self.set_lshw_input_data()
         for kv_key in data.get_keys():
             if kv_key.endswith('class'):
                 r_spec = data.get(kv_key)
@@ -190,18 +193,31 @@ class ServerManifest(CortxManifest):
                             self.field_mapping[field])
                         self.map_manifest_server_data(field, manifest_key, data, kv_key)
         # Adding data to kv
-        kvs_dst.set(self.kv_dict.keys(), self.kv_dict.values())
-        server_unsorted = self.get_manifest_output_data()
-        # Sorting dictionary according to priority.
-        for server_type in self.class_mapping.keys():
-            if server_type in server_unsorted["hw"]:
-                server["hw"][server_type] = server_unsorted["hw"][server_type]
+        output_file.set(self.kv_dict.keys(), self.kv_dict.values())
+        lshw_data = self.get_manifest_output_data()
+        return lshw_data
+
+    def get_hw_manifest_info(self, server_hw_data, resource=False):
+        server = {}
+        if resource == "hw" and "hw" in server_hw_data:
+            server.update({"hw": {}})
+            # Sorting output dictionary according to data priority.
+            for server_type in self.server_resources["hw"].keys():
+                if server_type in server_hw_data["hw"]:
+                    server["hw"][server_type] = server_hw_data["hw"][server_type]
+        else:
+            server = server_hw_data["hw"].get(resource, [])
         return server
 
     def set_lshw_input_data(self):
-        """Fetch lshw data and update it into a file for further execution."""
-        kvs_src = None
-        kvs_dst = None
+        """
+        KvStoreFactory can not accept a dictionary as direct input and output.
+        It will support only JSON, YAML, TOML, INI, PROPERTIES files. So here
+        we are fetching the lshw data and adding that to a file for further
+        execution.
+        """
+        input_file = None
+        output_file = None
         response, err, returncode = SimpleProcess("lshw -json").run()
         if returncode:
             msg = f"Failed to capture Node support data. Error:{str(err)}"
@@ -212,15 +228,18 @@ class ServerManifest(CortxManifest):
                 json.dump(json.loads(response.decode("utf-8")), fp,  indent=4)
             with open(MANIFEST_OUTPUT_FILE, 'w+') as fp:
                 json.dump({}, fp,  indent=4)
-            kvs_src = KvStoreFactory.get_instance(f'json://{LSHW_FILE}').load()
-            kvs_dst = KvStoreFactory.get_instance(f'json://{MANIFEST_OUTPUT_FILE}')
+            input_file = KvStoreFactory.get_instance(f'json://{LSHW_FILE}').load()
+            output_file = KvStoreFactory.get_instance(f'json://{MANIFEST_OUTPUT_FILE}')
         except Exception as e:
             msg = "Error in getting {0} file: {1}".format(LSHW_FILE, e)
             logger.error(self.log.svc_log(msg))
             raise ManifestError(errno.EINVAL, msg)
-        return kvs_src, kvs_dst
+        return input_file, output_file
 
     def map_manifest_server_data(self, field, manifest_key, data, kv_key):
+        """
+        Mapping actual lshw output data with standard structured manifest data.
+        """
         parent_id = ""
         base_key = '>'.join(kv_key.split('>')[:-1])
         if base_key:
@@ -236,6 +255,7 @@ class ServerManifest(CortxManifest):
         self.kv_dict[manifest_key] = parent_id + value
     
     def get_manifest_output_data(self):
+        """Returns JSON data which is got in the manifest output file."""
         data = {}
         try:
             with open(MANIFEST_OUTPUT_FILE) as json_file:
@@ -267,6 +287,7 @@ class ServerManifest(CortxManifest):
         return external_service_info
 
     def get_service_info(self, services):
+        """Returns node server services info."""
         services_info = []
         for service in services:
             response = self.service.get_systemd_service_info(self.log, service)
@@ -288,18 +309,10 @@ class ServerManifest(CortxManifest):
         return services_info
 
     def get_bmc_version_info(self):
+        """Returns node server bmc info."""
         bmc_data = []
-        specifics = {}
-        cmd = "bmc info"
-        out, _, retcode = self.platform._ipmi._run_ipmitool_subcommand(cmd)
-        if retcode == 0:
-            out_lst = out.split("\n")
-            for line in out_lst:
-                data = line.split(':')
-                if len(data)>1 and data[1].strip() != "":
-                    key = data[0].strip().lower().replace(" ","_")
-                    value = data[1].strip()
-                    specifics.update({key: value})
+        specifics = self.platform.get_bmc_info()
+        if specifics:
             bmc = {
                 "uid": 'bmc',
                 "type": "NA",
@@ -316,6 +329,7 @@ class ServerManifest(CortxManifest):
         return bmc_data
     
     def get_os_server_info(self):
+        """Returns node server os info."""
         os_data = []
         specifics = self.platform.get_os_info()
         if specifics:

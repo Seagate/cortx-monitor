@@ -15,27 +15,21 @@
 # For any questions about this software or licensing,
 # please email opensource@seagate.com or cortx-questions@seagate.com
 
-"""
- ***************************************************************************
-  Description: Storage class provides manifest information like technical
-  information of storage/enclosure components etc,.
- ***************************************************************************
-"""
-
 import errno
 import time
 
 from framework.utils.conf_utils import GLOBAL_CONF, Conf, STORAGE_TYPE_KEY
 from error import ManifestError
-from resource_map import CortxManifest
+from resource_map import Manifest
 from framework.base.sspl_constants import MANIFEST_SVC_NAME
 from framework.utils.service_logging import CustomLog, logger
 from framework.platforms.realstor.realstor_enclosure import (
     singleton_realstorencl as ENCL)
 from framework.utils.utility import Utility
+from framework.platforms.storage.storage import Storage
 
 
-class StorageManifest(CortxManifest):
+class StorageManifest(Manifest):
     """Provides storage manifest related information."""
 
     name = "storage_manifest"
@@ -45,7 +39,7 @@ class StorageManifest(CortxManifest):
         super().__init__()
         self.log = CustomLog(MANIFEST_SVC_NAME)
         storage_type = Conf.get(GLOBAL_CONF, STORAGE_TYPE_KEY)
-        Utility.validate_storage_type_support(self.log, ManifestError, storage_type)
+        Storage.validate_storage_type_support(self.log, ManifestError, storage_type)
         hw_resources = {
             "enclosures": self.get_enclosures_info,
             "controllers": self.get_controllers_info,
@@ -62,7 +56,7 @@ class StorageManifest(CortxManifest):
             "fw": fw_resources
         }
 
-    def get_manifest_info(self, rpath):
+    def get_data(self, rpath):
         """
         Fetch Manifest information for given rpath.
         """

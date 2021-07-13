@@ -42,6 +42,7 @@ from framework.utils.utility import Utility
 
 from error import ResourceMapError
 from resource_map import ResourceMap
+from framework.platforms.server.server import Server
 
 
 class ServerHealth(ResourceMap):
@@ -56,7 +57,7 @@ class ServerHealth(ResourceMap):
         super().__init__()
         self.log = CustomLog(const.HEALTH_SVC_NAME)
         server_type = Conf.get(GLOBAL_CONF, NODE_TYPE_KEY)
-        Utility.validate_server_type_support(self.log, ResourceMapError, server_type)
+        Server.validate_server_type_support(self.log, ResourceMapError, server_type)
         self.sysfs = ToolFactory().get_instance('sysfs')
         self.sysfs.initialize()
         self.sysfs_base_path = self.sysfs.get_sysfs_base_path()

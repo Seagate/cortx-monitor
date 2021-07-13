@@ -54,5 +54,5 @@ class ServerMap():
         """
         from server_manifest import ServerManifest
         server = ServerManifest()
-        info = server.get_manifest_info(rpath)
+        info = server.get_data(rpath)
         return info
