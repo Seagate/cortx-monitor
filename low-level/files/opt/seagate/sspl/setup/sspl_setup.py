@@ -541,10 +541,26 @@ class RestoreCmd(Cmd):
         logger.info(f"{self.name} interface not implemented.")
 
 
-class UpgradeCmd(Cmd):
-    """Upgrade support for SSPL componenet."""
+class PreUpgradeCmd(Cmd):
+    """PreUpgrade support for SSPL componenet."""
 
-    name = "upgrade"
+    name = "pre_upgrade"
+
+    def __init__(self, args):
+        super().__init__(args)
+
+    def validate(self):
+        # Common validator classes to check Cortx/system wide validator
+        pass
+
+    def process(self):
+        logger.info(f"{self.name} interface not implemented.")
+
+
+class PostUpgradeCmd(Cmd):
+    """PostUpgrade support for SSPL componenet."""
+
+    name = "post_upgrade"
 
     def __init__(self, args):
         super().__init__(args)
