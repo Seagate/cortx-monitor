@@ -17,6 +17,7 @@
 
 import os
 import shutil
+import time
 from cortx.utils.process import SimpleProcess
 from cortx.utils.service import DbusServiceHandler
 
@@ -31,6 +32,7 @@ def simulate_fault_alert():
     """Simulate fault for dummy service by deleting executable service file."""
     os.remove(f"{service_executable_code_des}/dummy_service.py")
     dbus_service.restart(service_name)
+    time.sleep(5)
 
 def restore_service_file():
     """Simulate fault resolved for dummy service by creating executable
@@ -40,6 +42,7 @@ def restore_service_file():
     cmd = f"chmod +x {service_executable_code_des}/dummy_service.py"
     execute_cmd(cmd)
     dbus_service.restart(service_name)
+    time.sleep(5)
 
 def cleanup():
     dbus_service.stop(service_name)
