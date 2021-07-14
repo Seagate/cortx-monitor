@@ -525,7 +525,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                             self._node_sensor.total_memory["percent"],
                             self._host_memory_usage_threshold
                         )
-                    logger.warning(fault_resolved_event)
+                    logger.info(fault_resolved_event)
                     logged_in_users = []
 
                     # Create the host update message and hand it over to the egress processor to transmit
@@ -689,7 +689,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                             self._node_sensor.cpu_usage,
                             self._cpu_usage_threshold
                         )
-                    logger.warning(fault_resolved_event)
+                    logger.info(fault_resolved_event)
 
                     # Create the cpu usage update message and hand it over to the egress processor to transmit
                     cpuDataMsg = CPUdataMsg(self._node_sensor.host_id,
@@ -949,7 +949,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     self._node_sensor.disk_used_percentage,
                     self._disk_usage_threshold
                 )
-            logger.warning(fault_resolved_event)
+            logger.info(fault_resolved_event)
             diskSpaceAlertMsg = DiskSpaceAlertMsg(self._node_sensor.host_id,
                                     self._epoch_time,
                                     self._node_sensor.total_space,
