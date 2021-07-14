@@ -71,7 +71,8 @@ def read_ingress_queue():
         try:
             # Make sure we get back the message type that matches the request
             msg_type = ingressMsg.get("sensor_response_type")
-            if msg_type["info"]["resource_type"] == RESOURCE_TYPE:
+            if (msg_type["info"]["resource_type"] == RESOURCE_TYPE and
+                msg_type["info"]["resource_id"] == service_name):
                 return msg_type
         except Exception as exception:
             time.sleep(0.1)
@@ -88,7 +89,7 @@ def test_service_inactive_alert(args):
     assert_on_mismatch(sensor_response, "fault")
     # Simulate Fault resolved alert.
     DbusServiceHandler().start(service_name)
-    time.sleep(5)
+    time.sleep(WAIT_TIME)
     sensor_response = read_ingress_queue()
     assert_on_mismatch(sensor_response, "fault_resolved")
 
@@ -100,7 +101,7 @@ def test_service_failed_alert(args):
     sensor_response = read_ingress_queue()
     assert_on_mismatch(sensor_response, "fault")
     simulate_service_alerts.restore_service_file()
-    time.sleep(5)
+    time.sleep(WAIT_TIME)
     sensor_response = read_ingress_queue()
     assert_on_mismatch(sensor_response, "fault_resolved")
 

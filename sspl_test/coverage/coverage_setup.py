@@ -57,31 +57,26 @@ def generate_cov_report(signal_number, frame):
         outfile='%scoverage/sspl_xml_coverage_report.xml')
     logger.info(f'XML coverage report generated with coverage of {cov_per} percentage.')
     ## Enable below code to inable HTML report generation
- 	# html_cov_per = co.html_report(
- 	#                     directory='%scoverage/sspl_html_coverage',
- 	#                     ignore_errors=True,
- 	#                 )
- 	# logger.info(f'HTML coverage report geverated with coverage of {html_cov_per} percentage.')\
-"""%(DATA_PATH, DATA_PATH)
+    # html_cov_per = co.html_report(
+    #                     directory='%scoverage/sspl_html_coverage',
+    #                     ignore_errors=True,
+    #                 )
+    # logger.info(f'HTML coverage report geverated with coverage of {html_cov_per} percentage.')\
+""" % (DATA_PATH, DATA_PATH)
 
 PATCH_4 = """\
     signal.signal(signal.SIGUSR1, generate_cov_report)\
 """
 
+
 def coverage_setup():
-    """Installs pip3 coverage pkg and creates required files for code coverage.
+    """
+    Create required files for code coverage.
 
     Creates a temporary sspl_ll_d file and injects different patches of code
     to enable code coverage tracking. Also creates target directory for code
     coverage report and assigns permission to the directory.
     """
-    print("Installing coverage.py")
-    cmd = 'python3 -m pip install coverage'
-    _, err, return_code = SimpleProcess(cmd).run()
-    if return_code:
-        print(err)
-        return return_code
-
     print("Creating required files for coverage..")
     patch1_name = "initialize coverage obj for code coverage report generation"
     patch2_name = "start the code coverage scope"
@@ -147,8 +142,9 @@ def coverage_reset():
         modification_time = os.path.getmtime(REPORT_PATH)
 
         if (time.time() - modification_time) < 100:
-            modification_time = time.strftime('%Y-%m-%d %H:%M:%S',
-                                        time.localtime(modification_time))
+            modification_time = \
+                time.strftime('%Y-%m-%d %H:%M:%S',
+                              time.localtime(modification_time))
             print("%s : The Code Coverage Report is saved at %s" %
                   (modification_time, REPORT_PATH))
         else:
@@ -170,10 +166,11 @@ def coverage_reset():
 
 def print_help():
     print('Error: Incorrect arguments to coverage_setup file.\n'
-        'cmd : python3 coverage_setup.py [start/stop]\n'
-        'Args => \n'
-        '    start : Set-up the environment for code coverage.\n'
-        '    stop : Reset the sspl environmet to normal.')
+          'cmd : python3 coverage_setup.py [start/stop]\n'
+          'Args => \n'
+          '    start : Set-up the environment for code coverage.\n'
+          '    stop : Reset the sspl environmet to normal.')
+
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
