@@ -31,10 +31,7 @@ class RAID:
 
     def get_devices(self):
         output, err, returncode = SimpleProcess(f"mdadm --detail --test {self.raid}").run()
-        if returncode == 0:
-            output = output.decode()
-        else:
-            output = err.decode()
+        output = (output + err).decode()
         devices = []
         for state in re.findall(r"^\s*\d+\s*\d+\s*\d+\s*\d+\s*(.*)", output, re.MULTILINE):
             device = {}
@@ -60,7 +57,7 @@ class RAID:
         if returncode == 0:
             return ("OK", "The array is in good health")
         elif returncode == 2:
-            return ("Failed", "The array has multiple failed devices such that it is unusable.")
+            return ("Fault", "The array has multiple failed devices such that it is unusable.")
         elif returncode == 1:
             return ("Degraded", "The array has at least one failed device.")
         else:
