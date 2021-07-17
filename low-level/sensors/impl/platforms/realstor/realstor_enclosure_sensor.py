@@ -51,7 +51,7 @@ class RealStorEnclosureSensor(SensorThread, InternalMsgQ):
     SENSOR_NAME = "RealStorEnclosureSensor"
     SENSOR_RESP_TYPE = "enclosure_alert"
     RESOURCE_CATEGORY = "hw"
-    RESOURCE_TYPE = "enclosure"
+    RESOURCE_TYPE = "storage"
 
     ENCL_FAULT_RESOLVED_EVENTS = ["The network-port Ethernet link is down for controller A",\
                             "The network-port Ethernet link is down for controller B",\

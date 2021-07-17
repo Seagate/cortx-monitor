@@ -47,7 +47,7 @@ class RealStorSideplaneExpanderSensor(SensorThread, InternalMsgQ):
 
     SENSOR_NAME = "RealStorSideplaneExpanderSensor"
     SENSOR_TYPE = "enclosure_sideplane_expander_alert"
-    RESOURCE_TYPE = "enclosure:hw:sideplane"
+    RESOURCE_TYPE = "storage:hw:sideplane"
 
     PRIORITY = 1
 

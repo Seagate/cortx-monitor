@@ -15,19 +15,22 @@
 
 # -*- coding: utf-8 -*-
 
-from common import check_sspl_ll_is_running, get_fru_response, send_enclosure_request
+from common import (
+    check_sspl_ll_is_running, get_fru_response, send_enclosure_actuator_request)
 
 
 def init(args):
     pass
 
-def test_real_stor_sideplane_module_actuator(agrs):
+def test_real_stor_sideplane_module_actuator(args):
     check_sspl_ll_is_running()
     instance_id = "*"
-    resource_type = "enclosure:hw:sideplane"
-    send_enclosure_request("ENCL:%s" % resource_type, instance_id)
-    ingressMsg = get_fru_response(resource_type, instance_id)
-    sideplane_module_actuator_msg = ingressMsg.get("actuator_response_type")
+    resource_type = "storage:hw:sideplane"
+    ingress_msg_type = "actuator_response_type"
+    send_enclosure_actuator_request("ENCL:%s" % resource_type, instance_id)
+    ingressMsg = get_fru_response(
+        resource_type, instance_id, ingress_msg_type)
+    sideplane_module_actuator_msg = ingressMsg.get(ingress_msg_type)
 
     assert(sideplane_module_actuator_msg is not None)
     assert(sideplane_module_actuator_msg.get("alert_type") is not None)

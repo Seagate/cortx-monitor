@@ -96,7 +96,7 @@ class RealStorEnclMsgHandler(ScheduledModuleThread, InternalMsgQ):
             "controller": self._generate_controller_alert,
             "disk": self._generate_disk_alert,
             "logical_volume": self._generate_logical_volume_alert,
-            "enclosure": self._generate_enclosure_alert
+            "storage": self._generate_enclosure_alert
         }
         self._fru_type = {
             "sideplane": self._expander_sensor_message,
@@ -105,7 +105,7 @@ class RealStorEnclMsgHandler(ScheduledModuleThread, InternalMsgQ):
             "controller": self._controller_sensor_message,
             "disk": self._disk_sensor_message,
             "logical_volume": self._logical_volume_sensor_message,
-            "enclosure": self._enclosure_message
+            "storage": self._enclosure_message
         }
 
     def run(self):

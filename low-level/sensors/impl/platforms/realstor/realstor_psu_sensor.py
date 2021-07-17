@@ -48,7 +48,7 @@ class RealStorPSUSensor(SensorThread, InternalMsgQ):
 
 
     SENSOR_NAME = "RealStorPSUSensor"
-    RESOURCE_CATEGORY = "enclosure:hw:psu"
+    RESOURCE_CATEGORY = "storage:hw:psu"
 
     PRIORITY = 1
 

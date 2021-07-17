@@ -199,10 +199,11 @@ def check_os_platform():
         print("Failed to get the os platform: error:{}".format(error.decode().rstrip('\n')))
 
 
-def get_fru_response(resource_type, instance_id, ingress_msg_type="actuator_response_type"):
+def get_fru_response(resource_type, instance_id, ingress_msg_type="actuator_response_type",
+                     wait_time=30):
     """Returns message when resource type match with ingress message."""
     sensor_msg = None
-    for _ in range(30):
+    for _ in range(wait_time):
         if world.sspl_modules[IngressProcessorTests.name()]._is_my_msgQ_empty():
             time.sleep(2)
         while not world.sspl_modules[IngressProcessorTests.name()]._is_my_msgQ_empty():
@@ -267,16 +268,14 @@ def send_node_controller_message_request(uuid, resource_type, instance_id="*"):
     write_to_egress_msgQ(request)
 
 
-def send_enclosure_request(resource_type, resource_id):
+def send_enclosure_actuator_request(resource_type, resource_id):
     request = {
         "title": "SSPL Actuator Request",
         "description": "Seagate Storage Platform Library - Actuator Request",
-
         "username" : "JohnDoe",
         "signature" : "None",
         "time" : "2015-05-29 14:28:30.974749",
         "expires" : 500,
-
         "message" : {
             "sspl_ll_msg_header": {
                 "schema_version": "1.0.0",
@@ -299,6 +298,35 @@ def send_enclosure_request(resource_type, resource_id):
                 "storage_enclosure": {
                     "enclosure_request": resource_type,
                     "resource": resource_id
+                }
+            }
+        }
+    }
+    write_to_egress_msgQ(request)
+
+def send_enclosure_sensor_request(resource_type, resource_id):
+    request = {
+        "title": "SSPL Actuator Request",
+        "description": "Seagate Storage Platform Library - Actuator Request",
+        "username" : "JohnDoe",
+        "signature" : "None",
+        "time" : "1576148751",
+        "expires" : 500,
+        "message" : {
+            "sspl_ll_msg_header": {
+                "schema_version": "1.0.0",
+                "sspl_version": "1.0.0",
+                "msg_version": "1.0.0"
+            },
+            "sspl_ll_debug": {
+                "debug_component" : "sensor",
+                "debug_enabled" : True
+            },
+            "sensor_request_type": {
+                "enclosure_alert": {
+                    "info": {
+                        "resource_type": resource_type
+                    }
                 }
             }
         }

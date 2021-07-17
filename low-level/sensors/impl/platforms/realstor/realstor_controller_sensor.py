@@ -55,7 +55,7 @@ class RealStorControllerSensor(SensorThread, InternalMsgQ):
     SENSOR_NAME = "RealStorControllerSensor"
     SENSOR_RESP_TYPE = "enclosure_controller_alert"
     RESOURCE_CATEGORY = "hw"
-    RESOURCE_TYPE = "enclosure:hw:controller"
+    RESOURCE_TYPE = "storage:hw:controller"
 
     PRIORITY          = 1
 

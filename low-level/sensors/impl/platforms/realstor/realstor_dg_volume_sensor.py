@@ -48,9 +48,9 @@ class RealStorLogicalVolumeSensor(SensorThread, InternalMsgQ):
 
     SENSOR_NAME = "RealStorLogicalVolumeSensor"
     SENSOR_RESP_TYPE = "enclosure_logical_volume_alert"
-    RESOURCE_CATEGORY = "cortx"
-    RESOURCE_TYPE_LVOL = "enclosure:cortx:logical_volume"
-    RESOURCE_TYPE_DG = "enclosure:cortx:disk_group"
+    RESOURCE_CATEGORY = "fw"
+    RESOURCE_TYPE_LVOL = "storage:fw:logical_volume"
+    RESOURCE_TYPE_DG = "storage:fw:disk_group"
 
     PRIORITY = 1
 
