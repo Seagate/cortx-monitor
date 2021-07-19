@@ -110,7 +110,7 @@ class SSPLTestCmd:
         # Validate input configs
         machine_id = Utility.get_machine_id()
         self.node_type = Conf.get(SSPL_TEST_GLOBAL_CONFIG,
-            "server_node>%s>type" % machine_id)
+            "server_node>%s>type" % machine_id).lower()
         enclosure_id = Conf.get(SSPL_TEST_GLOBAL_CONFIG,
             "server_node>%s>storage>enclosure_id" % machine_id)
         self.enclosure_type = Conf.get(SSPL_TEST_GLOBAL_CONFIG,
@@ -181,10 +181,12 @@ class SSPLTestCmd:
             self.dbus_service.start(service_name)
 
             service_list = Conf.get(
-                SSPL_CONFIG_INDEX, "SERVICEMONITOR>monitored_services")
+                SSPL_CONFIG_INDEX,
+                "SERVICEMONITOR>monitored_services>%s" % self.node_type)
             service_list.append(service_name)
             Conf.set(
-                SSPL_CONFIG_INDEX, "SERVICEMONITOR>monitored_services",
+                SSPL_CONFIG_INDEX,
+                "SERVICEMONITOR>monitored_services>%s" % self.node_type,
                 service_list)
 
             threshold_inactive_time_original = Conf.get(
@@ -232,7 +234,8 @@ class SSPLTestCmd:
             # if execution is failed.
             service_list.remove(service_name)
             Conf.set(
-                SSPL_CONFIG_INDEX, "SERVICEMONITOR>monitored_services",
+                SSPL_CONFIG_INDEX,
+                "SERVICEMONITOR>monitored_services>%s" % self.node_type,
                 service_list)
             Conf.set(
                 SSPL_CONFIG_INDEX,

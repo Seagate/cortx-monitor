@@ -22,7 +22,8 @@ from cortx.utils.process import SimpleProcess
 from cortx.utils.conf_store.error import ConfError
 from cortx.utils.service.service_handler import DbusServiceHandler
 from framework.platforms.server.error import BuildInfoError, ServiceError
-from framework.utils.conf_utils import SSPL_CONF, Conf
+from framework.utils.conf_utils import (
+    SSPL_CONF, Conf, GLOBAL_CONF, NODE_TYPE_KEY)
 from framework.base.sspl_constants import (CORTX_RELEASE_FACTORY_INFO,
     CONFIG_SPEC_TYPE, SYSTEMD_BUS, SERVICE_IFACE, UNIT_IFACE,
     DEFAULT_RECOMMENDATION)
@@ -64,6 +65,7 @@ class Service:
     def __init__(self):
         """Initialize the class."""
         self._bus, self._manager = DbusServiceHandler._get_systemd_interface()
+        self.node_type = Conf.get(GLOBAL_CONF, NODE_TYPE_KEY).lower()
 
     def get_external_service_list(self):
         """Get list of external services."""
@@ -71,7 +73,9 @@ class Service:
         # list of external services.
         try:
             external_services = set(Conf.get(
-                SSPL_CONF, f"{self.SERVICE_HANDLER}>{self.SERVICE_LIST}", []))
+                SSPL_CONF,
+                f"{self.SERVICE_HANDLER}>{self.SERVICE_LIST}>{self.node_type}",
+                []))
         except Exception as err:
             raise ServiceError(
                 err.errno, ("Unable to get external service list due to Error: '%s, %s'"),

@@ -38,7 +38,7 @@ class TestServiceMonitor(unittest.TestCase):
 
     def setUp(self):
         self.mocked_conf_values = {
-            "SERVICEMONITOR>monitored_services": ["spam.service"],
+            "SERVICEMONITOR>monitored_services>vm": ["spam.service"],
             "SERVICEMONITOR>thread_sleep": "1",
             "SERVICEMONITOR>polling_frequency": "5",
             "SERVICEMONITOR>threshold_inactive_time": "10"

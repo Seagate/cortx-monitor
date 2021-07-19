@@ -230,13 +230,6 @@ RESOURCE_MAP = {
     "storage_type_supported": ["rbod", "jbod", "ebod"]
 }
 
-EXCLUDED_SERVICES = {
-    "vm": ["multipathd.service",
-           "glusterd.service",
-           "scsi-network-relay.service"],
-    "hw": []
-}
-
 
 class RaidDataConfig(Enum):
     MDSTAT_FILE = "/proc/mdstat"

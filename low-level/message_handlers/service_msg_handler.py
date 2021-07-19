@@ -28,8 +28,7 @@ from framework.actuator_state_manager import actuator_state_manager
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
-from framework.base.sspl_constants import (
-    enabled_products, EXCLUDED_SERVICES)
+from framework.base.sspl_constants import enabled_products
 from json_msgs.messages.actuators.service_controller import ServiceControllerMsg
 from json_msgs.messages.sensors.service_monitor_msg import ServiceMonitorMsg
 
@@ -92,9 +91,10 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
         self.node_id = Conf.get(GLOBAL_CONF, NODE_ID_KEY, "SN01")
         self.cluster_id = Conf.get(GLOBAL_CONF, CLUSTER_ID_KEY, "CC01")
         self.storage_set_id = Conf.get(GLOBAL_CONF, STORAGE_SET_ID_KEY, "ST01")
-        services = Conf.get(SSPL_CONF, f'{SERVICEMONITOR}>{MONITORED_SERVICES}', [])
         node_type = Conf.get(GLOBAL_CONF, NODE_TYPE_KEY).lower()
-        self.monitored_services = list(set(services) - set(EXCLUDED_SERVICES[node_type]))
+        self.monitored_services = Conf.get(
+            SSPL_CONF,
+            f'{SERVICEMONITOR}>{MONITORED_SERVICES}>{node_type}', [])
 
     def _import_products(self, product):
         """Import classes based on which product is being used"""
