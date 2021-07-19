@@ -21,7 +21,7 @@ from default import world
 from messaging.ingress_processor_tests import IngressProcessorTests
 from messaging.egress_processor_tests import EgressProcessorTests
 from common import check_sspl_ll_is_running
-from framework.base.sspl_constants import DATA_PATH
+from framework.base.sspl_constants import DATA_PATH, BMCInterface
 from alerts.node import simulate_bmc_interface_alert
 
 
@@ -85,8 +85,9 @@ def test_bmc_interface(args):
 
 def backup_bmc_config():
     # read active bmc interface
-    cmd = f"cat {DATA_PATH}/server/ACTIVE_BMC_IF_*"
-    bmc_interface,retcode = run_cmd(cmd)
+    path = BMCInterface.ACTIVE_BMC_IF.value
+    cmd = f"cat {path}"
+    bmc_interface, retcode = run_cmd(cmd)
     bmc_interface = bmc_interface[0]
     if retcode != 0:
         print(f"command:{cmd} not executed successfully")
@@ -94,13 +95,12 @@ def backup_bmc_config():
 
     # bmc_interface = b'\x80\x03X\x06\x00\x00\x00systemq\x00.\n'
     # fetch interface key and value from bmc_interface
-    active_bmc_IF_key = f'{DATA_PATH}/server/ACTIVE_BMC_IF'
+    active_bmc_IF_key = path
     # parse string b'\x80\x03X\x06\x00\x00\x00systemq\x00.\n' to fetch bmc interface value
     if b'system' in bmc_interface:
         active_bmc_IF_value = bmc_interface.replace(bmc_interface,b'system').decode()
     elif b'lan' in bmc_interface:
         active_bmc_IF_value = bmc_interface.replace(bmc_interface, b'lan').decode()
-
     return active_bmc_IF_key, active_bmc_IF_value
 
 def run_cmd(cmd):
