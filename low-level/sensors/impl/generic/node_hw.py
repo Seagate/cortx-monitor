@@ -971,7 +971,10 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
 
         fan_info = fan_specific_data
         fan_info.update({"fru_id" : device_id, "event" : event})
-        resource_type = NodeDataMsgHandler.IPMI_RESOURCE_TYPE_FAN
+        try:
+            resource_type = NodeDataMsgHandler.fru_mapping['fan']
+        except Exception as e:
+            resource_type = NodeDataMsgHandler.IPMI_RESOURCE_TYPE_FAN
         severity_reader = SeverityReader()
         if alert_type:
             severity = severity_reader.map_severity(alert_type)
@@ -1029,7 +1032,10 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         }
 
         sensor_id = self.sensor_id_map[self.TYPE_PSU_SUPPLY][sensor_num]
-        resource_type = NodeDataMsgHandler.IPMI_RESOURCE_TYPE_PSU
+        try:
+            resource_type = NodeDataMsgHandler.fru_mapping['psu']
+        except Exception as e:
+            resource_type = NodeDataMsgHandler.IPMI_RESOURCE_TYPE_PSU
         info = {
             "resource_type": resource_type,
             "resource_id": sensor,
@@ -1112,7 +1118,10 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         }
 
         sensor_id = self.sensor_id_map[self.TYPE_PSU_UNIT][sensor_num]
-        resource_type = NodeDataMsgHandler.IPMI_RESOURCE_TYPE_PSU
+        try:
+            resource_type = NodeDataMsgHandler.fru_mapping['psu']
+        except Exception as e:
+            resource_type = NodeDataMsgHandler.IPMI_RESOURCE_TYPE_PSU
 
         info = {
             "resource_type": resource_type,
@@ -1176,8 +1185,10 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
                 ("Drive Present", "Asserted"): ("insertion", "informational"),
                 ("Drive Present", "Deasserted"): ("missing", "critical"),
                 }
-
-            resource_type = NodeDataMsgHandler.IPMI_RESOURCE_TYPE_DISK
+            try:
+                resource_type = NodeDataMsgHandler.fru_mapping['disk']
+            except Exception as e:
+                resource_type = NodeDataMsgHandler.IPMI_RESOURCE_TYPE_FAN
             info = {
                 "resource_type": resource_type,
                 "resource_id": sensor,

@@ -26,7 +26,8 @@ import json
 from actuators.impl.actuator import Actuator
 from framework.base.debug import Debug
 from framework.utils.service_logging import logger
-from framework.base.sspl_constants import AlertTypes, SensorTypes, SeverityTypes
+from framework.base.sspl_constants import (AlertTypes, SensorTypes,
+    SeverityTypes, SSPL_SUPPORTED_FRUS)
 
 
 class NodeHWactuator(Actuator, Debug):
@@ -57,8 +58,11 @@ class NodeHWactuator(Actuator, Debug):
 
     def initialize(self):
         """Performs basic Node HW actuator initialization"""
+        fru_list = []
+        for fru in SSPL_SUPPORTED_FRUS:
+            fru_list.append(self.NODE_REQUEST_MAP[fru])
         self.sensor_id_map = self._executor.get_fru_list_by_type(
-            ['fan', 'power supply', 'drive slot / bay'],
+            fru_list,
             sensor_id_map={})
 
     def _get_fru_instances(self, fru, fru_instance):

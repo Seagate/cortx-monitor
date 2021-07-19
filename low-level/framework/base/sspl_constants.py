@@ -116,6 +116,9 @@ MANIFEST_SVC_NAME = 'manifest'
 LSHW_FILE = f'{DATA_PATH}lshw.json'
 MANIFEST_OUTPUT_FILE = f'{DATA_PATH}manifest_output.json'
 
+# Default SSPl server supported FRU list
+SSPL_SUPPORTED_FRUS = ['disk', 'psu', 'fan']
+
 # required only for init
 component = 'sspl/config'
 file_store_config_path = '/etc/sspl.conf'

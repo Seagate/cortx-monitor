@@ -200,6 +200,7 @@ SYSTEM_INFORMATION:
    sysfs_base_path: /sys/
    sspl_state: active
    global_config_copy_url: ""
+   server_fru_list: []
 
 # NOTE: Keys present in OBSOLETE section are out of date
 # and will be removed in furture version. Keys present in

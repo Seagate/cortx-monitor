@@ -43,7 +43,7 @@ from framework.actuator_state_manager import actuator_state_manager
 from framework.base.module_thread import SensorThread
 from framework.base.sspl_constants import (SSPL_SETTINGS, COMMON_CONFIGS, PRODUCT_FAMILY,
     OperatingSystem, enabled_products, SYSLOG_HOST, SYSLOG_PORT,
-    IEM_INIT_FAILED)
+    IEM_INIT_FAILED, SSPL_SUPPORTED_FRUS, SSPL_CONFIG_INDEX)
 from framework.messaging.egress_accumulated_msgs_processor import \
     EgressAccumulatedMsgsProcessor
 # Modules for handling messages and manipulating internal threads
@@ -60,6 +60,7 @@ from framework.utils.config_reader import ConfigReader
 from framework.utils.service_logging import init_logging, logger
 from framework.utils.store_factory import store
 from framework.utils.utility import Utility
+from framework.utils.ipmi_client import IpmiFactory
 from cortx.utils.iem_framework.error import EventMessageError
 # Message to send to HAlon upon critical thread errors
 from json_msgs.messages.actuators.thread_controller import ThreadControllerMsg
@@ -740,6 +741,38 @@ def refresh_iem_log_file(signal_number, frame):
 
 #DO NOT EDIT: Marker comment to dynamically add code to stop coverage, save and generate code coverage report
 
+def load_server_fru_list():
+    """Get FRU info from server and load it into Config."""
+    executor = IpmiFactory().get_implementor("ipmitool")
+    cmd = 'fru list'
+    result = []
+    out, err, ret = executor._run_ipmitool_subcommand(cmd,
+        grep_args="FRU Device Description : ")
+    if ret != 0:
+        logger.error("Failed in fetching FRU info from server."
+                     f"Error:{err}")
+    if out:
+        for l in out.split('\n'):
+            result.append(l.split(': ')[1])
+        keywords = ['Pwr Supply', 'power', 'PS', 'PSU']
+        for key in keywords:
+            for ele in result:
+                if key in ele:
+                    result[result.index(ele)] = 'psu'
+        result = list(dict.fromkeys(result))
+    # Override SSPL supported FRUS to the config
+    if len(result)!= 0:
+        for fru in SSPL_SUPPORTED_FRUS:
+            if fru not in result:
+                result.append(fru)
+    else:
+        result = SSPL_SUPPORTED_FRUS
+    logger.info(f"Fetched server FRU list:{result}")
+    # update config
+    Conf.set(SSPL_CONFIG_INDEX, "SYSTEM_INFORMATION>server_fru_list", result)
+    Conf.save(SSPL_CONFIG_INDEX)
+
+
 if __name__ == "__main__":
     # Retrieve configuration file for sspl-ll service
     try:
@@ -814,6 +847,9 @@ if __name__ == "__main__":
                 fileObj.write(str(os.getpid()))
 
         #DO NOT EDIT: Marker comment to dynamically add code to start the code coverage scope
+
+        # Get FRU info from server and load it into Config
+        load_server_fru_list()
 
         # Start sspl-ll as a main process running multiple threads
         main(conf_reader, systemd_support)
