@@ -144,7 +144,6 @@ class ConfigReader(object):
         """
         Specific function for executable binary.
         """
-        print("Running via sspl service and taking key values from store factory")
         from framework.utils.store_factory import store
         self.store = store
 

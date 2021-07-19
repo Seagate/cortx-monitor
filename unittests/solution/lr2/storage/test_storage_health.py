@@ -1,10 +1,8 @@
 import unittest
 import json
 
-from unittest.mock import patch
-
-from files.opt.seagate.sspl.setup.resource_map.lr2.storage_health import StorageHealth
-
+from unittest.mock import patch, Mock
+from solution.lr2.storage.health import StorageHealth
 from encl_api_response import (
     ENCLOSURE_RESPONSE, ENCLOSURE_SENSORS_RESPONSE, ENCLOSURE_RESPONSE_EMPTY,
     ENCLOSURE_NW_RESPONSE, CONTROLLER_RESPONSE, DRIVE_RESPONSE,
@@ -15,6 +13,10 @@ class TestStorageHealth(unittest.TestCase):
     _storage_health = None
 
     @classmethod
+    @patch(
+        "framework.platforms.storage.platform.Platform."
+        "validate_storage_type_support", new=Mock(return_value=True)
+    )
     def create_storage_health_obj(cls):
         if cls._storage_health is None:
             cls._storage_health = StorageHealth()

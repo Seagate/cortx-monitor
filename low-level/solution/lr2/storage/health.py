@@ -19,19 +19,18 @@ import errno
 import json
 import time
 
-from framework.utils.conf_utils import (
-    GLOBAL_CONF, Conf, STORAGE_TYPE_KEY)
-from error import ResourceMapError
-from resource_map import ResourceMap
+from cortx.utils.discovery.error import ResourceMapError
+from framework.utils.conf_utils import (GLOBAL_CONF, Conf, STORAGE_TYPE_KEY)
 from framework.base import sspl_constants as const
 from framework.utils.service_logging import CustomLog, logger
 from framework.utils.utility import Utility
 from framework.platforms.realstor.realstor_enclosure import (
-    singleton_realstorencl as ENCL)
-from framework.platforms.storage.storage import Storage
+    singleton_realstorencl as enclosure)
+from framework.platforms.storage.platform import Platform
+from storage_resource_map import StorageResourceMap
 
 
-class StorageHealth(ResourceMap):
+class StorageHealth():
     """Provides storage resource related information."""
 
     name = "storage_health"
@@ -41,7 +40,7 @@ class StorageHealth(ResourceMap):
         super().__init__()
         self.log = CustomLog(const.HEALTH_SVC_NAME)
         storage_type = Conf.get(GLOBAL_CONF, STORAGE_TYPE_KEY)
-        Storage.validate_storage_type_support(self.log, ResourceMapError, storage_type)
+        Platform.validate_storage_type_support(self.log, ResourceMapError, storage_type)
         hw_resources = {
             "controllers": self.get_controllers_info,
             "psus": self.get_psu_info,
@@ -61,7 +60,7 @@ class StorageHealth(ResourceMap):
             "fw": fw_resources
         }
 
-    def get_health_info(self, rpath):
+    def get_data(self, rpath):
         """
         Fetch health information for given rpath.
         """
@@ -70,7 +69,7 @@ class StorageHealth(ResourceMap):
         info = {}
         resource_found = False
         nodes = rpath.strip().split(">")
-        leaf_node, _ = Utility.get_node_details(nodes[-1])
+        leaf_node, _ = StorageResourceMap.get_node_details(nodes[-1])
 
         # Fetch health information for all sub nodes
         if leaf_node == "storage":
@@ -88,7 +87,7 @@ class StorageHealth(ResourceMap):
                     info = None
         else:
             for node in nodes:
-                resource, _ = Utility.get_node_details(node)
+                resource, _ = StorageResourceMap.get_node_details(node)
                 for res_type in self.storage_resources:
                     method = self.storage_resources[res_type].get(resource)
                     if not method:
@@ -116,6 +115,41 @@ class StorageHealth(ResourceMap):
         return info
 
     @staticmethod
+    def get_health_template(uid, is_fru: bool):
+        """Returns health template."""
+        return {
+            "uid": uid,
+            "fru": str(is_fru).lower(),
+            "last_updated": "",
+            "health": {
+                "status": "",
+                "description": "",
+                "recommendation": "",
+                "specifics": []
+            }
+        }
+
+    @staticmethod
+    def set_health_data(health_data: dict, status, description=None,
+                        recommendation=None, specifics=None):
+        """Sets health attributes for a component."""
+        good_state = (status == "OK")
+        if not description:
+            description = "%s %s in good health." % (
+                health_data.get("uid"),
+                'is' if good_state else 'is not')
+        if not recommendation:
+            recommendation = 'NA' if good_state\
+                else const.DEFAULT_RECOMMENDATION
+        health_data["last_updated"] = int(time.time())
+        health_data["health"].update({
+            "status": status,
+            "description": description,
+            "recommendation": recommendation,
+            "specifics": specifics
+        })
+
+    @staticmethod
     def get_fan_specfics(fan):
         return {
             "uid": fan.get("durable-id", "NA"),
@@ -130,7 +164,7 @@ class StorageHealth(ResourceMap):
     def get_fanmodules_info(self):
         """Returns fan modules health data."""
         response = []
-        fanmodules_data = ENCL.get_realstor_encl_data("fan-modules")
+        fanmodules_data = enclosure.get_realstor_encl_data("fan-modules")
         if fanmodules_data:
             for fan_module in fanmodules_data:
                 uid = fan_module.get('durable-id', 'NA')
@@ -176,7 +210,7 @@ class StorageHealth(ResourceMap):
     def get_enclosures_info(self):
         """Update and return enclosure information in specific format."""
         data = []
-        enclosures = ENCL.get_realstor_encl_data("enclosures")
+        enclosures = enclosure.get_realstor_encl_data("enclosures")
         for encl in enclosures:
             uid = encl.get("durable-id")
             status = encl.get("health", "NA")
@@ -203,7 +237,7 @@ class StorageHealth(ResourceMap):
     def get_controllers_info(self):
         """Update and return controller information in specific format."""
         data = []
-        controllers = ENCL.get_realstor_encl_data("controllers")
+        controllers = enclosure.get_realstor_encl_data("controllers")
         for controller in controllers:
             uid = controller.get("durable-id")
             status = controller.get("health", "NA")
@@ -232,7 +266,7 @@ class StorageHealth(ResourceMap):
     def get_psu_info(self):
         """Update and return PSUs information in specific format."""
         data = []
-        psus = ENCL.get_realstor_encl_data("power-supplies")
+        psus = enclosure.get_realstor_encl_data("power-supplies")
         for psu in psus:
             uid = psu.get("durable-id")
             status = psu.get("health", "NA")
@@ -276,7 +310,7 @@ class StorageHealth(ResourceMap):
             dict with three keys for respective sensors.
         """
         sensors_data = {}
-        sensors_resp = ENCL.get_realstor_encl_data('sensors')
+        sensors_resp = enclosure.get_realstor_encl_data('sensors')
         if sensors_resp:
             for platform_sensor in platform_sensors:
                 for sensor in sensors_resp:
@@ -309,7 +343,7 @@ class StorageHealth(ResourceMap):
     def get_logical_volumes_info(self):
         """Update and return logical volume information in specific format."""
         logvol_data = []
-        logicalvolumes = ENCL.get_realstor_encl_data("volumes")
+        logicalvolumes = enclosure.get_realstor_encl_data("volumes")
         if logicalvolumes:
             for logicalvolume in logicalvolumes:
                 uid = logicalvolume.get("volume-name", "NA")
@@ -342,9 +376,9 @@ class StorageHealth(ResourceMap):
         """Update and return disk-group information in specific format."""
         dg_data = []
         dg_vol_map = {}
-        diskgroups = ENCL.get_realstor_encl_data("disk-groups")
+        diskgroups = enclosure.get_realstor_encl_data("disk-groups")
         # Mapping logical volumes with disk group.
-        logicalvolumes = ENCL.get_realstor_encl_data("volumes")
+        logicalvolumes = enclosure.get_realstor_encl_data("volumes")
         if logicalvolumes:
             for logicalvolume in logicalvolumes:
                 volume_pool_sr_no = logicalvolume.get("container-serial", "NA")
@@ -395,7 +429,7 @@ class StorageHealth(ResourceMap):
         """Update and return sideplane_expanders information."""
         sideplane_expander_list = []
         sideplane_expander_data = []
-        enclosures = ENCL.get_realstor_encl_data("enclosures")
+        enclosures = enclosure.get_realstor_encl_data("enclosures")
         #TODO : Handle CORVAULT sideplane expander data without expecting drawers
         encl_drawers = enclosures[0].get("drawers")
         if encl_drawers:
@@ -451,7 +485,7 @@ class StorageHealth(ResourceMap):
     def get_drives_info(self):
         """Update and return drives information in specific format."""
         drive_data = []
-        drives = ENCL.get_realstor_encl_data("drives")
+        drives = enclosure.get_realstor_encl_data("drives")
         for drive in drives:
             slot = drive.get("slot", -1)
             if slot == -1:
@@ -500,7 +534,7 @@ class StorageHealth(ResourceMap):
     def get_nw_ports_info(self):
         """Return the current network health."""
         nw_data = []
-        nw_interfaces = ENCL.get_realstor_encl_data("network-parameters")
+        nw_interfaces = enclosure.get_realstor_encl_data("network-parameters")
         for nw_inf in nw_interfaces:
             nw_inf_data = self.get_health_template(nw_inf.get('durable-id'),
                                                    False)
@@ -520,7 +554,7 @@ class StorageHealth(ResourceMap):
     def get_sas_ports_info(self):
         """Return SAS ports current health."""
         data = []
-        sas_ports = ENCL.get_realstor_encl_data("expander-ports")
+        sas_ports = enclosure.get_realstor_encl_data("expander-ports")
         for sas_port in sas_ports:
             port_data = self.get_health_template(sas_port.get("durable-id"),
                                                  False)

@@ -1,9 +1,8 @@
 import unittest
 from socket import AF_INET
-from unittest.mock import patch
+from unittest.mock import patch, Mock
 from collections import namedtuple
-
-from files.opt.seagate.sspl.setup.resource_map.lr2.server_health import ServerHealth
+from solution.lr2.server.health import ServerHealth
 
 snetio = namedtuple('snetio', ['bytes_sent', 'bytes_recv', 'packets_sent',
                                'packets_recv', 'errin', 'errout', 'dropin',
@@ -82,6 +81,10 @@ class TestServerHealth(unittest.TestCase):
     _server_health = None
 
     @classmethod
+    @patch(
+        "framework.platforms.server.platform.Platform."
+        "validate_server_type_support", new=Mock(return_value=True)
+    )
     def create_server_health_obj(cls):
         if cls._server_health is None:
             cls._server_health = ServerHealth()
@@ -222,8 +225,7 @@ class TestServerHealth(unittest.TestCase):
         assert phy['state'] == "enabled"
         assert phy['negotiated_linkrate'] == "12.0 Gbit"
 
-    @patch(("files.opt.seagate.sspl.setup.resource_map.lr2.server_health."
-            "ServerHealth.get_nw_status"))
+    @patch("solution.lr2.server.health.ServerHealth.get_nw_status")
     @patch("psutil.net_if_addrs")
     @patch("psutil.net_io_counters")
     def test_get_nw_ports_info(self, io_counter, if_addrs, nw_status):

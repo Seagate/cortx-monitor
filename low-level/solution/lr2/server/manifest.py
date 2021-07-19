@@ -22,20 +22,20 @@ import os
 
 from cortx.utils.process import SimpleProcess
 from cortx.utils.kv_store import KvStoreFactory
+from cortx.utils.discovery.error import ResourceMapError
 from framework.utils.conf_utils import GLOBAL_CONF, Conf, NODE_TYPE_KEY
-from error import ManifestError
-from resource_map import Manifest
 from framework.base.sspl_constants import (MANIFEST_SVC_NAME, LSHW_FILE,
     MANIFEST_OUTPUT_FILE)
 from framework.utils.service_logging import CustomLog, logger
 from framework.utils.utility import Utility
 from framework.platforms.server.software import Service
 from framework.platforms.server.platform import Platform
-from framework.platforms.server.server import Server
+from server_resource_map import ServerResourceMap
 
 
-class ServerManifest(Manifest):
-    """ServerManifest class provides resource map and related information
+class ServerManifest():
+    """
+    ServerManifest class provides resource map and related information
     like health.
     """
 
@@ -46,7 +46,8 @@ class ServerManifest(Manifest):
         super().__init__()
         self.log = CustomLog(MANIFEST_SVC_NAME)
         server_type = Conf.get(GLOBAL_CONF, NODE_TYPE_KEY)
-        Server.validate_server_type_support(self.log, ManifestError, server_type)
+        # import pdb; pdb.set_trace()
+        Platform.validate_server_type_support(self.log, ResourceMapError, server_type)
         self.field_mapping = {
             'id': 'uid',
             'class': 'type',
@@ -96,15 +97,13 @@ class ServerManifest(Manifest):
         self.platform = Platform()
 
     def get_data(self, rpath):
-        """
-        Fetch manifest information for given rpath.
-        """
+        """Fetch manifest information for given rpath."""
         logger.info(self.log.svc_log(
             f"Get Manifest data for rpath:{rpath}"))
         info = {}
         resource_found = False
         nodes = rpath.strip().split(">")
-        leaf_node, _ = Utility.get_node_details(nodes[-1])
+        leaf_node, _ = ServerResourceMap.get_node_details(nodes[-1])
 
         # Fetch manifest information for all sub nodes
         if leaf_node == "compute":
@@ -127,7 +126,7 @@ class ServerManifest(Manifest):
         else:
             server_hw_data = self.get_server_hw_info()
             for node in nodes:
-                resource, _ = Utility.get_node_details(node)
+                resource, _ = ServerResourceMap.get_node_details(node)
                 for res_type in self.server_resources:
                     method = self.server_resources[res_type].get(resource)
                     if not method:
@@ -151,7 +150,7 @@ class ServerManifest(Manifest):
         if not resource_found:
             msg = f"Invalid rpath or manifest provider doesn't have support for'{rpath}'."
             logger.error(self.log.svc_log(f"{msg}"))
-            raise ManifestError(errno.EINVAL, msg)
+            raise ResourceMapError(errno.EINVAL, msg)
 
         return info
 
@@ -222,7 +221,7 @@ class ServerManifest(Manifest):
         if returncode:
             msg = f"Failed to capture Node support data. Error:{str(err)}"
             logger.error(self.log.svc_log(msg))
-            raise ManifestError(errno.EINVAL, msg)
+            raise ResourceMapError(errno.EINVAL, msg)
         try:
             with open(LSHW_FILE, 'w+') as fp:
                 json.dump(json.loads(response.decode("utf-8")), fp,  indent=4)
@@ -233,7 +232,7 @@ class ServerManifest(Manifest):
         except Exception as e:
             msg = "Error in getting {0} file: {1}".format(LSHW_FILE, e)
             logger.error(self.log.svc_log(msg))
-            raise ManifestError(errno.EINVAL, msg)
+            raise ResourceMapError(errno.EINVAL, msg)
         return input_file, output_file
 
     def map_manifest_server_data(self, field, manifest_key, data, kv_key):
@@ -263,7 +262,7 @@ class ServerManifest(Manifest):
         except Exception as e:
             msg = "Error in getting {0} file: {1}".format(json_file, e)
             logger.error(self.log.svc_log(msg))
-            raise ManifestError(errno.EINVAL, msg)
+            raise ResourceMapError(errno.EINVAL, msg)
         try:
             if os.path.exists(LSHW_FILE):
                 os.remove(LSHW_FILE)

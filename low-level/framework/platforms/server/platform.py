@@ -16,10 +16,12 @@
 # please email opensource@seagate.com or cortx-questions@seagate.com
 
 import re
+import errno
 
 from cortx.utils.process import SimpleProcess
 from framework.utils.ipmi_client import IpmiFactory
-from framework.utils.utility import Utility
+from framework.utils.service_logging import logger
+from framework.base import sspl_constants as const
 
 
 class Platform:
@@ -68,6 +70,7 @@ class Platform:
         Grep 'FRU device description on ID 0' information using
         ipmitool command.
         """
+        os_info = self.get_os_info()
         specifics = {
             "Board Mfg": "",
             "Board Product": "",
@@ -75,7 +78,7 @@ class Platform:
             "Product Name": "",
             "Product Part Number": "",
             "Manufacturer": self._ipmi.get_manufacturer_name(),
-            "OS": Utility().get_os()
+            "OS": os_info.get('id', '') + os_info.get('version_id', '')
             }
         cmd = "fru print"
         prefix = "FRU Device Description : Builtin FRU Device (ID 0)"
@@ -85,8 +88,7 @@ class Platform:
             # Get only 'FRU Device Description : Builtin FRU Device (ID 0)' information
             search_res = re.search(
                 r"((.*%s[\S\n\s]+ID 1\)).*)|(.*[\S\n\s]+)" % prefix, out)
-            if search_res:
-                search_res = search_res.group()
+            search_res = search_res.group() if search_res else ""
         for key in specifics.keys():
             if key in search_res:
                 device_desc = re.search(
@@ -95,3 +97,16 @@ class Platform:
                     value = device_desc.groups()[0]
                 specifics.update({key: value})
         return specifics
+
+    @staticmethod
+    def validate_server_type_support(log, Error, server_type):
+        """Check for supported server type."""
+        logger.debug(log.svc_log(f"Server Type:{server_type}"))
+        if not server_type:
+            msg = "ConfigError: server type is unknown."
+            logger.error(log.svc_log(msg))
+            raise Error(errno.EINVAL, msg)
+        if server_type.lower() not in const.RESOURCE_MAP["server_type_supported"]:
+            msg = f"{log.service} provider is not supported for server type '{server_type}'"
+            logger.error(log.svc_log(msg))
+            raise Error(errno.EINVAL, msg)

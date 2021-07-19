@@ -93,7 +93,7 @@ MANAGER_IFACE = 'org.freedesktop.systemd1.Manager'
 SYSTEMD_BUS = "org.freedesktop.systemd1"
 CORTX_RELEASE_FACTORY_INFO = "/etc/yum.repos.d/RELEASE_FACTORY.INFO"
 DEFAULT_RECOMMENDATION = 'Please Contact Seagate Support.'
-HEALTH_SVC_NAME = 'node-health'
+HEALTH_SVC_NAME = 'health'
 SAS_RESOURCE_ID = "SASHBA-"
 
 IVT_TEST_PLANS = ("full", "performance", "regression", "sanity",  "scalability")
@@ -112,7 +112,7 @@ SSPL_SB_REQUEST = f"{SB_DATA_PATH}/sspl-sb-req.txt"
 HEALTH_UNDESIRED_VALS = ["N/A", ""]
 
 # required only for manifest
-MANIFEST_SVC_NAME = 'node-manifest'
+MANIFEST_SVC_NAME = 'manifest'
 LSHW_FILE = f'{DATA_PATH}lshw.json'
 MANIFEST_OUTPUT_FILE = f'{DATA_PATH}manifest_output.json'
 

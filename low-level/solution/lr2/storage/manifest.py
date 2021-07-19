@@ -18,18 +18,18 @@
 import errno
 import time
 
+from cortx.utils.discovery.error import ResourceMapError
 from framework.utils.conf_utils import GLOBAL_CONF, Conf, STORAGE_TYPE_KEY
-from error import ManifestError
-from resource_map import Manifest
 from framework.base.sspl_constants import MANIFEST_SVC_NAME
 from framework.utils.service_logging import CustomLog, logger
 from framework.platforms.realstor.realstor_enclosure import (
     singleton_realstorencl as ENCL)
 from framework.utils.utility import Utility
-from framework.platforms.storage.storage import Storage
+from framework.platforms.storage.platform import Platform
+from storage_resource_map import StorageResourceMap
 
 
-class StorageManifest(Manifest):
+class StorageManifest():
     """Provides storage manifest related information."""
 
     name = "storage_manifest"
@@ -39,7 +39,7 @@ class StorageManifest(Manifest):
         super().__init__()
         self.log = CustomLog(MANIFEST_SVC_NAME)
         storage_type = Conf.get(GLOBAL_CONF, STORAGE_TYPE_KEY)
-        Storage.validate_storage_type_support(self.log, ManifestError, storage_type)
+        Platform.validate_storage_type_support(self.log, ResourceMapError, storage_type)
         hw_resources = {
             "enclosures": self.get_enclosures_info,
             "controllers": self.get_controllers_info,
@@ -65,7 +65,7 @@ class StorageManifest(Manifest):
         info = {}
         resource_found = False
         nodes = rpath.strip().split(">")
-        leaf_node, _ = Utility.get_node_details(nodes[-1])
+        leaf_node, _ = StorageResourceMap.get_node_details(nodes[-1])
 
         # Fetch health information for all sub nodes
         if leaf_node == "storage":
@@ -83,7 +83,7 @@ class StorageManifest(Manifest):
                     info = None
         else:
             for node in nodes:
-                resource, _ = Utility.get_node_details(node)
+                resource, _ = StorageResourceMap.get_node_details(node)
                 for res_type in self.storage_resources:
                     method = self.storage_resources[res_type].get(resource)
                     if not method:
@@ -106,7 +106,7 @@ class StorageManifest(Manifest):
         if not resource_found:
             msg = f"Invalid rpath or manifest provider doesn't have support for'{rpath}'."
             logger.error(self.log.svc_log(f"{msg}"))
-            raise ManifestError(errno.EINVAL, msg)
+            raise ResourceMapError(errno.EINVAL, msg)
 
         return info
 

@@ -20,22 +20,22 @@ from framework.utils.service_logging import logger
 from framework.base import sspl_constants as const
 
 
-class Server:
-    """provides information about server."""
+class Platform:
+    """provides information about platform."""
 
     def __init__(self):
         """Initialize instance."""
         super().__init__()
 
     @staticmethod
-    def validate_server_type_support(log, Error, server_type):
-        """Check for supported server type."""
-        logger.debug(log.svc_log(f"Server Type:{server_type}"))
-        if not server_type:
-            msg = "ConfigError: server type is unknown."
+    def validate_storage_type_support(log, Error, storage_type):
+        """Check for supported storage type."""
+        logger.debug(log.svc_log(f"Storage Type:{storage_type}"))
+        if not storage_type:
+            msg = "ConfigError: storage type is unknown."
             logger.error(log.svc_log(msg))
             raise Error(errno.EINVAL, msg)
-        if server_type.lower() not in const.RESOURCE_MAP["server_type_supported"]:
-            msg = f"{log.service} provider is not supported for server type '{server_type}'"
+        if storage_type.lower() not in const.RESOURCE_MAP["storage_type_supported"]:
+            msg = f"{log.service} provider is not supported for storage type '{storage_type}'"
             logger.error(log.svc_log(msg))
             raise Error(errno.EINVAL, msg)

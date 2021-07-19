@@ -28,7 +28,6 @@ import time
 from cortx.utils.conf_store import Conf
 from cortx.utils.conf_store.error import ConfError
 from framework.utils.service_logging import logger
-from framework.base import sspl_constants as const
 
 
 class Utility(object):
@@ -166,22 +165,6 @@ class Utility(object):
     def get_current_time():
         """Returns the time as integer number in seconds since the epoch in UTC."""
         return int(time.time())
-
-    @staticmethod
-    def get_node_details(node):
-        """
-        Parse node information and returns left string and instance.
-        Example
-            "storage"    -> ("storage", "*")
-            "storage[0]" -> ("storage", "0")
-
-            "compute"    -> ("compute", "*")
-            "compute[0]" -> ("compute", "0")
-        """
-        res = re.search(r"(\w+)\[([\d]+)\]|(\w+)", node)
-        inst = res.groups()[1] if res.groups()[1] else "*"
-        node = res.groups()[0] if res.groups()[1] else res.groups()[2]
-        return node, inst
 
 def errno_to_str_mapping(err_no):
     """Convert numerical errno to its meaning."""

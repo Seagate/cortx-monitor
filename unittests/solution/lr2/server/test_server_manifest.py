@@ -1,14 +1,17 @@
 import unittest
 import socket
-from unittest.mock import patch
-
-from files.opt.seagate.sspl.setup.resource_map.lr2.server_manifest import ServerManifest
+from unittest.mock import patch, Mock
+from solution.lr2.server.manifest import ServerManifest
 
 
 class TestServerManifest(unittest.TestCase):
     _server_manifest = None
 
     @classmethod
+    @patch(
+        "framework.platforms.server.platform.Platform."
+        "validate_server_type_support", new=Mock(return_value=True)
+    )
     def create_server_manifest_obj(cls):
         if cls._server_manifest is None:
             cls._server_manifest = ServerManifest()

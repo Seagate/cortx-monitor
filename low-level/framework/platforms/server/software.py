@@ -143,7 +143,7 @@ class Service:
                     return result
                 break
         return result
-    
+
     def get_systemd_service_info(self, log, service_name):
         """Get info of specified service using dbus API."""
         try:

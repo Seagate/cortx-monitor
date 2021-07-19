@@ -23,6 +23,7 @@ from pathlib import Path
 
 import psutil
 from cortx.utils.process import SimpleProcess
+from cortx.utils.discovery.error import ResourceMapError
 from dbus import PROPERTIES_IFACE, DBusException, Interface
 from framework.base import sspl_constants as const
 from framework.platforms.server.disk import Disk
@@ -30,7 +31,7 @@ from framework.platforms.server.error import (NetworkError, SASError,
                                               ServiceError)
 from framework.platforms.server.network import Network
 from framework.platforms.server.platform import Platform
-from framework.platforms.server.raid.raid import RAIDs
+from framework.platforms.server.raid import RAIDs
 from framework.platforms.server.sas import SAS
 from framework.platforms.server.software import BuildInfo, Service
 from framework.utils.conf_utils import (GLOBAL_CONF, NODE_TYPE_KEY, SSPL_CONF,
@@ -39,14 +40,12 @@ from framework.utils.ipmi_client import IpmiFactory
 from framework.utils.service_logging import CustomLog, logger
 from framework.utils.tool_factory import ToolFactory
 from framework.utils.utility import Utility
-
-from error import ResourceMapError
-from resource_map import ResourceMap
-from framework.platforms.server.server import Server
+from server_resource_map import ServerResourceMap
 
 
-class ServerHealth(ResourceMap):
-    """ServerHealth class provides resource map and related information
+class ServerHealth():
+    """
+    ServerHealth class provides resource map and related information
     like health.
     """
 
@@ -57,7 +56,7 @@ class ServerHealth(ResourceMap):
         super().__init__()
         self.log = CustomLog(const.HEALTH_SVC_NAME)
         server_type = Conf.get(GLOBAL_CONF, NODE_TYPE_KEY)
-        Server.validate_server_type_support(self.log, ResourceMapError, server_type)
+        Platform.validate_server_type_support(self.log, ResourceMapError, server_type)
         self.sysfs = ToolFactory().get_instance('sysfs')
         self.sysfs.initialize()
         self.sysfs_base_path = self.sysfs.get_sysfs_base_path()
@@ -86,14 +85,14 @@ class ServerHealth(ResourceMap):
         self.platform_sensor_list = ['Temperature', 'Voltage', 'Current']
         self.service = Service()
 
-    def get_health_info(self, rpath):
+    def get_data(self, rpath):
         """Fetch health information for given rpath."""
         logger.info(self.log.svc_log(
             f"Get Health data for rpath:{rpath}"))
         info = {}
         resource_found = False
         nodes = rpath.strip().split(">")
-        leaf_node, _ = Utility.get_node_details(nodes[-1])
+        leaf_node, _ = ServerResourceMap.get_node_details(nodes[-1])
 
         # Fetch health information for all sub nodes
         if leaf_node == "compute":
@@ -110,7 +109,7 @@ class ServerHealth(ResourceMap):
                     info = None
         else:
             for node in nodes:
-                resource, _ = Utility.get_node_details(node)
+                resource, _ = ServerResourceMap.get_node_details(node)
                 for res_type in self.server_resources:
                     method = self.server_resources[res_type].get(resource)
                     if not method:
@@ -144,6 +143,41 @@ class ServerHealth(ResourceMap):
                     child["health"]["status"].lower() != "ok":
                     return True
         return False
+
+    @staticmethod
+    def get_health_template(uid, is_fru: bool):
+        """Returns health template."""
+        return {
+            "uid": uid,
+            "fru": str(is_fru).lower(),
+            "last_updated": "",
+            "health": {
+                "status": "",
+                "description": "",
+                "recommendation": "",
+                "specifics": []
+            }
+        }
+
+    @staticmethod
+    def set_health_data(health_data: dict, status, description=None,
+                        recommendation=None, specifics=None):
+        """Sets health attributes for a component."""
+        good_state = (status == "OK")
+        if not description:
+            description = "%s %s in good health." % (
+                health_data.get("uid"),
+                'is' if good_state else 'is not')
+        if not recommendation:
+            recommendation = 'NA' if good_state\
+                else const.DEFAULT_RECOMMENDATION
+        health_data["last_updated"] = int(time.time())
+        health_data["health"].update({
+            "status": status,
+            "description": description,
+            "recommendation": recommendation,
+            "specifics": specifics
+        })
 
     def get_server_health_info(self):
         """Returns overall server information."""

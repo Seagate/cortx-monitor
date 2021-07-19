@@ -1,10 +1,7 @@
 import unittest
 import json
-
-from unittest.mock import patch
-
-from files.opt.seagate.sspl.setup.resource_map.lr2.storage_manifest import StorageManifest
-
+from unittest.mock import patch, Mock
+from solution.lr2.storage.manifest import StorageManifest
 from encl_api_response import (ENCLOSURE_RESPONSE, CONTROLLER_RESPONSE,
     DRIVE_RESPONSE, PSU_RESPONSE, FAN_MODULE_RESPONSE)
 
@@ -13,6 +10,10 @@ class TestStorageManifest(unittest.TestCase):
     _storage_manifest = None
 
     @classmethod
+    @patch(
+        "framework.platforms.storage.platform.Platform."
+        "validate_storage_type_support", new=Mock(return_value=True)
+    )
     def create_storage_manifest_obj(cls):
         if cls._storage_manifest is None:
             cls._storage_manifest = StorageManifest()

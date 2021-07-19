@@ -15,9 +15,15 @@
 # For any questions about this software or licensing,
 # please email opensource@seagate.com or cortx-questions@seagate.com
 
+import re
+from cortx.utils.discovery.resource_map import ResourceMap
+from framework.utils.service_logging import init_logging
+from framework.utils.conf_utils import (SSPL_CONF, Conf, SYSTEM_INFORMATION,
+    LOG_LEVEL)
 
-class ServerMap():
-    """ServerMap class provides resource map and related information
+
+class ServerResourceMap(ResourceMap):
+    """ServerResourceMap class provides resource map and related information
     like health, manifest, etc,.
     """
 
@@ -26,11 +32,14 @@ class ServerMap():
     def __init__(self):
         """Initialize server."""
         super().__init__()
+        logging_level = Conf.get(SSPL_CONF,
+            f"{SYSTEM_INFORMATION}>{LOG_LEVEL}", "INFO")
+        init_logging('resource', logging_level)
 
     @staticmethod
     def get_health_info(rpath):
         """
-        Fetch health information for given rpath.
+        Fetch health information for given resource path.
 
         rpath: Resource path to fetch its health
                Examples:
@@ -38,21 +47,37 @@ class ServerMap():
                     node>compute[0]>hw
                     node>compute[0]>hw>disks
         """
-        from server_health import ServerHealth
-        server = ServerHealth()
-        info = server.get_health_info(rpath)
+        from health import ServerHealth
+        health = ServerHealth()
+        info = health.get_data(rpath)
         return info
 
     @staticmethod
     def get_manifest_info(rpath):
         """
-        Fetch manifest information for given rpath.
+        Fetch manifest information for given resource path.
 
-        rpath: Resource path to fetch its health
+        rpath: Resource path to fetch its manifest
                Examples:
                     node>compute[0]
         """
-        from server_manifest import ServerManifest
-        server = ServerManifest()
-        info = server.get_data(rpath)
+        from manifest import ServerManifest
+        manifest = ServerManifest()
+        info = manifest.get_data(rpath)
         return info
+
+    @staticmethod
+    def get_node_details(node):
+        """
+        Parse node information and returns left string and instance.
+        Example
+            "storage"    -> ("storage", "*")
+            "storage[0]" -> ("storage", "0")
+
+            "compute"    -> ("compute", "*")
+            "compute[0]" -> ("compute", "0")
+        """
+        res = re.search(r"(\w+)\[([\d]+)\]|(\w+)", node)
+        inst = res.groups()[1] if res.groups()[1] else "*"
+        node = res.groups()[0] if res.groups()[1] else res.groups()[2]
+        return node, inst
