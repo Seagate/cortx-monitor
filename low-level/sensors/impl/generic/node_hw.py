@@ -284,7 +284,8 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
 
         return True
 
-    def check_cache_exists(self, path):
+    @staticmethod
+    def check_cache_exists(path):
         exists, _ = store.exists(path)
         return exists
 
@@ -725,6 +726,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
     def get_channel_alert(self, alert, IF_name, err=""):
         """create BMC interface alert json msg."""
 
+        specific_info = {}
         alert_type = alert.alert
         severity = SeverityReader().map_severity(alert_type)
         channel_info = self.CHANNEL_INFO
@@ -746,9 +748,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
                 "impact": alert.impact.format(IF_name),
                 "recommendation": alert.recommendation.format(IF_name)
             }
-        specific_info = {
-                "channel info": channel_info
-            }
+        specific_info["channel info"] = channel_info
         # Update cache
         data = ""
         key = ""
