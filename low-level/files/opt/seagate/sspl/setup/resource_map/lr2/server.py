@@ -250,8 +250,8 @@ class ServerMap(ResourceMap):
             uid = f"CPU-{cpu_id}"
             cpu_dict = self.get_health_template(uid, is_fru=False)
             online_status = "Online" if cpu_id in cpu_online else "Offline"
-            health_status = "OK" if online_status == "Online" else "NA"
-            usage = "NA" if health_status == "NA" \
+            health_status = "OK" if online_status == "Online" else "FAULT"
+            usage = "NA" if health_status == "FAULT" \
                 else cpu_usage_dict[cpu_id]
             specifics = [
                 {
@@ -318,7 +318,7 @@ class ServerMap(ResourceMap):
         upper_critical = sensor_props[1].get('Upper Critical', 'NA')
         lower_non_recoverable = sensor_props[1].get('Lower Non-Recoverable', 'NA')
         upper_non_recoverable = sensor_props[1].get('Upper Non-Recoverable', 'NA')
-        status = 'OK' if reading[2] == 'ok' else 'NA'
+        status = 'OK' if reading[2] == 'ok' else 'FAULT'
         health_desc = 'good' if status == 'OK' else 'bad'
         description = f"{uid} sensor is in {health_desc} health."
         recommendation = const.DEFAULT_RECOMMENDATION if status != 'OK' else 'NA'
@@ -535,7 +535,7 @@ class ServerMap(ResourceMap):
                 specifics['phys'].append(phy_data)
                 if not phy_data or phy_data['state'] != 'enabled' or \
                    'Gbit' not in phy_data['negotiated_linkrate']:
-                    health = "NA"
+                    health = "FAULT"
             self.set_health_data(port_data, health, specifics=[specifics])
             sas_ports_data.append(port_data)
         return sas_ports_data
@@ -571,7 +571,7 @@ class ServerMap(ResourceMap):
             # Map and set the interface health status and description.
             map_status = {"CONNECTED": "OK", "DISCONNECTED": "Disabled/Failed",
                           "UNKNOWN": "NA"}
-            health_status = map_status[nw_cable_conn_status]
+            health_status = "OK" if map_status[nw_cable_conn_status] == "OK" else "FAULT"
             desc = "Network Interface '%s' is %sin good health." % (
                 interface, '' if health_status == "OK" else 'not '
             )
@@ -642,7 +642,7 @@ class ServerMap(ResourceMap):
             const.UNIT_IFACE, 'UnitFileState') else False
         uid = str(properties_iface.Get(const.UNIT_IFACE, 'Id'))
         if not is_installed:
-            health_status = "NA"
+            health_status = "FAULT"
             health_description = f"Software enabling {uid} is not installed"
             recommendation = "NA"
             specifics = [
@@ -703,7 +703,7 @@ class ServerMap(ResourceMap):
                 health_description = f"{uid} is in good health"
                 recommendation = "NA"
             else:
-                health_status = state
+                health_status = 'FAULT'
                 health_description = f"{uid} is not in good health"
                 recommendation = const.DEFAULT_RECOMMENDATION
 

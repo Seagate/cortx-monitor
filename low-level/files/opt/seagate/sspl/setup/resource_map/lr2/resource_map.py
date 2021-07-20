@@ -88,6 +88,9 @@ class ResourceMap(metaclass=ABCMeta):
         if not recommendation:
             recommendation = 'NA' if good_state\
                 else DEFAULT_RECOMMENDATION
+        else:
+            if "No action is required" in recommendation.lower():
+                status = "OK"
         health_data["last_updated"] = int(time.time())
         health_data["health"].update({
             "status": status,

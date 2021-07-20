@@ -145,7 +145,7 @@ class StorageMap(ResourceMap):
             "speed": fan.get("speed", "NA"),
             "serial-number": fan.get("serial-number", "N/A"),
             "part-number": fan.get("part-number", "N/A"),
-            "health": fan.get("health", "OK"),
+            "health": fan.get("health", "FAULT"),
         }
 
     def get_fanmodules_info(self):
@@ -200,7 +200,7 @@ class StorageMap(ResourceMap):
         enclosures = self.get_realstor_encl_data("enclosures")
         for encl in enclosures:
             uid = encl.get("durable-id")
-            status = encl.get("health", "NA")
+            status = encl.get("health", "FAULT")
             description = encl.get("description", "NA")
             recommendation = encl.get("health-recommendation", "NA")
             specifics = [{
@@ -227,7 +227,7 @@ class StorageMap(ResourceMap):
         controllers = self.get_realstor_encl_data("controllers")
         for controller in controllers:
             uid = controller.get("durable-id")
-            status = controller.get("health", "NA")
+            status = controller.get("health", "FAULT")
             description = controller.get("description")
             recommendation = controller.get("health-recommendation")
             specifics = [
@@ -256,7 +256,7 @@ class StorageMap(ResourceMap):
         psus = self.get_realstor_encl_data("power-supplies")
         for psu in psus:
             uid = psu.get("durable-id")
-            status = psu.get("health", "NA")
+            status = psu.get("health", "FAULT")
             description = psu.get("description")
             recommendation = psu.get("health-recommendation")
             specifics = [
@@ -333,7 +333,7 @@ class StorageMap(ResourceMap):
         if logicalvolumes:
             for logicalvolume in logicalvolumes:
                 uid = logicalvolume.get("volume-name", "NA")
-                health = logicalvolume.get("health", "NA")
+                health = logicalvolume.get("health", "FAULT")
                 if health in const.HEALTH_UNDESIRED_VALS:
                     health = "NA"
                 description = logicalvolume.get("volume-description", "NA")
@@ -378,7 +378,7 @@ class StorageMap(ResourceMap):
         if diskgroups:
             for diskgroup in diskgroups:
                 uid = diskgroup.get("name", "NA")
-                health = diskgroup.get("health", "NA")
+                health = diskgroup.get("health", "FAULT")
                 pool_sr_no = diskgroup.get("pool-serial-number", "NA")
                 if pool_sr_no in dg_vol_map:
                     volumes = dg_vol_map[pool_sr_no]
@@ -426,7 +426,7 @@ class StorageMap(ResourceMap):
             uid = sideplane.get("durable-id", "NA")
             expanders = sideplane.get("expanders")
             expander_data = self.get_expander_data(expanders)
-            health = sideplane.get("health", "NA")
+            health = sideplane.get("health", "FAULT")
             recommendation = sideplane.get("health-recommendation", "NA")
             specifics = [
                 {
@@ -451,7 +451,7 @@ class StorageMap(ResourceMap):
         expander_data = []
         for expander in expanders:
             uid = expander.get("durable-id", "NA")
-            expander_health = expander.get("health", "NA")
+            expander_health = expander.get("health", "FAULT")
             recommendation = expander.get("health-recommendation", "NA")
             specifics = [
                 {
@@ -477,7 +477,7 @@ class StorageMap(ResourceMap):
             if slot == -1:
                 continue
             uid = drive.get("durable-id")
-            status = drive.get("health", "NA")
+            status = drive.get("health", "FAULT")
             description = drive.get("description", "NA")
             recommendation = drive.get("health-recommendation", "NA")
             specifics = [
@@ -580,7 +580,7 @@ class StorageMap(ResourceMap):
                 "status": sas_port.get("status")
             }]
             self.set_health_data(
-                port_data, sas_port.get("health"),
+                port_data, sas_port.get("health", "FAULT"),
                 sas_port.get("health-reason"),
                 sas_port.get("health-recommendation"), specifics)
             data.append(port_data)
