@@ -27,7 +27,7 @@ from actuators.impl.actuator import Actuator
 from framework.base.debug import Debug
 from framework.utils.service_logging import logger
 from framework.base.sspl_constants import (AlertTypes, SensorTypes,
-    SeverityTypes, SSPL_SUPPORTED_FRUS)
+    SeverityTypes, SSPL_CONFIG_INDEX)
 
 
 class NodeHWactuator(Actuator, Debug):
@@ -58,11 +58,13 @@ class NodeHWactuator(Actuator, Debug):
 
     def initialize(self):
         """Performs basic Node HW actuator initialization"""
-        fru_list = []
-        for fru in SSPL_SUPPORTED_FRUS:
-            fru_list.append(self.NODE_REQUEST_MAP[fru])
+        node_frus = []
+        fru_list = Conf.get(SSPL_CONFIG_INDEX,
+            "SYSTEM_INFORMATION>server_fru_list", [])
+        for fru in fru_list:
+            node_frus.append(self.NODE_REQUEST_MAP[fru])
         self.sensor_id_map = self._executor.get_fru_list_by_type(
-            fru_list,
+            node_frus,
             sensor_id_map={})
 
     def _get_fru_instances(self, fru, fru_instance):
@@ -167,7 +169,7 @@ class NodeHWactuator(Actuator, Debug):
     def _create_node_fru_json_message(self, specifics, resource_id):
         """Creates JSON response to be sent out to Node Controller Message
            Handler for further validation"""
-        resource_type = "node:fru:{0}".format(self.fru_node_request)
+        resource_type = "node:hw:{0}".format(self.fru_node_request)
         epoch_time = str(calendar.timegm(time.gmtime()))
         response = {
           "alert_type":"GET",
@@ -177,6 +179,7 @@ class NodeHWactuator(Actuator, Debug):
           "info": {
             "resource_id": resource_id,
             "resource_type": resource_type,
+            "fru": True,
             "event_time": epoch_time
           },
           "specific_info": specifics

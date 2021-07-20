@@ -28,7 +28,7 @@ from framework.utils.conf_utils import (Conf, SSPL_CONF, GLOBAL_CONF,
 from framework.utils import encryptor
 from framework.base.sspl_constants import (ServiceTypes, BMCInterface)
 from framework.utils.store_factory import file_store
-from framework.base.sspl_constants import DATA_PATH
+from framework.base.sspl_constants import DATA_PATH, SERVER_FRU_LIST_FILE
 
 # Override default store
 store = file_store
@@ -237,6 +237,47 @@ class IPMITool(IPMI):
             error = error.replace('\n', '')
 
         return out, error, retcode
+
+    def get_server_fru_list(self):
+        """Get FRU info from server and load it into Config."""
+        try:
+            server_frus = Conf.get(SSPL_CONF, "SYSTEM_INFORMATION>server_fru_list")
+        except ValueError as e:
+            logger.error("Failed to get server_fru_list from config."
+                         f"Error:{e}")
+        cmd = 'fru list'
+        fru_list = []
+        out, err, ret = self._run_ipmitool_subcommand(cmd,
+        grep_args="FRU Device Description : ")
+        if ret != 0:
+            logger.error("Failed in fetching FRU info from server."
+                         f"Error:{err}")
+        if out:
+            for l in out.split('\n'):
+                fru_list.append(l.split(': ')[1])
+            keywords = ['Pwr Supply', 'power', 'PS', 'PSU']
+            for key in keywords:
+                for ele in fru_list:
+                    if key in ele:
+                        fru_list[fru_list.index(ele)] = 'psu'
+            fru_list = list(dict.fromkeys(fru_list))
+        # Override SSPL supported FRUS to the resulted fru list
+        if len(fru_list)!= 0:
+            for fru in server_frus:
+                if fru not in fru_list:
+                    fru_list.append(fru)
+        else:
+            fru_list = server_frus
+        logger.info(f"Fetched server FRU list:{fru_list}")
+        return fru_list
+
+    def is_fru(self, fru):
+        with open(SERVER_FRU_LIST_FILE, 'r') as f:
+            fru_list = [line.strip() for line in f]
+        if fru in fru_list:
+            return True
+        return False
+        
 
 
 class IpmiFactory(object):

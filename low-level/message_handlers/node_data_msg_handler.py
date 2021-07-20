@@ -26,7 +26,7 @@ import os
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.sspl_constants import (enabled_products,
-    DATA_PATH, SSPL_SUPPORTED_FRUS)
+    DATA_PATH)
 from framework.utils.conf_utils import (GLOBAL_CONF, SSPL_CONF, Conf,
                                         NODE_ID_KEY)
 from framework.utils.service_logging import logger
@@ -153,14 +153,6 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                                                 self.DEFAULT_HOST_MEMORY_USAGE_THRESHOLD)
 
         self.node_id = Conf.get(GLOBAL_CONF, NODE_ID_KEY, "SN01")
-
-        # Get SSPL supported FRUs and resource_type respectively.
-        self.server_frus = Conf.get(SSPL_CONF, "SYSTEM_INFORMATION>server_fru_list",
-                                    SSPL_SUPPORTED_FRUS)
-        self.fru_mapping = {}
-        for fru in self.server_frus:
-            if fru in SSPL_SUPPORTED_FRUS:
-                self.fru_mapping[fru] = f'node:fru:{fru}'
 
         self.bmcNwStatus = None
         self.severity_reader = SeverityReader()
