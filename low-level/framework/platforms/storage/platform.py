@@ -21,7 +21,7 @@ from framework.base import sspl_constants as const
 
 
 class Platform:
-    """provides information about platform."""
+    """Provides information about platform."""
 
     def __init__(self):
         """Initialize instance."""

@@ -27,10 +27,9 @@ from framework.utils.conf_utils import GLOBAL_CONF, Conf, NODE_TYPE_KEY
 from framework.base.sspl_constants import (MANIFEST_SVC_NAME, LSHW_FILE,
     MANIFEST_OUTPUT_FILE)
 from framework.utils.service_logging import CustomLog, logger
-from framework.utils.utility import Utility
 from framework.platforms.server.software import Service
 from framework.platforms.server.platform import Platform
-from server_resource_map import ServerResourceMap
+from server.server_resource_map import ServerResourceMap
 
 
 class ServerManifest():
@@ -61,19 +60,19 @@ class ServerManifest():
             'version': 'version'
         }
         self.class_mapping = {
-            'memory': 'hw>memories[%s]>%s',
-            'disk': 'hw>disks[%s]>%s',
-            'storage': 'hw>storages[%s]>%s',
-            'system': 'hw>systems[%s]>%s',
-            'processor': 'hw>processors[%s]>%s',
-            'network': 'hw>networks[%s]>%s',
-            'power': 'hw>powers[%s]>%s',
-            'volume': 'hw>volumes[%s]>%s',
-            'bus': 'hw>buses[%s]>%s',
-            'bridge': 'hw>bridges[%s]>%s',
-            'display': 'hw>displays[%s]>%s',
-            'input': 'hw>inputs[%s]>%s',
-            'generic': 'hw>generics[%s]>%s'
+            'memory': 'hw>memory[%s]>%s',
+            'disk': 'hw>disk[%s]>%s',
+            'storage': 'hw>storage[%s]>%s',
+            'system': 'hw>system[%s]>%s',
+            'processor': 'hw>processor[%s]>%s',
+            'network': 'hw>network[%s]>%s',
+            'power': 'hw>power[%s]>%s',
+            'volume': 'hw>volume[%s]>%s',
+            'bus': 'hw>bus[%s]>%s',
+            'bridge': 'hw>bridge[%s]>%s',
+            'display': 'hw>display[%s]>%s',
+            'input': 'hw>input[%s]>%s',
+            'generic': 'hw>generic[%s]>%s'
         }
         self.kv_dict = {}
         sw_resources = {
@@ -87,7 +86,7 @@ class ServerManifest():
         # Extracting resource type for 'self.class_mapping' dictionary values
         # and adding to hw_resources for function mapping.
         hw_resources = {value[len('hw>'):-len('[%s]>%s')]: \
-            self.get_hw_manifest_info for value in self.class_mapping.values()}
+            self.get_hw_resources_info for value in self.class_mapping.values()}
         self.server_resources = {
             "fw": fw_resources,
             "sw": sw_resources,
@@ -103,18 +102,21 @@ class ServerManifest():
         info = {}
         resource_found = False
         nodes = rpath.strip().split(">")
-        leaf_node, _ = ServerResourceMap.get_node_details(nodes[-1])
+        leaf_node, _ = ServerResourceMap.get_node_info(nodes[-1])
 
         # Fetch manifest information for all sub nodes
         if leaf_node == "compute":
+            # Example rpath: 'node>storage[0]'
             server_hw_data = self.get_server_hw_info()
             info = self.get_server_info(server_hw_data)
             resource_found = True
         elif leaf_node == "hw":
+            # Example rpath: 'node>storage[0]>hw'
             server_hw_data = self.get_server_hw_info()
-            info = self.get_hw_manifest_info(server_hw_data, "hw")["hw"]
+            info = self.get_hw_resources_info(server_hw_data, "hw")["hw"]
             resource_found = True
         elif leaf_node in ["sw", "fw"]:
+            # Example rpath: 'node>storage[0]>fw' or sw
             for resource, method in self.server_resources[leaf_node].items():
                 try:
                     info.update({resource: method()})
@@ -124,9 +126,10 @@ class ServerManifest():
                         self.log.svc_log(f"{err.__class__.__name__}: {err}"))
                     info = None
         else:
+            # Example rpath: 'node>storage[0]>hw>disk'
             server_hw_data = self.get_server_hw_info()
             for node in nodes:
-                resource, _ = ServerResourceMap.get_node_details(node)
+                resource, _ = ServerResourceMap.get_node_info(node)
                 for res_type in self.server_resources:
                     method = self.server_resources[res_type].get(resource)
                     if not method:
@@ -196,7 +199,8 @@ class ServerManifest():
         lshw_data = self.get_manifest_output_data()
         return lshw_data
 
-    def get_hw_manifest_info(self, server_hw_data, resource=False):
+    def get_hw_resources_info(self, server_hw_data, resource=False):
+        """Get server hw resource information."""
         server = {}
         if resource == "hw" and "hw" in server_hw_data:
             server.update({"hw": {}})
@@ -236,9 +240,7 @@ class ServerManifest():
         return input_file, output_file
 
     def map_manifest_server_data(self, field, manifest_key, data, kv_key):
-        """
-        Mapping actual lshw output data with standard structured manifest data.
-        """
+        """Mapping actual lshw output data with standard structured manifest data."""
         parent_id = ""
         base_key = '>'.join(kv_key.split('>')[:-1])
         if base_key:
@@ -254,13 +256,13 @@ class ServerManifest():
         self.kv_dict[manifest_key] = parent_id + value
 
     def get_manifest_output_data(self):
-        """Returns JSON data which is got in the manifest output file."""
+        """Returns JSON data in the manifest output file."""
         data = {}
         try:
             with open(MANIFEST_OUTPUT_FILE) as json_file:
                 data = json.loads(json_file.read())
         except Exception as e:
-            msg = "Error in getting {0} file: {1}".format(json_file, e)
+            msg = "Error in getting {0} file: {1}".format(MANIFEST_OUTPUT_FILE, e)
             logger.error(self.log.svc_log(msg))
             raise ResourceMapError(errno.EINVAL, msg)
         try:

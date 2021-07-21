@@ -16,18 +16,16 @@
 # please email opensource@seagate.com or cortx-questions@seagate.com
 
 import errno
-import json
 import time
 
 from cortx.utils.discovery.error import ResourceMapError
 from framework.utils.conf_utils import (GLOBAL_CONF, Conf, STORAGE_TYPE_KEY)
 from framework.base import sspl_constants as const
 from framework.utils.service_logging import CustomLog, logger
-from framework.utils.utility import Utility
 from framework.platforms.realstor.realstor_enclosure import (
     singleton_realstorencl as enclosure)
 from framework.platforms.storage.platform import Platform
-from storage_resource_map import StorageResourceMap
+from storage.storage_resource_map import StorageResourceMap
 
 
 class StorageHealth():
@@ -42,18 +40,18 @@ class StorageHealth():
         storage_type = Conf.get(GLOBAL_CONF, STORAGE_TYPE_KEY)
         Platform.validate_storage_type_support(self.log, ResourceMapError, storage_type)
         hw_resources = {
-            "controllers": self.get_controllers_info,
-            "psus": self.get_psu_info,
-            "platform_sensors": self.get_platform_sensors_info,
-            "sideplane_expanders": self.get_sideplane_expanders_info,
-            "nw_ports": self.get_nw_ports_info,
-            "disks": self.get_drives_info,
-            "sas_ports": self.get_sas_ports_info,
-            "fan_modules": self.get_fanmodules_info,
+            "controller": self.get_controllers_info,
+            "psu": self.get_psu_info,
+            "platform_sensor": self.get_platform_sensors_info,
+            "sideplane_expander": self.get_sideplane_expanders_info,
+            "nw_port": self.get_nw_ports_info,
+            "disk": self.get_drives_info,
+            "sas_port": self.get_sas_ports_info,
+            "fan": self.get_fanmodules_info,
             }
         fw_resources = {
-            "logical_volumes": self.get_logical_volumes_info,
-            "disk_groups": self.get_disk_groups_info
+            "logical_volume": self.get_logical_volumes_info,
+            "disk_group": self.get_disk_groups_info
             }
         self.storage_resources = {
             "hw": hw_resources,
@@ -69,7 +67,7 @@ class StorageHealth():
         info = {}
         resource_found = False
         nodes = rpath.strip().split(">")
-        leaf_node, _ = StorageResourceMap.get_node_details(nodes[-1])
+        leaf_node, _ = StorageResourceMap.get_node_info(nodes[-1])
 
         # Fetch health information for all sub nodes
         if leaf_node == "storage":
@@ -87,7 +85,7 @@ class StorageHealth():
                     info = None
         else:
             for node in nodes:
-                resource, _ = StorageResourceMap.get_node_details(node)
+                resource, _ = StorageResourceMap.get_node_info(node)
                 for res_type in self.storage_resources:
                     method = self.storage_resources[res_type].get(resource)
                     if not method:

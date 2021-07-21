@@ -40,7 +40,7 @@ class ServerResourceMap(ResourceMap):
     @staticmethod
     def get_health_info(rpath):
         """
-        Fetch health information for given resource path
+        Fetch health information for given resource path.
 
         rpath: Resource path to fetch its health
                Examples:
@@ -48,7 +48,7 @@ class ServerResourceMap(ResourceMap):
                     node>compute[0]>hw
                     node>compute[0]>hw>disks
         """
-        from health import ServerHealth
+        from server.health import ServerHealth
         health = ServerHealth()
         info = health.get_data(rpath)
         return info
@@ -56,21 +56,21 @@ class ServerResourceMap(ResourceMap):
     @staticmethod
     def get_manifest_info(rpath):
         """
-        Fetch manifest information for given resource path
+        Fetch manifest information for given resource path.
 
         rpath: Resource path to fetch its manifest
                Examples:
                     node>compute[0]
         """
-        from manifest import ServerManifest
+        from server.manifest import ServerManifest
         manifest = ServerManifest()
         info = manifest.get_data(rpath)
         return info
 
     @staticmethod
-    def get_node_details(node):
+    def get_node_info(node):
         """
-        Parse node information and returns left string and instance
+        Parse node information and returns left string and instance.
         Example
             "storage"    -> ("storage", "*")
             "storage[0]" -> ("storage", "0")

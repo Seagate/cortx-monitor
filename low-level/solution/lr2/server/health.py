@@ -24,11 +24,9 @@ from pathlib import Path
 import psutil
 from cortx.utils.process import SimpleProcess
 from cortx.utils.discovery.error import ResourceMapError
-from dbus import PROPERTIES_IFACE, DBusException, Interface
 from framework.base import sspl_constants as const
 from framework.platforms.server.disk import Disk
-from framework.platforms.server.error import (NetworkError, SASError,
-                                              ServiceError)
+from framework.platforms.server.error import NetworkError, SASError
 from framework.platforms.server.network import Network
 from framework.platforms.server.platform import Platform
 from framework.platforms.server.raid import RAIDs
@@ -39,8 +37,7 @@ from framework.utils.conf_utils import (GLOBAL_CONF, NODE_TYPE_KEY, SSPL_CONF,
 from framework.utils.ipmi_client import IpmiFactory
 from framework.utils.service_logging import CustomLog, logger
 from framework.utils.tool_factory import ToolFactory
-from framework.utils.utility import Utility
-from server_resource_map import ServerResourceMap
+from server.server_resource_map import ServerResourceMap
 
 
 class ServerHealth():
@@ -63,14 +60,14 @@ class ServerHealth():
         self.cpu_path = self.sysfs_base_path + const.CPU_PATH
         hw_resources = {
             'cpu': self.get_cpu_info,
-            'platform_sensors': self.get_platform_sensors_info,
+            'platform_sensor': self.get_platform_sensors_info,
             'memory': self.get_mem_info,
-            'fans': self.get_fans_info,
-            'nw_ports': self.get_nw_ports_info,
+            'fan': self.get_fans_info,
+            'nw_port': self.get_nw_ports_info,
             'sas_hba': self.get_sas_hba_info,
-            'sas_ports': self.get_sas_ports_info,
-            'disks': self.get_disks_info,
-            'psus': self.get_psu_info
+            'sas_port': self.get_sas_ports_info,
+            'disk': self.get_disks_info,
+            'psu': self.get_psu_info
         }
         sw_resources = {
             'cortx_sw_services': self.get_cortx_service_info,
@@ -92,7 +89,7 @@ class ServerHealth():
         info = {}
         resource_found = False
         nodes = rpath.strip().split(">")
-        leaf_node, _ = ServerResourceMap.get_node_details(nodes[-1])
+        leaf_node, _ = ServerResourceMap.get_node_info(nodes[-1])
 
         # Fetch health information for all sub nodes
         if leaf_node == "compute":
@@ -109,7 +106,7 @@ class ServerHealth():
                     info = None
         else:
             for node in nodes:
-                resource, _ = ServerResourceMap.get_node_details(node)
+                resource, _ = ServerResourceMap.get_node_info(node)
                 for res_type in self.server_resources:
                     method = self.server_resources[res_type].get(resource)
                     if not method:
@@ -325,7 +322,8 @@ class ServerHealth():
         return disk_data
 
     def format_ipmi_platform_sensor_reading(self, reading):
-        """builds json resposne from ipmi tool response.
+        """
+        builds json response from ipmi tool response.
         reading arg sample: ('CPU1 Temp', '01', 'ok', '3.1', '36 degrees C').
         """
 
@@ -438,7 +436,7 @@ class ServerHealth():
         data = []
         sensor_reading = self._ipmi.get_sensor_list_by_type('Fan')
         if sensor_reading is None:
-            msg = f"Failed to get Fan sensor reading using ipmitool"
+            msg = "Failed to get Fan sensor reading using ipmitool"
             logger.error(self.log.svc_log(msg))
             return
         for fan_reading in sensor_reading:
@@ -547,7 +545,7 @@ class ServerHealth():
                 except SASError as err:
                     phy_data = {}
                     logger.error(self.log.svc_log(err))
-                except Exception:
+                except Exception as err:
                     phy_data = {}
                     logger.exception(self.log.svc_log(err))
                 specifics['phys'].append(phy_data)
@@ -621,16 +619,16 @@ class ServerHealth():
     def get_cortx_service_info(self):
         """Get cortx service info in required format."""
         cortx_services = self.service.get_cortx_service_list()
-        cortx_service_info = self.get_service_into(cortx_services)
+        cortx_service_info = self.get_service_info(cortx_services)
         return cortx_service_info
 
     def get_external_service_info(self):
         """Get external service info in required format."""
         external_services = self.service.get_external_service_list()
-        external_service_info = self.get_service_into(external_services)
+        external_service_info = self.get_service_info(external_services)
         return external_service_info
 
-    def get_service_into(self, services):
+    def get_service_info(self, services):
         services_info = []
         for service in services:
             response = self.service.get_systemd_service_info(self.log, service)

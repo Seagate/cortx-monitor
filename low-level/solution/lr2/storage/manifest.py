@@ -24,13 +24,12 @@ from framework.base.sspl_constants import MANIFEST_SVC_NAME
 from framework.utils.service_logging import CustomLog, logger
 from framework.platforms.realstor.realstor_enclosure import (
     singleton_realstorencl as ENCL)
-from framework.utils.utility import Utility
 from framework.platforms.storage.platform import Platform
-from storage_resource_map import StorageResourceMap
+from storage.storage_resource_map import StorageResourceMap
 
 
 class StorageManifest():
-    """ Provides storage manifest related information. """
+    """Provides storage manifest related information."""
 
     name = "storage_manifest"
 
@@ -41,15 +40,15 @@ class StorageManifest():
         storage_type = Conf.get(GLOBAL_CONF, STORAGE_TYPE_KEY)
         Platform.validate_storage_type_support(self.log, ResourceMapError, storage_type)
         hw_resources = {
-            "enclosures": self.get_enclosures_info,
-            "controllers": self.get_controllers_info,
-            "power-supplies": self.get_psu_info,
-            "fan-modules": self.get_fan_modules_info,
-            "disks": self.get_drives_info,
+            "enclosure": self.get_enclosures_info,
+            "controller": self.get_controllers_info,
+            "psu": self.get_psu_info,
+            "fan": self.get_fan_modules_info,
+            "disk": self.get_drives_info,
             "sideplane": self.get_sideplane_expander_info
         }
         fw_resources = {
-            "versions": self.get_versions_info,
+            "version": self.get_versions_info,
         }
         self.storage_resources = {
             "hw": hw_resources,
@@ -63,13 +62,15 @@ class StorageManifest():
         info = {}
         resource_found = False
         nodes = rpath.strip().split(">")
-        leaf_node, _ = StorageResourceMap.get_node_details(nodes[-1])
+        leaf_node, _ = StorageResourceMap.get_node_info(nodes[-1])
 
         # Fetch health information for all sub nodes
         if leaf_node == "storage":
+            # Example rpath: 'node>storage[0]'
             resource_found = True
             info = self.get_storage_manifest_info()
         elif leaf_node in self.storage_resources:
+            # Example rpath: 'node>storage[0]>hw'
             resource_found = True
             for resource, method in self.storage_resources[leaf_node].items():
                 try:
@@ -80,8 +81,9 @@ class StorageManifest():
                         self.log.svc_log(f"{err.__class__.__name__}:{err}"))
                     info = None
         else:
+            # Example rpath: 'node>storage[0]>hw>disk'
             for node in nodes:
-                resource, _ = StorageResourceMap.get_node_details(node)
+                resource, _ = StorageResourceMap.get_node_info(node)
                 for res_type in self.storage_resources:
                     method = self.storage_resources[res_type].get(resource)
                     if not method:
@@ -272,7 +274,7 @@ class StorageManifest():
         return data
 
     @staticmethod
-    def get_fan_specfics(fan):
+    def get_fan_specifics(fan):
         return {
             "uid": fan.get("durable-id", "NA"),
             "type": fan.get("type", "NA"),
@@ -305,7 +307,7 @@ class StorageManifest():
                     "version": fan_module.get("hardware-version", "NA"),
                     "part_number": fan_module.get("part-number", "NA"),
                     "last_updated": int(time.time()),
-                    "specifics": [self.get_fan_specfics(fan) for fan in fan_module['fan']]
+                    "specifics": [self.get_fan_specifics(fan) for fan in fan_module['fan']]
                 }
                 data.append(fan_module_resp)
                 logger.debug(self.log.svc_log(
