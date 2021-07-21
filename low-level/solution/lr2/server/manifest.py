@@ -210,7 +210,7 @@ class ServerManifest():
 
     def set_lshw_input_data(self):
         """
-        KvStoreFactory can not accept a dictionary as direct input and output.
+        KvStoreFactory can not accept a dictionary as direct input and output
         It will support only JSON, YAML, TOML, INI, PROPERTIES files. So here
         we are fetching the lshw data and adding that to a file for further
         execution.
@@ -252,7 +252,7 @@ class ServerManifest():
             field = '>'+field if parent_key else field
             parent_id = data.get(parent_key+field)+"-"
         self.kv_dict[manifest_key] = parent_id + value
-    
+
     def get_manifest_output_data(self):
         """Returns JSON data which is got in the manifest output file."""
         data = {}
@@ -326,7 +326,7 @@ class ServerManifest():
             }
             bmc_data.append(bmc)
         return bmc_data
-    
+
     def get_os_server_info(self):
         """Returns node server os info."""
         os_data = []

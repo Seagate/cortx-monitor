@@ -22,7 +22,8 @@ from framework.utils.conf_utils import (SSPL_CONF, Conf, SYSTEM_INFORMATION,
     LOG_LEVEL)
 
 class StorageResourceMap(ResourceMap):
-    """StorageResourceMap class provides resource map and related information
+    """
+    StorageResourceMap class provides resource map and related information
     like health, manifest, etc,.
     """
 
@@ -38,7 +39,7 @@ class StorageResourceMap(ResourceMap):
     @staticmethod
     def get_health_info(rpath):
         """
-        Fetch health information for given resource path.
+        Fetch health information for given resource path
 
         rpath: Resource path to fetch its health
                Examples:
@@ -54,7 +55,7 @@ class StorageResourceMap(ResourceMap):
     @staticmethod
     def get_manifest_info(rpath):
         """
-        Fetch manifest information for given resource path.
+        Fetch manifest information for given resource path
 
         rpath: Resource path to fetch its manifest
                Examples:
@@ -70,7 +71,7 @@ class StorageResourceMap(ResourceMap):
     @staticmethod
     def get_node_details(node):
         """
-        Parse node information and returns left string and instance.
+        Parse node information and returns left string and instance
         Example
             "storage"    -> ("storage", "*")
             "storage[0]" -> ("storage", "0")

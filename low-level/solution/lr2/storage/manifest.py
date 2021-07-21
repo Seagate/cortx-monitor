@@ -30,7 +30,7 @@ from storage_resource_map import StorageResourceMap
 
 
 class StorageManifest():
-    """Provides storage manifest related information."""
+    """ Provides storage manifest related information. """
 
     name = "storage_manifest"
 
@@ -57,9 +57,7 @@ class StorageManifest():
         }
 
     def get_data(self, rpath):
-        """
-        Fetch Manifest information for given rpath.
-        """
+        """Fetch Manifest information for given rpath."""
         logger.info(self.log.svc_log(
             f"Get Manifest data for rpath:{rpath}"))
         info = {}
