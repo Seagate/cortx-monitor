@@ -19,11 +19,13 @@ import os
 import re
 import errno
 import socket
+import time
 
 # using cortx package
 from cortx.utils.conf_store import Conf
 from cortx.utils.process import SimpleProcess
 from cortx.utils.security.cipher import Cipher
+from cortx.utils.validator.error import VError
 from cortx.utils.validator.v_controller import ControllerV
 from cortx.utils.validator.v_network import NetworkV
 from files.opt.seagate.sspl.setup.setup_error import SetupError
@@ -97,7 +99,17 @@ class SSPLPrepare:
 
         # Validate BMC connectivity & storage controller accessibility
         if node_type.lower() not in ["virtual", "vm"]:
-            NetworkV().validate("connectivity", [bmc_ip, primary_ip, secondary_ip])
+            for ip in [bmc_ip, primary_ip, secondary_ip]:
+                max_retry = 3
+                while max_retry != 0:
+                    try:
+                        NetworkV().validate("connectivity", [ip])
+                        break
+                    except VError:
+                        time.sleep(1)
+                        max_retry -= 1
+                        if max_retry == 0:
+                            raise
             # check BMC ip, user, password are valid
             self.test_bmc_is_accessible(bmc_ip, bmc_user, bmc_passwd)
             c_validator = ControllerV()

@@ -31,6 +31,7 @@ import distutils.dir_util
 from cortx.utils.conf_store import Conf
 from cortx.utils.process import SimpleProcess
 from cortx.utils.service.service_handler import ServiceError
+from cortx.utils.validator.error import VError
 from cortx.utils.validator.v_network import NetworkV
 from cortx.utils.validator.v_pkg import PkgV
 from cortx.utils.validator.v_service import ServiceV
@@ -103,7 +104,17 @@ class SSPLPostInstall:
             # cluster_id required for decrypting the secret is only available from
             # the prepare stage. However accessibility validation will be done in
             # prepare stage. So at this time, validating ip reachability is fine.
-            NetworkV().validate("connectivity", [bmc_ip, primary_ip, secondary_ip])
+            for ip in [bmc_ip, primary_ip, secondary_ip]:
+                max_retry = 3
+                while max_retry != 0:
+                    try:
+                        NetworkV().validate("connectivity", [ip])
+                        break
+                    except VError:
+                        time.sleep(1)
+                        max_retry -= 1
+                        if max_retry == 0:
+                            raise
 
     @staticmethod
     def validate_dependencies(setup):
