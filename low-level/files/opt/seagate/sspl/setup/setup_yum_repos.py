@@ -25,6 +25,8 @@ import shutil
 import argparse
 import subprocess
 
+from framework.utils.utility import Utility
+
 CORTX_BASE_URL = "http://cortx-storage.colo.seagate.com/releases/cortx"
 
 COMMON_REPOS = """[cortx_commons]
@@ -87,12 +89,14 @@ class SetupYumRepo:
         self.sspl_repo = "/etc/yum.repos.d/sspl.repo"
         self.sspl_uploads_repo = "/etc/yum.repos.d/sspl_uploads.repo"
 
-    def _validate_centos_release_support(self):
+    def _validate_os_release_support(self):
         """Get CORTX url based on centos release."""
-        file = "/etc/centos-release"
+        os = Utility().get_os_name().lower()
+        file = f"/etc/{os}-release"
         with open(file) as fObj:
             content = fObj.read()
-        if "CentOS Linux release 7.8" in content:
+        if "CentOS Linux release 7.8" in content or \
+           "Rocky Linux release 8.4" in content:
             self.url_local_repo_commons="%s/third-party-deps/centos/centos-7.8.2003/" % (CORTX_BASE_URL)
             self.url_uploads_repo = "%s/uploads/centos/centos-7.8.2003/" % (CORTX_BASE_URL)
         elif "CentOS Linux release 7.7" in content:
@@ -110,7 +114,7 @@ class SetupYumRepo:
             self.epel_repo = "%s/3rd_party/EPEL-7" % self.build_url
             self.url_local_repo_commons = self.cortx_deps_repo
             self.url_sspl_repo = "%s/cortx_iso" % self.build_url
-        self._validate_centos_release_support()
+        self._validate_os_release_support()
 
     def create_commons_repos(self):
         """Create common platform base, extra and epel repos."""

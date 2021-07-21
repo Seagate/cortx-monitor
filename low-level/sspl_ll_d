@@ -426,8 +426,9 @@ def _sensors_actuators_factory(sspl_threaded_modules, msgQlist, operating_system
     logger.info("sspl-ll Bootstrap: actuators to load: %s" % (actuators, ))
 
     # Import in the proper classes based upon values from config file
-    if operating_system == OperatingSystem.CENTOS7.value or operating_system == OperatingSystem.RHEL7.value or \
-        operating_system.lower() in OperatingSystem.CENTOS7.value.lower() or operating_system.lower() in OperatingSystem.RHEL7.value.lower():
+    if OperatingSystem.CENTOS7.value in operating_system.lower() or \
+       OperatingSystem.RHEL7.value in operating_system.lower() or \
+       OperatingSystem.ROCKY8.value in operating_system.lower():
         from actuators.impl.centos_7.systemd_service import SystemdService as Service
         from actuators.impl.centos_7.command_line import CommandLine as CommandLine
         from actuators.impl.centos_7.systemd_login import SystemdLogin as Login

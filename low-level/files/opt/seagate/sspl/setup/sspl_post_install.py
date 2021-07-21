@@ -120,18 +120,18 @@ class SSPLPostInstall:
             "zope.interface": "5.2.0"
             }
         rpm_3ps_packages = {
-            "hdparm": "9.43",
+            "hdparm": "9.54",
             "ipmitool": "1.8.18",
-            "lshw": "B.02.18",
-            "python3": "3.6.8",
+            "lshw": "B.02.19.2",
+            "python36": "3.6.8",
             "python36-dbus": "1.2.4",
             "python36-gobject": "3.22.0",
             "python36-paramiko": "2.1.1",
             "python36-psutil": "5.6.7",
             "shadow-utils": "4.6",
-            "smartmontools": "7.0",
-            "systemd-python36": "1.0.0",
-            "udisks2": "2.8.4"
+            "smartmontools": "7.1",
+            "python3-systemd": "234",
+            "udisks2": "2.9.0"
             }
         ssu_dependency_rpms = [
             "sg3_utils",

@@ -40,7 +40,7 @@ BuildRequires: gcc
 BuildRequires: graphviz
 BuildRequires: make
 BuildRequires: openssl-devel
-BuildRequires: python-pep8
+BuildRequires: python3-pycodestyle
 #Requires:
 
 %description
