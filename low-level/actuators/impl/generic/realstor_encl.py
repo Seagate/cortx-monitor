@@ -541,7 +541,7 @@ class RealStorActuator(Actuator, Debug):
     def _get_enclosure_data(self, sasurl, response):
         logger.info("url comes into _get_enclosure_data is:{0}".format(sasurl))
         sas_response = self.rssencl.ws_request(sasurl, self.rssencl.ws.HTTP_GET)
-        logger.info("_get_sas_port_status, sasresponse for coming is:{0}".format(sas_response))
+        logger.info("_get_sas_port_status, sas_response is:{0}".format(sas_response))
 
         if not sas_response:
             logger.warn(
@@ -551,7 +551,7 @@ class RealStorActuator(Actuator, Debug):
         if sas_response.status_code != self.rssencl.ws.HTTP_OK:
             if sasurl.find(self.rssencl.ws.LOOPBACK) == -1:
                 logger.error("{0}:: http request {1} to sas port health status failed with error:{2}".format(
-                    self.rssencl.LDR_R1_ENCL, sasurl, sasresponse.status_code))
+                    self.rssencl.LDR_R1_ENCL, sasurl, sas_response.status_code))
             return None
 
         json_response = None
