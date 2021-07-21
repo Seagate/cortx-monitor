@@ -1274,10 +1274,10 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         store.put(self.faulty_resources, self.faulty_resources_path)
 
     def _parse_current_info(self, index, date, _time, sensor, sensor_num, event, status, is_last):
+        """Parse out 'current' related changes that gets reflected in the ipmi sel list."""
 
         sensor_name = self.sensor_id_map[self.TYPE_CURRENT][sensor_num]
         resource_type = NodeDataMsgHandler.IPMI_RESOURCE_TYPE_CURRENT
-
         threshold = event.split(" ")[-1]
         if threshold.lower() in ['low', 'high']:
             alert_type = f"threshold_breached:{threshold}"
@@ -1291,8 +1291,6 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         else:
             alert_type = "miscellaneous"
             severity = "informational"
-
-
         common, specific, specific_dynamic = self._get_sensor_props(sensor_name)
 
         specific_info = {}
