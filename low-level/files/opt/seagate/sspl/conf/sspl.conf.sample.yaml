@@ -140,32 +140,30 @@ NODEDATAMSGHANDLER:
 SYSTEMDWATCHDOG:
    threaded: true
    monitored_services:
-      hw:
-         - m0t1fs@*.service
-         - m0d@*.service
-         - motr.service
-         - motr-kernel.service
-         - motr-trace@kernel.service
-         - motr-trace@motr-kernel.service
-         - motr-server@kernel.service
-         - motr-server@motr-kernel.service
-         - motr-mkfs@kernel.service
-         - motr-mkfs@motr-kernel.service
-         - systemd-user-sessions.service
-         - systemd-logind.services
-         - systemd-journald.service
-         - systemd-sysctl.service
-         - crond.service
-         - syslog.service
-         - sshd.service
-         - lnet.service
-         - network.service
-         - mcollective.service
-         - dbus.service
-         - openhpid.service
-         - dcs-collector.service
-         - zabbix*.service
-      vm:
+      - m0t1fs@*.service
+      - m0d@*.service
+      - motr.service
+      - motr-kernel.service
+      - motr-trace@kernel.service
+      - motr-trace@motr-kernel.service
+      - motr-server@kernel.service
+      - motr-server@motr-kernel.service
+      - motr-mkfs@kernel.service
+      - motr-mkfs@motr-kernel.service
+      - systemd-user-sessions.service
+      - systemd-logind.services
+      - systemd-journald.service
+      - systemd-sysctl.service
+      - crond.service
+      - syslog.service
+      - sshd.service
+      - lnet.service
+      - network.service
+      - mcollective.service
+      - dbus.service
+      - openhpid.service
+      - dcs-collector.service
+      - zabbix*.service
    smart_test_interval: 999999999
    run_smart_on_start: 'False'
 

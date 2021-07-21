@@ -145,31 +145,25 @@ SERVICEMONITOR:
    threshold_inactive_time: 180
    threshold_active_time: 30
    monitored_services:
-      hw:
-         - hare-consul-agent.service
-         - elasticsearch.service
+      - hare-consul-agent.service
+      - elasticsearch.service
+      - multipathd.service
+      - statsd.service
+      - rsyslog.service
+      - slapd.service
+      - lnet.service
+      - salt-master.service
+      - salt-minion.service
+      - glusterd.service
+      - scsi-network-relay.service
+      - kafka.service
+      - kafka-zookeeper.service
+   excluded_services:
+      vm:
          - multipathd.service
-         - statsd.service
-         - rsyslog.service
-         - slapd.service
-         - lnet.service
-         - salt-master.service
-         - salt-minion.service
          - glusterd.service
          - scsi-network-relay.service
-         - kafka.service
-         - kafka-zookeeper.service
-      vm:
-         - hare-consul-agent.service
-         - elasticsearch.service
-         - statsd.service
-         - rsyslog.service
-         - slapd.service
-         - lnet.service
-         - salt-master.service
-         - salt-minion.service
-         - kafka.service
-         - kafka-zookeeper.service
+      hw:
 
 NODEHWACTUATOR:
    ipmi_client: ipmitool

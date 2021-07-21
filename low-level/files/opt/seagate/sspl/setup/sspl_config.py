@@ -35,7 +35,8 @@ from cortx.utils.message_bus.error import MessageBusError
 from cortx.utils.process import SimpleProcess
 from files.opt.seagate.sspl.setup.setup_error import SetupError
 from files.opt.seagate.sspl.setup.setup_logger import logger
-from .conf_based_sensors_enable import update_sensor_info
+from .platform_based_config_update import (
+    update_sensor_info, update_monitored_services)
 from framework.base import sspl_constants as consts
 from framework.utils.utility import Utility
 
@@ -105,6 +106,9 @@ class SSPLConfig:
         # enable/disable sensor groups in the conf file accordingly.
         update_sensor_info(consts.SSPL_CONFIG_INDEX, self.node_type,
             self.enclosure_type)
+
+        # Update monitored services in sspl conf based on server type
+        update_monitored_services(consts.SSPL_CONFIG_INDEX, self.node_type)
 
         # Message bus topic creation
         self.create_message_types()

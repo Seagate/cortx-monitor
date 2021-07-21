@@ -34,10 +34,10 @@ from json_msgs.messages.sensors.service_monitor_msg import ServiceMonitorMsg
 
 from framework.utils.utility import errno_to_str_mapping
 from cortx.utils.service import DbusServiceHandler
-from framework.utils.conf_utils import (
-    GLOBAL_CONF, SSPL_CONF, Conf, SITE_ID_KEY, CLUSTER_ID_KEY,
-    NODE_ID_KEY, RACK_ID_KEY, STORAGE_SET_ID_KEY,
-    SERVICEMONITOR, MONITORED_SERVICES, NODE_TYPE_KEY)
+from framework.utils.conf_utils import (GLOBAL_CONF, SSPL_CONF,
+                                        Conf, SITE_ID_KEY, CLUSTER_ID_KEY, NODE_ID_KEY,
+                                        RACK_ID_KEY, STORAGE_SET_ID_KEY,
+                                        SERVICEMONITOR, MONITORED_SERVICES)
 
 
 class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
@@ -91,10 +91,8 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
         self.node_id = Conf.get(GLOBAL_CONF, NODE_ID_KEY, "SN01")
         self.cluster_id = Conf.get(GLOBAL_CONF, CLUSTER_ID_KEY, "CC01")
         self.storage_set_id = Conf.get(GLOBAL_CONF, STORAGE_SET_ID_KEY, "ST01")
-        node_type = Conf.get(GLOBAL_CONF, NODE_TYPE_KEY).lower()
-        self.monitored_services = Conf.get(
-            SSPL_CONF,
-            f'{SERVICEMONITOR}>{MONITORED_SERVICES}>{node_type}', [])
+        self.monitored_services = Conf.get(SSPL_CONF,
+                                    f'{SERVICEMONITOR}>{MONITORED_SERVICES}')
 
     def _import_products(self, product):
         """Import classes based on which product is being used"""

@@ -21,7 +21,7 @@ from cortx.utils.process import SimpleProcess
 from cortx.utils.conf_store import Conf
 from cortx.utils.service import DbusServiceHandler
 from cortx.utils.validator.v_pkg import PkgV
-from .conf_based_sensors_enable import update_sensor_info
+from .platform_based_config_update import update_sensor_info
 from files.opt.seagate.sspl.setup.setup_logger import logger
 from framework.utils.utility import Utility
 from framework.base.sspl_constants import (
@@ -110,7 +110,7 @@ class SSPLTestCmd:
         # Validate input configs
         machine_id = Utility.get_machine_id()
         self.node_type = Conf.get(SSPL_TEST_GLOBAL_CONFIG,
-            "server_node>%s>type" % machine_id).lower()
+            "server_node>%s>type" % machine_id)
         enclosure_id = Conf.get(SSPL_TEST_GLOBAL_CONFIG,
             "server_node>%s>storage>enclosure_id" % machine_id)
         self.enclosure_type = Conf.get(SSPL_TEST_GLOBAL_CONFIG,
@@ -181,12 +181,10 @@ class SSPLTestCmd:
             self.dbus_service.start(service_name)
 
             service_list = Conf.get(
-                SSPL_CONFIG_INDEX,
-                "SERVICEMONITOR>monitored_services>%s" % self.node_type)
+                SSPL_CONFIG_INDEX, "SERVICEMONITOR>monitored_services")
             service_list.append(service_name)
             Conf.set(
-                SSPL_CONFIG_INDEX,
-                "SERVICEMONITOR>monitored_services>%s" % self.node_type,
+                SSPL_CONFIG_INDEX, "SERVICEMONITOR>monitored_services",
                 service_list)
 
             threshold_inactive_time_original = Conf.get(
@@ -234,8 +232,7 @@ class SSPLTestCmd:
             # if execution is failed.
             service_list.remove(service_name)
             Conf.set(
-                SSPL_CONFIG_INDEX,
-                "SERVICEMONITOR>monitored_services>%s" % self.node_type,
+                SSPL_CONFIG_INDEX, "SERVICEMONITOR>monitored_services",
                 service_list)
             Conf.set(
                 SSPL_CONFIG_INDEX,

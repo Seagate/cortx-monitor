@@ -33,8 +33,7 @@ from zope.interface import implementer
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.base.module_thread import SensorThread, ThreadException
 from framework.base.sspl_constants import DATA_PATH
-from framework.utils.conf_utils import (
-    GLOBAL_CONF, SSPL_CONF, Conf, NODE_TYPE_KEY)
+from framework.utils.conf_utils import (SSPL_CONF, Conf)
 from framework.utils.iem import Iem
 from framework.utils.mon_utils import get_alert_id
 from framework.utils.service_logging import logger
@@ -312,11 +311,10 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
         """Initialize the relevant datastructures."""
         super(ServiceMonitor, self).__init__(self.SENSOR_NAME,
                                              self.PRIORITY)
-        node_type = Conf.get(GLOBAL_CONF, NODE_TYPE_KEY).lower()
+
         self.services_to_monitor = set(Conf.get(
-            SSPL_CONF,
-            f'{self.SERVICEMONITOR}>{self.MONITORED_SERVICES}>{node_type}',
-            []))
+            SSPL_CONF, f"{self.SERVICEMONITOR}>{self.MONITORED_SERVICES}", []))
+
         self.services = {}
 
         self.thread_sleep = int(Conf.get(SSPL_CONF,
