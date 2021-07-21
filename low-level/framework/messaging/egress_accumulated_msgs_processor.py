@@ -131,6 +131,7 @@ class EgressAccumulatedMsgsProcessor(ScheduledModuleThread, InternalMsgQ):
                     if isinstance(self._producer, MessageProducer):
                         self._producer.send([message])
                         logger.error(f"Published Accumulated Message {message}")
+                        self.store_queue.delete()
                     else:
                         self.create_MsgProducer_obj()
         except MessageBusError as e:

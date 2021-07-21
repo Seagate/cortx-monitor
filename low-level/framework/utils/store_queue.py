@@ -102,10 +102,15 @@ class StoreQueue:
         if self.is_empty():
             return
         item = store.get(f"{self.SSPL_UNSENT_MESSAGES}/{self.head}")
+        return item
+
+    def delete(self):
+        if self.is_empty():
+            return
+        item = store.get(f"{self.SSPL_UNSENT_MESSAGES}/{self.head}")
         store.delete(f"{self.SSPL_UNSENT_MESSAGES}/{self.head}")
         self.head += 1
         self.current_size -= sys.getsizeof(item)
-        return item
 
     def put(self, item):
         size_of_item = sys.getsizeof(item)

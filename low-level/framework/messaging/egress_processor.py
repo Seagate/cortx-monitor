@@ -226,6 +226,9 @@ class EgressProcessor(ScheduledModuleThread, InternalMsgQ):
                             self._producer.send([jsonMsg])
                             logger.info(f"Published Alert: {jsonMsg}")
                         else:
+                            logger.info(f"MessageProducer instance is not available,"
+                                "adding message to accumulated queue.")
+                            self.store_queue.put(jsonMsg)
                             self.create_MsgProducer_obj()
                     else:
                         logger.info("'Accumulated msg queue' is not Empty." +
