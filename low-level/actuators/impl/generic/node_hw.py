@@ -26,8 +26,7 @@ import json
 from actuators.impl.actuator import Actuator
 from framework.base.debug import Debug
 from framework.utils.service_logging import logger
-from framework.base.sspl_constants import (AlertTypes, SensorTypes,
-    SeverityTypes, SSPL_CONFIG_INDEX)
+from framework.base.sspl_constants import AlertTypes, SensorTypes, SeverityTypes
 
 
 class NodeHWactuator(Actuator, Debug):
@@ -58,13 +57,8 @@ class NodeHWactuator(Actuator, Debug):
 
     def initialize(self):
         """Performs basic Node HW actuator initialization"""
-        node_frus = []
-        fru_list = Conf.get(SSPL_CONFIG_INDEX,
-            "SYSTEM_INFORMATION>server_fru_list", [])
-        for fru in fru_list:
-            node_frus.append(self.NODE_REQUEST_MAP[fru])
         self.sensor_id_map = self._executor.get_fru_list_by_type(
-            node_frus,
+            ['fan', 'power supply', 'drive slot / bay'],
             sensor_id_map={})
 
     def _get_fru_instances(self, fru, fru_instance):
@@ -137,7 +131,7 @@ class NodeHWactuator(Actuator, Debug):
         node_request = json_msg.get("node_controller")
         node_request_instance = node_request.get("node_request").split(":")[:3]
 
-        if node_request_instance == ['NDHW', 'node', 'fru']:
+        if node_request_instance == ['NDHW', 'node', 'hw']:
             response = self._process_fru_request(node_request)
         elif node_request_instance == ['NDHW', 'node', 'sensor']:
             response = self._process_sensor_request(node_request)
@@ -178,8 +172,8 @@ class NodeHWactuator(Actuator, Debug):
           "instance_id": resource_id,
           "info": {
             "resource_id": resource_id,
-            "resource_type": resource_type,
             "fru": True,
+            "resource_type": resource_type,
             "event_time": epoch_time
           },
           "specific_info": specifics
@@ -269,6 +263,7 @@ class NodeHWactuator(Actuator, Debug):
         response['severity'] = SeverityTypes.INFORMATIONAL.value
         response['info'] = {
             "resource_type": "node:sensor:" + self._sensor_type.lower(),
+            "fru": False,
             "resource_id": self._resource_id,
             "event_time": str(calendar.timegm(time.gmtime())),
         }

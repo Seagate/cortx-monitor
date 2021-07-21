@@ -1191,7 +1191,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
                 ("Drive Present", "Deasserted"): ("missing", "critical"),
                 }
             resource_type = NodeDataMsgHandler.IPMI_RESOURCE_TYPE_DISK
-            self.ipmi_client.is_fru(self.fru_map[self.TYPE_DISK])
+            fru_bool = self.ipmi_client.is_fru(self.fru_map[self.TYPE_DISK])
             info = {
                 "resource_type": resource_type,
                 "fru": fru_bool,
