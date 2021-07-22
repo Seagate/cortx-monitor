@@ -75,9 +75,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
     TYPE_DISK = 'Drive Slot / Bay'
     TYPE_TEMPERATURE = "Temperature"
     TYPE_VOLTAGE = "Voltage"
-    # TODO: Enable this code once Intel servers become available
-    # to test the current sensor
-    # TYPE_CURRENT = "Current"
+    TYPE_CURRENT = "Current"
 
     SEL_USAGE_THRESHOLD = 90
     SEL_INFO_PERC_USED = "Percent Used"
@@ -154,9 +152,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
             self.TYPE_DISK: self._parse_disk_info,
             self.TYPE_TEMPERATURE: self._parse_temperature_info,
             self.TYPE_VOLTAGE: self._parse_voltage_info,
-            # TODO: Enable this code once Intel servers become available
-            # to test the current sensor
-            # self.TYPE_CURRENT: self._parse_current_info,
+            self.TYPE_CURRENT: self._parse_current_info,
         }
         self.faulty_resources = {}
 
@@ -1277,60 +1273,54 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         self._send_json_msg(resource_type, alert_type, severity, info, specific_info)
         store.put(self.faulty_resources, self.faulty_resources_path)
 
-# TODO: Enable this code once Intel servers become available
-# to test the current sensor
-#    def _parse_current_info(self, index, date, _time, sensor, sensor_num, event, status, is_last):
-#
-#        sensor_name = self.sensor_id_map[self.TYPE_CURRENT][sensor_num]
-#        resource_type = NodeDataMsgHandler.IPMI_RESOURCE_TYPE_CURRENT
-#
-#        threshold = event.split(" ")[-1]
-#        if threshold.lower() in ['low', 'high']:
-#            alert_type = f"threshold_breached:{threshold}"
-#        if alert_type:
-#            severity_reader = SeverityReader()
-#            severity = severity_reader.map_severity(alert_type)
-#            if threshold.lower() in ['low', 'high'] and status.lower.lower() == "deasserted":
-#                severity = "informational"
-#        else:
-#            alert_type = "miscellaneous"
-#            severity = "informational"
-#
-#
-#        common, specific, specific_dynamic = self._get_sensor_props(sensor_name)
-#
-#        specific_info = {}
-#        specific_info.update(common)
-#        specific_info.update(specific)
-#        specific_info.update({'fru_id': sensor})
-#        if is_last:
-#            specific_info.update(specific_dynamic)
-#
-#        info = {
-#            "site_id": self._site_id,
-#            "rack_id": self._rack_id,
-#            "node_id": self._node_id,
-#            "cluster_id":self._cluster_id ,
-#            "resource_type": resource_type,
-#            "resource_id": sensor_name,
-#            "event_time": self._get_epoch_time_from_date_and_time(date, _time),
-#            "description": event
-#        }
-#
-#        if (threshold.lower() in ['low', 'high'] and status.lower() == "asserted"):
-#            self.faulty_resources[sensor_name] = {
-#                'status': status,
-#                'event': event,
-#                'device_id': sensor,
-#                'fru_type': self.TYPE_VOLTAGE
-#            }
-#        elif (alert_type in ['fault_resolved', 'miscellaneous'] or \
-#            (threshold.lower() in ['low', 'high'] and status.lower() == "deasserted")) \
-#                and sensor_name in self.faulty_resources:
-#            del self.faulty_resources[sensor_name]
-#
-#        self._send_json_msg(resource_type, alert_type, severity, info, specific_info)
-#        store.put(self.faulty_resources, self.faulty_resources_path)
+    def _parse_current_info(self, index, date, _time, sensor, sensor_num, event, status, is_last):
+        """Parse out 'current' related changes that gets reflected in the ipmi sel list."""
+        sensor_name = self.sensor_id_map[self.TYPE_CURRENT][sensor_num]
+        resource_type = NodeDataMsgHandler.IPMI_RESOURCE_TYPE_CURRENT
+        threshold = event.split(" ")[-1]
+        if threshold.lower() in ['low', 'high']:
+            alert_type = f"threshold_breached:{threshold}"
+        if alert_type:
+            severity_reader = SeverityReader()
+            severity = severity_reader.map_severity(alert_type)
+            if (
+                threshold.lower() in ['low', 'high'] and
+                    status.lower() == "deasserted"):
+                severity = "informational"
+        else:
+            alert_type = "miscellaneous"
+            severity = "informational"
+        common, specific, specific_dynamic = self._get_sensor_props(sensor_name)
+
+        specific_info = {}
+        specific_info.update(common)
+        specific_info.update(specific)
+        specific_info.update({'fru_id': sensor})
+        if is_last:
+            specific_info.update(specific_dynamic)
+
+        info = {
+            "resource_type": resource_type,
+            "resource_id": sensor_name,
+            "event_time": self._get_epoch_time_from_date_and_time(date, _time),
+            "description": event
+        }
+
+        if (threshold.lower() in ['low', 'high'] and status.lower() == "asserted"):
+            self.faulty_resources[sensor_name] = {
+                'status': status,
+                'event': event,
+                'device_id': sensor,
+                'fru_type': self.TYPE_CURRENT
+            }
+        elif (alert_type in ['fault_resolved', 'miscellaneous'] or
+                (threshold.lower() in ['low', 'high'] and
+                    status.lower() == "deasserted")) \
+                and sensor_name in self.faulty_resources:
+            del self.faulty_resources[sensor_name]
+
+        self._send_json_msg(resource_type, alert_type, severity, info, specific_info)
+        store.put(self.faulty_resources, self.faulty_resources_path)
 
     def _send_json_msg(self, resource_type, alert_type, severity, info, specific_info):
         """Transmit data to NodeDataMsgHandler which takes two arguments.
