@@ -262,7 +262,6 @@ class SSPLPostInstall:
         iem_log_file_path = Utility.get_config_value(consts.SSPL_CONFIG_INDEX,
             "IEMSENSOR>log_file_path")
         manifest_log_file_path = sspl_log_file_path.replace("/sspl.log","/manifest.log")
-        setup_log_file_path = sspl_log_file_path.replace("/sspl.log","/sspl-setup.log")
 
         # IEM configuration
         os.makedirs("%s/iem/iec_mapping" % consts.PRODUCT_BASE_DIR, exist_ok=True)
@@ -299,14 +298,6 @@ class SSPLPostInstall:
         Utility.replace_expr(consts.RSYSLOG_SB_CONF, 'File.*[=,"]',
             'File="%s"' % sspl_sb_log_file_path)
 
-        # SSPL Setup log configuration
-        if not os.path.exists(consts.RSYSLOG_SETUP_CONF):
-            shutil.copyfile("%s/%s" % (system_files_root, consts.RSYSLOG_SETUP_CONF),
-                consts.RSYSLOG_SETUP_CONF)
-        # Update log location as per sspl.conf
-        Utility.replace_expr(consts.RSYSLOG_SETUP_CONF, 'File.*[=,"]',
-            'File="%s"' % setup_log_file_path)
-
         # Configure logrotate
         # Create logrotate dir in case it's not present
         os.makedirs(consts.LOGROTATE_DIR, exist_ok=True)
@@ -316,8 +307,6 @@ class SSPLPostInstall:
             0, sspl_log_file_path)
         Utility.replace_expr("%s/etc/logrotate.d/sspl_sb_logs" % system_files_root,
             0, sspl_sb_log_file_path)
-        Utility.replace_expr("%s/etc/logrotate.d/sspl_setup_logs" % system_files_root,
-            0, setup_log_file_path)
         shutil.copy2("%s/etc/logrotate.d/iem_messages" % system_files_root,
             consts.IEM_LOGROTATE_CONF)
         shutil.copy2("%s/etc/logrotate.d/sspl_logs" % system_files_root,
@@ -326,8 +315,6 @@ class SSPLPostInstall:
             consts.MSB_LOGROTATE_CONF)
         shutil.copy2("%s/etc/logrotate.d/sspl_sb_logs" % system_files_root,
             consts.SB_LOGROTATE_CONF)
-        shutil.copy2("%s/etc/logrotate.d/sspl_setup_logs" % system_files_root,
-            consts.SETUP_LOGROTATE_CONF)
 
         # This rsyslog restart will happen after successful updation of rsyslog
         # conf file and before sspl starts. If at all this will be removed from
