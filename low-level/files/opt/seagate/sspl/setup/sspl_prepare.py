@@ -100,16 +100,15 @@ class SSPLPrepare:
         # Validate BMC connectivity & storage controller accessibility
         if node_type.lower() not in ["virtual", "vm"]:
             max_retry = 3
-            for ip in [bmc_ip, primary_ip, secondary_ip]:
-                for i in range(max_retry):
-                    try:
-                        NetworkV().validate("connectivity", [ip])
-                        break
-                    except VError:
-                        logger.debug("Retrying {ip} connectivity, attempt: {i}")
-                        time.sleep(1)
-                        if i == (max_retry-1):
-                            raise
+            for i in range(max_retry):
+                try:
+                    NetworkV().validate(
+                        "connectivity", [bmc_ip, primary_ip, secondary_ip])
+                    break
+                except VError:
+                    if i == (max_retry-1):
+                        raise
+                    time.sleep(1)
             # check BMC ip, user, password are valid
             self.test_bmc_is_accessible(bmc_ip, bmc_user, bmc_passwd)
             c_validator = ControllerV()
