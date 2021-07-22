@@ -89,13 +89,6 @@ class Utility(object):
             file = open(path, "w+")
             file.close()
 
-    def get_os_name(self):
-        """Return os_name eg. centos, rocky, etc."""
-        with open("/etc/os-release") as f:
-            os_release = f.read()
-            os_id = re.search("ID=\"(.*)\"\n", os_release).group(1)
-            return os_id if os_id else None
-
     def get_os(self):
         """
         Returns os name({ID}{VERSION_ID}) from /etc/os-release.

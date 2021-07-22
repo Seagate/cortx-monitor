@@ -24,8 +24,7 @@ import os
 import shutil
 import argparse
 import subprocess
-
-from framework.utils.utility import Utility
+import re
 
 CORTX_BASE_URL = "http://cortx-storage.colo.seagate.com/releases/cortx"
 
@@ -91,7 +90,9 @@ class SetupYumRepo:
 
     def _validate_os_release_support(self):
         """Get CORTX url based on centos release."""
-        os = Utility().get_os_name().lower()
+        with open("/etc/os-release") as f:
+            os_release = f.read()
+            os = re.search("ID=\"(.*)\"\n", os_release).group(1)
         file = f"/etc/{os}-release"
         with open(file) as fObj:
             content = fObj.read()
