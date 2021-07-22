@@ -196,7 +196,7 @@ class IPMITool(IPMI):
             _active_interface = _active_interface.decode()
         # Set host_conf_cmd based on channel info.
         if (self.ACTIVE_IPMI_TOOL != self.IPMISIMTOOL and _active_interface
-            in BMCInterface.LAN_IF.value):
+                in BMCInterface.LAN_IF.value):
             bmc_ip = Conf.get(GLOBAL_CONF, BMC_IP_KEY, '')
             bmc_user = Conf.get(GLOBAL_CONF, BMC_USER_KEY, 'ADMIN')
             bmc_secret = Conf.get(GLOBAL_CONF, BMC_SECRET_KEY, 'ADMIN')
@@ -206,12 +206,8 @@ class IPMITool(IPMI):
             bmc_pass = encryptor.decrypt(
                 decryption_key, bmc_secret, self.NAME)
 
-            if _active_interface == BMCInterface.LAN.value:
-                host_conf_cmd = BMCInterface.LAN_CMD.value.format(
-                    bmc_ip, bmc_user, bmc_pass)
-            elif _active_interface == BMCInterface.LANPLUS.value:
-                host_conf_cmd = BMCInterface.LANPLUS_CMD.value.format(
-                    bmc_ip, bmc_user, bmc_pass)
+            host_conf_cmd = BMCInterface.LAN_CMD.value.format(
+                    _active_interface, bmc_ip, bmc_user, bmc_pass)
 
         # generate the final cmd and execute on shell.
         command = " ".join([self.ACTIVE_IPMI_TOOL, host_conf_cmd, subcommand])

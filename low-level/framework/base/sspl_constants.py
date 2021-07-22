@@ -291,10 +291,9 @@ class OperatingSystem(Enum):
 class BMCInterface(Enum):
     BMC_IF_CACHE = f"{DATA_PATH}server/BMC_INTERFACE"
     ACTIVE_BMC_IF = f"{BMC_IF_CACHE}/ACTIVE_BMC_IF"
-    LAN_IF_CACHE = f"{BMC_IF_CACHE}/LAN_IF"
-    LANPLUS_IF_CACHE = f"{BMC_IF_CACHE}/LANPLUS_IF"
-    SYSTEM_IF_CACHE = f"{BMC_IF_CACHE}/SYSTEM_IF"
-    LAN_CMD = "-I lan -H {} -U {} -P {}"
+    LAN_IF_CACHE = f"{BMC_IF_CACHE}/LAN"
+    SYSTEM_IF_CACHE = f"{BMC_IF_CACHE}/SYSTEM"
+    LAN_CMD = "-I {} -H {} -U {} -P {}"
     LANPLUS_CMD = "-I lanplus -H {} -U {} -P {}"
     LAN = "lan"
     LANPLUS = "lanplus"
