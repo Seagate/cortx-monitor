@@ -24,11 +24,13 @@ import pwd
 import errno
 import shutil
 import socket
+import time
 import distutils.dir_util
 
 # using cortx package
 from cortx.utils.conf_store import Conf
 from cortx.utils.process import SimpleProcess
+from cortx.utils.service.service_handler import ServiceError
 from cortx.utils.validator.v_network import NetworkV
 from cortx.utils.validator.v_pkg import PkgV
 from cortx.utils.validator.v_service import ServiceV
@@ -321,7 +323,19 @@ class SSPLPostInstall:
         # here, there will be a chance that SSPL intial logs will not be present in
         # "/var/log/<product>/sspl/sspl.log" file. So, initial logs needs to be collected from
         # "/var/log/messages"
-        self.dbus_service.restart('rsyslog.service')
+        attempt = 0
+        while attempt < 3:
+            attempt += 1
+            try:
+                self.dbus_service.restart('rsyslog.service')
+                break
+            except ServiceError as err:
+                if not attempt < 3:
+                    logger.critical("Restarting rsyslog.service is failed " \
+                        "due to error, %s" % err)
+                    raise
+                logger.debug("Waiting for rsyslog service to become active..")
+                time.sleep(2)
 
     def install_sspl_service_files(self):
         """Copy service file to systemd location based on product."""
