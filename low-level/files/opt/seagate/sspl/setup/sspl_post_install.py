@@ -104,16 +104,16 @@ class SSPLPostInstall:
             # cluster_id required for decrypting the secret is only available from
             # the prepare stage. However accessibility validation will be done in
             # prepare stage. So at this time, validating ip reachability is fine.
+            max_retry = 3
             for ip in [bmc_ip, primary_ip, secondary_ip]:
-                max_retry = 3
-                while max_retry != 0:
+                for i in range(max_retry):
                     try:
                         NetworkV().validate("connectivity", [ip])
                         break
                     except VError:
+                        logger.debug("Retrying {ip} connectivity, attempt: {i}")
                         time.sleep(1)
-                        max_retry -= 1
-                        if max_retry == 0:
+                        if i == (max_retry-1):
                             raise
 
     @staticmethod
