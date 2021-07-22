@@ -294,7 +294,6 @@ class BMCInterface(Enum):
     LAN_IF_CACHE = f"{BMC_IF_CACHE}/LAN"
     SYSTEM_IF_CACHE = f"{BMC_IF_CACHE}/SYSTEM"
     LAN_CMD = "-I {} -H {} -U {} -P {}"
-    LANPLUS_CMD = "-I lanplus -H {} -U {} -P {}"
     LAN = "lan"
     LANPLUS = "lanplus"
     SYSTEM = "system"

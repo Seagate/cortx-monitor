@@ -60,13 +60,13 @@ CACHE_DIR_NAME = f"{DATA_PATH}server"
 BMC_CHANNEL = namedtuple(
     'BMC_CHANNEL', 'alert description impact recommendation')
 INACTIVE_CHANNEL = BMC_CHANNEL(
-    "fault", "Server BMC is unreachable through {} interface, possible cause: {}.",
-    "IPMITOOL commands can not be executed using BMC {} interface.",
+    "fault", "Server BMC is unreachable through {} interface.",
+    "IPMITOOL commands can not be executed through BMC {} interface.",
     "Verify BMC IP, username and password is correct,"
-    " Check accessibility of {} interface.")
+    " Enable {} interface.")
 ACTIVE_CHANNEL = BMC_CHANNEL(
     "fault_resolved", "Server BMC is reachable through {} interface.",
-    "IPMITOOL commands can be executed using BMC {} interface.", "NA"
+    "IPMITOOL commands can be executed through BMC {} interface.", "NA"
 )
 
 system = BMCInterface.SYSTEM.value
@@ -260,7 +260,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         self.iem = Iem()
         self.iem.check_existing_fault_iems()
         self.IPMI = self.iem.EVENT_CODE["IPMITOOL_AVAILABLE"][1]
-        if self.active_bmc_if in BMCInterface.LAN_IF.value:
+        if self._channel_interface in BMCInterface.LAN_IF.value:
             try:
                 # Decrypt bmc secret
                 decryption_key = encryptor.gen_key(
@@ -682,6 +682,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
     def _check_channel_error(self, err, retcode):
         """Check BMC accessibility for active_interface."""
 
+        logger.debug(f"Current active bmc interface is: {self.active_bmc_if}")
         if self.active_bmc_if == system:
             self.check_kcs_channel(err, retcode)
         elif self.active_bmc_if in BMCInterface.LAN_IF.value:
@@ -697,7 +698,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         # If there is no prev fault raised for system if
         if retcode != 0 and self.system_fault != "fault" and \
             (any(val in err for val in BMCInterface.KCS_ERRS.value)):
-            self.get_channel_alert(INACTIVE_CHANNEL, self.active_bmc_if, err)
+            self.get_channel_alert(INACTIVE_CHANNEL, system)
         if retcode == 0 and self.system_fault == "fault":
             self.get_channel_alert(ACTIVE_CHANNEL, system)
 
@@ -705,7 +706,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         """Detect fault if err string contains possible cause/error listed in LAN_ERRS."""
         if retcode != 0 and self.lan_fault != "fault" and \
             (any(val in err for val in BMCInterface.LAN_ERRS.value)):
-            self.get_channel_alert(INACTIVE_CHANNEL, self.active_bmc_if, err)
+            self.get_channel_alert(INACTIVE_CHANNEL, self.active_bmc_if)
             # If error detected for lan/lanplus interface,
             # fallback to KCS interface.
             if self.active_bmc_if in BMCInterface.LAN_IF.value:
@@ -717,7 +718,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
                 self.active_bmc_if = system
                 store.put(self.active_bmc_if, active_bmc_if)
 
-    def get_channel_alert(self, alert, IF_name, err=""):
+    def get_channel_alert(self, alert, IF_name):
         """create BMC interface alert json msg."""
 
         specific_info = {}
@@ -728,24 +729,18 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         if IF_name in BMCInterface.LAN_IF.value:
             resource_type = "node:bmc:interface:rmcp"
             specific_info["bmc_user"] = self._bmc_user
-            description = alert.description.format("lan/lanplus", err)
-            impact = alert.impact.format("lan/lanplus")
-            recommendation = alert.recommendation.format("lan/lanplus")
             channel_info = self.LAN_CHANNEL_INFO
         else:
             resource_type = "node:bmc:interface:kcs"
-            description = alert.description.format(IF_name, err)
-            impact = alert.impact.format(IF_name)
-            recommendation = alert.recommendation.format(IF_name)
             if alert_type == "fault":
                 channel_info = self.KCS_CHANNEL_INFO
         info = {
                 "resource_type": resource_type,
                 "resource_id": channel_info["Channel Medium Type"],
                 "event_time": str(int(time.time())),
-                "description": description,
-                "impact": impact,
-                "recommendation": recommendation
+                "description": alert.description.format(IF_name),
+                "impact": alert.impact.format(IF_name),
+                "recommendation": alert.recommendation.format(IF_name)
             }
         specific_info["channel info"] = channel_info
         # Update cache
