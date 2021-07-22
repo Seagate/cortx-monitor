@@ -92,6 +92,9 @@ class SetupYumRepo:
         file = "/etc/centos-release"
         with open(file) as fObj:
             content = fObj.read()
+        if "CentOS Linux release 7.9" in content:
+            self.url_local_repo_commons="%s/third-party-deps/centos/centos-7.9.2009-2.0.0-1/" % (CORTX_BASE_URL)
+            self.url_uploads_repo = "%s/uploads/centos/centos-7.9.2009-2.0.0-1/" % (CORTX_BASE_URL)
         if "CentOS Linux release 7.8" in content:
             self.url_local_repo_commons="%s/third-party-deps/centos/centos-7.8.2003/" % (CORTX_BASE_URL)
             self.url_uploads_repo = "%s/uploads/centos/centos-7.8.2003/" % (CORTX_BASE_URL)
