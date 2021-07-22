@@ -39,10 +39,10 @@ def wait_for_asserted_event():
         try:
             # Make sure we get back the message type that matches the request
             msg_type = ingressMsg.get("sensor_response_type")
-            if msg_type["info"]["resource_type"] == "node:fru:fan":
+            if msg_type["info"]["resource_type"] == "node:hw:fan":
                 info = msg_type["info"]
                 specific_info = msg_type["specific_info"]
-                if info["resource_type"] == "node:fru:fan" and \
+                if info["resource_type"] == "node:hw:fan" and \
                         specific_info["event"] == "Asserted - Lower Critical going low":
                     # We got the expected alert
                     got_alert = True
@@ -63,10 +63,10 @@ def wait_for_deasserted_event():
         try:
             # Make sure we get back the message type that matches the request
             msg_type = ingressMsg.get("sensor_response_type")
-            if msg_type["info"]["resource_type"] == "node:fru:fan":
+            if msg_type["info"]["resource_type"] == "node:hw:fan":
                 info = msg_type["info"]
                 specific_info = msg_type["specific_info"]
-                if info["resource_type"] == "node:fru:fan" and \
+                if info["resource_type"] == "node:hw:fan" and \
                         specific_info["event"] == "Deasserted - Lower Critical going high":
                     # We got the expected alert
                     got_alert = True

@@ -26,7 +26,7 @@ def init(args):
 def test_node_disk_module_actuator(agrs):
     check_sspl_ll_is_running()
     instance_id = "*"
-    resource_type = "node:fru:disk"
+    resource_type = "node:hw:disk"
     send_node_controller_message_request(UUID, "NDHW:%s" % resource_type, instance_id)
     ingressMsg = get_fru_response(resource_type, instance_id)
 
