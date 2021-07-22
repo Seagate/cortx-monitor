@@ -53,24 +53,3 @@ def update_sensor_info(config_index, node_type, enclosure_type):
         Conf.set(config_index, '%s>monitor' % sect, value)
 
     Conf.save(config_index)
-
-def update_monitored_services(config_index, node_type):
-    """Based on node type exclude the services from list
-    of monitored services.
-    """
-    # Align to node type as used in sspl.conf SERVICEMONITOR section
-    vm_types = ["virtual", "vm"]
-    node_type = "vm" if node_type.lower() in vm_types else "hw"
-
-    monitored_services = Conf.get(
-        config_index, "SERVICEMONITOR>monitored_services", [])
-    excluded_services = Conf.get(
-        config_index,
-        "SERVICEMONITOR>excluded_services>%s" % node_type, [])
-
-    # Have only required list of services to be monitored
-    monitored_services = list(set(monitored_services) - set(excluded_services))
-    Conf.set(
-        config_index, "SERVICEMONITOR>monitored_services",
-        monitored_services)
-    Conf.save(config_index)

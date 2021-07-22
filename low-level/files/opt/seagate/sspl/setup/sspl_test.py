@@ -21,7 +21,7 @@ from cortx.utils.process import SimpleProcess
 from cortx.utils.conf_store import Conf
 from cortx.utils.service import DbusServiceHandler
 from cortx.utils.validator.v_pkg import PkgV
-from .platform_based_config_update import update_sensor_info
+from .conf_based_sensors_enable import update_sensor_info
 from files.opt.seagate.sspl.setup.setup_logger import logger
 from framework.utils.utility import Utility
 from framework.base.sspl_constants import (

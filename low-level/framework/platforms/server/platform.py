@@ -20,8 +20,15 @@ import errno
 
 from cortx.utils.process import SimpleProcess
 from framework.utils.ipmi_client import IpmiFactory
+<<<<<<< HEAD
 from framework.utils.service_logging import logger
 from framework.base import sspl_constants as const
+=======
+from framework.utils.conf_utils import (
+    Conf, GLOBAL_CONF, SSPL_CONF, SERVICEMONITOR,
+    MONITORED_SERVICES, EXCLUDED_SERVICES, NODE_TYPE_KEY)
+from framework.utils.service_logging import logger
+>>>>>>> 747bb598 (Resuse monitored service code)
 
 
 class Platform:
@@ -110,3 +117,26 @@ class Platform:
             msg = f"{log.service} provider is not supported for server type '{server_type}'"
             logger.error(log.svc_log(msg))
             raise Error(errno.EINVAL, msg)
+
+    def get_effective_monitored_services():
+        """Get platform type based monitored services."""
+        # Align node type as it is given in sspl.conf SERVICEMONITOR section
+        node_type = Conf.get(GLOBAL_CONF, NODE_TYPE_KEY).lower()
+        vm_types = ["virtual", "vm"]
+        node_type = "vm" if node_type in vm_types else "hw"
+
+        monitored_services = Conf.get(
+            SSPL_CONF, f'{SERVICEMONITOR}>{MONITORED_SERVICES}', [])
+        excluded_services = Conf.get(
+            SSPL_CONF,
+            f'{SERVICEMONITOR}>{EXCLUDED_SERVICES}>{node_type}', [])
+        effective_monitored_services = list(
+            set(monitored_services)-set(excluded_services))
+
+        logger.debug("Monitored services list, %s" % monitored_services)
+        logger.debug("Excluded monitored services list, " \
+            "%s for environment %s" %(excluded_services, node_type))
+        logger.debug("Effective monitored services list, " \
+            "%s" % effective_monitored_services)
+
+        return effective_monitored_services
