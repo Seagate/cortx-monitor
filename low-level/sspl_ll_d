@@ -43,7 +43,7 @@ from framework.actuator_state_manager import actuator_state_manager
 from framework.base.module_thread import SensorThread
 from framework.base.sspl_constants import (SSPL_SETTINGS, COMMON_CONFIGS, PRODUCT_FAMILY,
     OperatingSystem, enabled_products, SYSLOG_HOST, SYSLOG_PORT,
-    IEM_INIT_FAILED, SERVER_FRU_LIST_FILE)
+    IEM_INIT_FAILED)
 from framework.messaging.egress_accumulated_msgs_processor import \
     EgressAccumulatedMsgsProcessor
 # Modules for handling messages and manipulating internal threads
@@ -817,15 +817,9 @@ if __name__ == "__main__":
 
         #DO NOT EDIT: Marker comment to dynamically add code to start the code coverage scope
 
-        # Get server fru list
+        # load server fru list
         executor = IpmiFactory().get_implementor("ipmitool")
-        server_fru_list = executor.get_server_fru_list()
-
-        if os.path.exists(SERVER_FRU_LIST_FILE):
-            os.remove(SERVER_FRU_LIST_FILE)
-        with open(SERVER_FRU_LIST_FILE, 'w') as f:
-            for fru in server_fru_list:
-                f.write("%s\n" % fru)
+        executor.load_server_fru_list()
 
         # Start sspl-ll as a main process running multiple threads
         main(conf_reader, systemd_support)
