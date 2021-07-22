@@ -306,7 +306,12 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
                 if isinstance(self.system_fault, bytes):
                     self.system_fault = self.system_fault.decode()
         # Read BMC active_interface value from cache.
-        if self.check_cache_exists(active_bmc_if):
+        # In case of lan channel fault, we fallback to system and
+        # stored active_bmc_if=system in cache.
+        # If lan_fault exist and persistent cache for active_bmc
+        # if exist read active_bmc_if value from cache otherwise read
+        # from config.
+        if self.check_cache_exists(active_bmc_if) and self.lan_fault == "fault":
             self.active_bmc_if = store.get(active_bmc_if)
             if isinstance(self.active_bmc_if, bytes):
                 self.active_bmc_if = self.active_bmc_if.decode()
