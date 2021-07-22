@@ -542,7 +542,7 @@ class RestoreCmd(Cmd):
 
 
 class PreUpgradeCmd(Cmd):
-    """PreUpgrade support for SSPL componenet."""
+    """PreUpgrade support for SSPL component."""
 
     name = "pre_upgrade"
 
@@ -554,7 +554,7 @@ class PreUpgradeCmd(Cmd):
         pass
 
     def process(self):
-        logger.info(f"{self.name} interface not implemented.")
+        logger.info(f"Nothing to be done for {self.name}.")
 
 
 class PostUpgradeCmd(Cmd):
@@ -576,15 +576,14 @@ class PostUpgradeCmd(Cmd):
         # Only proceed if both existing and new config path are present
         for filepath in [existing_conf_url, new_conf_url]:
             if not os.path.exists(filepath.split(":/")[1]):
-                logger.info("Exiting, File %s does not exists" % filepath)
+                logger.debug("Config not upgraded as existing or new config file is not present.")
                 return
         conf_upgrade = ConfUpgrade(existing_conf_url, new_conf_url,
                                    merged_conf_url)
         try:
             conf_upgrade.create_merged_config()
         except ConfError as e:
-            logger.error("Error: %s while upgrading config file, existing config"
-                         "file is retained" % e)
+            logger.error("%s error seen while upgrading config, existing config retained" % e)
         else:
             conf_upgrade.upgrade_existing_config()
         finally:
