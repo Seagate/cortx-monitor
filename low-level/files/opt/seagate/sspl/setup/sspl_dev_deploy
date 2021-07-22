@@ -70,10 +70,16 @@ class SSPLDevDeploy:
             self.build_url = ("http://cortx-storage.colo.seagate.com/releases"
                           "/cortx/github/main/centos-7.9.2009"
                           "/last_successful_prod/")
+            self.cortx_utils_build_url = ("http://cortx-storage.colo.seagate.com/releases/"
+                     "cortx/components/github/main/centos-7.9.2009/"
+                     "dev/cortx-utils/last_successful/")
         else:
             self.build_url = ("http://cortx-storage.colo.seagate.com/releases"
                           "/cortx/github/main/centos-7.8.2003"
                           "/last_successful_prod/")
+            self.cortx_utils_build_url = ("http://cortx-storage.colo.seagate.com/releases/"
+                     "cortx/components/github/main/centos-7.8.2003/"
+                     "dev/cortx-utils/last_successful/")
         self.target_build = None
         self.rpms_path = None
         self.nodes = {localhost_fqdn}
@@ -191,15 +197,16 @@ class SSPLDevDeploy:
 
         pkg_name = "cortx-py-utils"
         print("INFO: INSTALLING cortx-py-utils...")
+        print("Downloading pyutils from %s" % self.build_url)
         # build_url = ("http://cortx-storage.colo.seagate.com/releases/"
         #              "cortx/components/github/main/centos-7.8.2003/"
         #              "dev/cortx-utils/last_successful/")
         pkg = [re.findall("<a .*>(.*?)</a>", str(line))[0]
-               for line in urllib.request.urlopen(self.build_url).readlines()
+               for line in urllib.request.urlopen(self.cortx_utils_build_url).readlines()
                if pkg_name in str(line)]
         if not pkg:
             print(f"ERROR: Unable to download {pkg_name}.")
-        cmd = "yum install -y %s%s" % (self.build_url, pkg[0])
+        cmd = "yum install -y %s%s" % (self.cortx_utils_build_url, pkg[0])
         out, rc = self._execute_cmd(cmd)
         if rc != 0:
             raise DeployError(rc, "%s - %s CMD: %s",
