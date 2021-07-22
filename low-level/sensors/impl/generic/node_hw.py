@@ -1275,7 +1275,6 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
 
     def _parse_current_info(self, index, date, _time, sensor, sensor_num, event, status, is_last):
         """Parse out 'current' related changes that gets reflected in the ipmi sel list."""
-
         sensor_name = self.sensor_id_map[self.TYPE_CURRENT][sensor_num]
         resource_type = NodeDataMsgHandler.IPMI_RESOURCE_TYPE_CURRENT
         threshold = event.split(" ")[-1]
