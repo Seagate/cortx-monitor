@@ -127,7 +127,7 @@ class IngressProcessor(ScheduledModuleThread, InternalMsgQ):
                 message = self._consumer.receive()
                 if message:
                     logger.info(
-                        f"IngressProcessor, Message Recieved: {message}")
+                        f"IngressProcessor, Message Received: {message}")
                     self._process_msg(message)
                     self._consumer.ack()
                 else:
@@ -197,7 +197,7 @@ class IngressProcessor(ScheduledModuleThread, InternalMsgQ):
 
             # Compare hostname from the request to determine
             # if request is meant for the current node
-            node_identifier = ingressMsg.get("node_identifier")
+            node_identifier = message.get("node_identifier")
             if node_identifier is None:
                 logger.warning(
                     "Required attribute node_identifier is missing from actuator request")
