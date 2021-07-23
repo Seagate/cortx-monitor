@@ -23,6 +23,7 @@ import ctypes
 import json
 import os
 import time
+import socket
 
 from cortx.utils.message_bus import MessageConsumer
 from jsonschema import Draft3Validator, validate
@@ -72,7 +73,7 @@ class IngressProcessor(ScheduledModuleThread, InternalMsgQ):
 
     def __init__(self):
         super(IngressProcessor, self).__init__(self.MODULE_NAME,
-                                                       self.PRIORITY)
+                                               self.PRIORITY)
 
         # Read in the actuator schema for validating messages
         schema_file = os.path.join(RESOURCE_PATH + '/actuators',
@@ -148,6 +149,7 @@ class IngressProcessor(ScheduledModuleThread, InternalMsgQ):
 
         ingressMsg = {}
         uuid = None
+        hostname = socket.getfqdn()
         try:
             if isinstance(body, dict) is False:
                 ingressMsg = json.loads(body)
@@ -193,9 +195,21 @@ class IngressProcessor(ScheduledModuleThread, InternalMsgQ):
             self._check_debug(message)
             self._log_debug("_process_msg, ingressMsg: %s" % ingressMsg)
 
-            self._send_to_msg_handler(msgType, message, uuid)
+            # Compare hostname from the request to determine
+            # if request is meant for the current node
+            node_identifier = ingressMsg.get("node_identifier")
+            if node_identifier is None:
+                logger.warning(
+                    "Required attribute node_identifier is missing from actuator request")
+                return
+            elif node_identifier == hostname:
+                self._send_to_msg_handler(msgType, message, uuid)
+            else:
+                logger.info(
+                    "Node identifier mismatch, actuator request rejected.")
+                return
 
-        except Exception as ex:
+        except Exception:
             logger.error(
                 "IngressProcessor, _process_msg unrecognized message: %r" % ingressMsg)
             ack_msg = AckResponseMsg("Error Processing Msg",
@@ -243,9 +257,7 @@ class IngressProcessor(ScheduledModuleThread, InternalMsgQ):
         self._consumer_id = Conf.get(SSPL_CONF,
                                      f"{self.PROCESSOR}>{self.CONSUMER_ID}",
                                      'sspl_actuator')
-        self._consumer_group = Conf.get(SSPL_CONF,
-                                        f"{self.PROCESSOR}>{self.CONSUMER_GROUP}",
-                                        'cortx_monitor')
+        self._consumer_group = socket.getfqdn()
         self._message_type = Conf.get(SSPL_CONF,
                                       f"{self.PROCESSOR}>{self.MESSAGE_TYPE}",
                                       'requests')
