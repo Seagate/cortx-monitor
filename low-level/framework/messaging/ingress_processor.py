@@ -73,7 +73,7 @@ class IngressProcessor(ScheduledModuleThread, InternalMsgQ):
 
     def __init__(self):
         super(IngressProcessor, self).__init__(self.MODULE_NAME,
-                                               self.PRIORITY)
+                                                       self.PRIORITY)
 
         # Read in the actuator schema for validating messages
         schema_file = os.path.join(RESOURCE_PATH + '/actuators',
