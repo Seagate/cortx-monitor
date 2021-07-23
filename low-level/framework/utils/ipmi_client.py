@@ -266,15 +266,15 @@ class IPMITool(IPMI):
             for fru in self.fru_list:
                 if fru_regex.search(fru):
                     self.fru_list[self.fru_list.index(fru)] = 'psu'
-            self.fru_list = list(set(self.fru_list))       
+            self.fru_list = list(set(self.fru_list))
         try:
             default_frus = Conf.get(SSPL_CONF,
-                "NODEHWSENSOR>server_decalre_frus")
+                "NODEHWSENSOR>server_declare_frus")
         except ValueError as e:
             logger.error("Failed to get server_declare_frus from config."
                          f"Error:{e}")
         if len(self.fru_list)!= 0:
-            self.fru_list= list(set(self.fru_list) | set(default_frus))
+            self.fru_list = list(set(self.fru_list + default_frus))
         else:
             self.fru_list = default_frus
         logger.info(f"Fetched server FRU list:{self.fru_list}")

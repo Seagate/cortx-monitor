@@ -116,7 +116,9 @@ NODEHWSENSOR:
    threaded: true
    polling_interval: 30
    ipmi_client: ipmitool
-   server_declare_frus: ['disk', 'psu', 'fan']
+   server_declare_frus:
+      - disk
+      - psu
 
 REALSTORLOGICALVOLUMESENSOR:
    threaded: true
