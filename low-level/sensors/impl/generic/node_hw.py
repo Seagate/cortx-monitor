@@ -255,7 +255,8 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         self._channel_interface = Conf.get(
             SSPL_CONF, f"{BMC_INTERFACE}>{BMC_CHANNEL_IF}", 'system')
         self.active_bmc_if = None
-        # Read existing alert data for interfaces, from persistent cache.
+        # To avoid raising duplicate alerts, check if alert already
+        # exists for supported interface by reading persistent cache value.
         self.get_interface_from_cache()
 
         self.iem = Iem()
@@ -276,9 +277,16 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         # Set flag 'request_shutdown' to true if ipmitool/simulator is non-functional
         _, _, retcode = self._run_ipmitool_subcommand("sel info")
         if retcode != 0 and self.channel_err:
-            logger.critical(
-                "ipmitool commands not able to access BMC through"
-                " any of the interface i.e. system,lan and lanplus.")
+            if self._channel_interface == system:
+                log_msg = (
+                    "ipmitool commands not able to access BMC through"
+                    " configured %s interface." % self._channel_interface)
+            else:
+                log_msg = (
+                    "ipmitool commands not able to access BMC through"
+                    " configured %s interface or even fallback option"
+                    " 'KCS' interface." % (self._channel_interface))
+            logger.critical(log_msg)
             self.request_shutdown = True
         else:
             self._initialize_cache()
@@ -299,7 +307,9 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         self.lan_fault = None
         self.system_fault = None
 
-        # Read persistent cache value for interface alert.
+        # To avoid raising duplicate alerts/to monitor fault_resolved alert
+        # after reboot, check if alert already exists for supported
+        # interface by reading persistent cache value.
         for key in BMCInterface.SUPPORTED_BMC_IF.value:
             if (key in BMCInterface.LAN_IF.value and
                     self.check_cache_exists(lan_cache_path)):
@@ -311,11 +321,9 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
                 if isinstance(self.system_fault, bytes):
                     self.system_fault = self.system_fault.decode()
         # Read BMC active_interface value from cache.
-        # In case of lan channel fault, we fallback to system and
-        # stored active_bmc_if=system in cache.
-        # If lan_fault="fault" and persistent cache for active_bmc_if exist
-        # read active_bmc_if value from cache otherwise read
-        # from config.
+        # In case of lan/lanplus fault, we fallback to system(KCS).
+        # If lan_fault="fault" and persistent cache for active_bmc_if exists
+        # read active_bmc_if value from cache otherwise read from config.
         if self.check_cache_exists(active_bmc_if_cache) and self.lan_fault == "fault":
             self.active_bmc_if = store.get(active_bmc_if_cache)
             if isinstance(self.active_bmc_if, bytes):
@@ -694,10 +702,16 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
             self.check_kcs_channel(err, retcode)
         elif self.active_bmc_if in BMCInterface.LAN_IF.value:
             self.check_lan_channel(err, retcode)
-        # If none of the interface is accessible set channel_err=True
-        if all([self.system_fault, self.lan_fault]) == "fault":
+        # Set channel_err=True if both configured lan interface and fallback
+        # KCS interface is inaccessible. OR Set it to True if configured
+        # interface is system(KCS) and fault present for that interface.
+        # and if channel_err=True node_hw resource monitoring will be stop.
+        if all([self.system_fault, self.lan_fault]) == "fault" or \
+            (self._channel_interface == system and self.system_fault == "fault"):
             self.channel_err = True
         # If any interface is accessible set channel_err=False
+        # and if channel_err=False node_hw resource monitoring
+        # will be resumed.
         elif any([self.system_fault, self.lan_fault]) != "fault":
             self.channel_err = False
 
@@ -723,8 +737,8 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
             if self.active_bmc_if in BMCInterface.LAN_IF.value:
                 logger.warning(
                     f"BMC is unreachable through {self.active_bmc_if}"
-                    " interface, ipmitool fallback to system interface if local"
-                    "server is being monitored."
+                    " interface, ipmitool fallback to KCS interface, if local"
+                    " server is being monitored."
                     )
                 self.active_bmc_if = system
                 store.put(self.active_bmc_if, active_bmc_if_cache)
