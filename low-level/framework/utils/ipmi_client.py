@@ -244,12 +244,12 @@ class IPMITool(IPMI):
         for a solution.
         
         Ex: Supermicro servers not listing disk as FRU,
-        though its most common FRU in servers, and 
-        practically it can be replaced easily. 
+        though its most common FRU in servers, and
+        practically it can be replaced easily.
         So if for a solution, FRU list needs to be extended
         beyond what server publishes, 'server_declare_fru' config in sspl.conf
-        can be used. 
-        Some of the usual FRU examples are:- disk, psu, fan."""
+        can be used.
+        Some of the usual FRU examples are:- disk, psu."""
 
         cmd = 'fru list'
         self.fru_list = []
