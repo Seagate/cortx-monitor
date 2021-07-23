@@ -20,15 +20,11 @@ import errno
 
 from cortx.utils.process import SimpleProcess
 from framework.utils.ipmi_client import IpmiFactory
-<<<<<<< HEAD
 from framework.utils.service_logging import logger
 from framework.base import sspl_constants as const
-=======
 from framework.utils.conf_utils import (
     Conf, GLOBAL_CONF, SSPL_CONF, SERVICEMONITOR,
     MONITORED_SERVICES, EXCLUDED_SERVICES, NODE_TYPE_KEY)
-from framework.utils.service_logging import logger
->>>>>>> 747bb598 (Resuse monitored service code)
 
 
 class Platform:
