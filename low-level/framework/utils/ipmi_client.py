@@ -269,9 +269,9 @@ class IPMITool(IPMI):
             self.fru_list = list(dict.fromkeys(self.fru_list))        
         try:
             default_frus = Conf.get(SSPL_CONF,
-                "NODEHWSENSOR>default_server_frus")
+                "NODEHWSENSOR>server_decalre_frus")
         except ValueError as e:
-            logger.error("Failed to get default_server_frus from config."
+            logger.error("Failed to get server_declare_frus from config."
                          f"Error:{e}")
         if len(self.fru_list)!= 0:
             self.fru_list= list(set(self.fru_list) | set(default_frus))
