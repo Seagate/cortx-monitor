@@ -27,6 +27,7 @@ import os
 import syslog
 import time
 from urllib.parse import urlparse
+from cortx.utils.conf_store.error import ConfError
 
 # using cortx package
 from cortx.utils.process import SimpleProcess
@@ -38,7 +39,9 @@ from files.opt.seagate.sspl.setup.setup_error import SetupError
 from files.opt.seagate.sspl.setup.setup_logger import init_logging, logger
 from framework.base.sspl_constants import (
     PRVSNR_CONFIG_INDEX, GLOBAL_CONFIG_INDEX, global_config_path,
-    file_store_config_path, SSPL_BASE_DIR, TEST_REQ_SERVICE_RESTART)
+    file_store_config_path, SSPL_BASE_DIR, TEST_REQ_SERVICE_RESTART,
+    sspl_config_path)
+from framework.base.conf_upgrade import ConfUpgrade
 
 
 class Cmd:
@@ -537,6 +540,54 @@ class RestoreCmd(Cmd):
 
     def process(self):
         logger.info(f"{self.name} interface not implemented.")
+
+
+class PreUpgradeCmd(Cmd):
+    """PreUpgrade support for SSPL component."""
+
+    name = "pre_upgrade"
+
+    def __init__(self, args):
+        super().__init__(args)
+
+    def validate(self):
+        # Common validator classes to check Cortx/system wide validator
+        pass
+
+    def process(self):
+        logger.info(f"Nothing to be done for {self.name}.")
+
+
+class PostUpgradeCmd(Cmd):
+    """PostUpgrade support for SSPL componenet."""
+
+    name = "post_upgrade"
+
+    def __init__(self, args):
+        super().__init__(args)
+
+    def validate(self):
+        # Common validator classes to check Cortx/system wide validator
+        pass
+
+    def process(self):
+        new_conf_url = 'yaml:///opt/seagate/cortx/sspl/conf/sspl.conf.LR2.yaml'
+        merged_conf_url = 'yaml:///opt/seagate/cortx/sspl/tmp/merged.conf'
+        # Only proceed if both existing and new config path are present
+        for filepath in [sspl_config_path, new_conf_url]:
+            if not os.path.exists(filepath.split(":/")[1]):
+                logger.debug("Config not upgraded as existing or new config file is not present.")
+                return
+        conf_upgrade = ConfUpgrade(sspl_config_path, new_conf_url,
+                                   merged_conf_url)
+        try:
+            conf_upgrade.create_merged_config()
+        except ConfError as e:
+            logger.error("%s error seen while upgrading config, existing config retained" % e)
+        else:
+            conf_upgrade.upgrade_existing_config()
+        finally:
+            conf_upgrade.remove_merged_config()
 
 
 def main(argv: dict):

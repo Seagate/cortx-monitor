@@ -26,7 +26,7 @@ from framework.utils.conf_utils import (Conf, SSPL_CONF, GLOBAL_CONF,
                                         BMC_SECRET_KEY, MACHINE_ID,
                                         NODE_ID_KEY)
 from framework.utils import encryptor
-from framework.base.sspl_constants import ServiceTypes
+from framework.base.sspl_constants import (ServiceTypes, BMCInterface)
 from framework.utils.store_factory import file_store
 from framework.base.sspl_constants import DATA_PATH
 
@@ -44,23 +44,8 @@ class IPMITool(IPMI):
     IPMISIMTOOL = "/usr/bin/ipmisimtool "
     IPMI_ENCODING = 'utf8'
     MANUFACTURER = "Manufacturer Name"
-    SYSTEM_IF = "system"
-    LAN_IF = "lan"
-    _node_id = Conf.get(GLOBAL_CONF, NODE_ID_KEY, 'SN01')
-    ACTIVE_INTERFACE = f"{DATA_PATH}server/ACTIVE_BMC_IF_{_node_id}"
     ACTIVE_IPMI_TOOL = None
     VM_ERROR = 'Could not open device at'
-    RMCP_ERRS = ("Unable to establish LAN session",
-                 "Unable to establish IPMI v1.5 / RMCP session",
-                 "Unable to establish IPMI v2 / RMCP+ session",
-                 "connection timeout","session timeout",
-                 "driver timeout","message timeout",
-                 "Address lookup for -U failed","BMC busy","invalid user name",
-                 "password invalid","password verification timeout",
-                 "k_g invalid","privilege level insufficient",
-                 "privilege level cannot be obtained for this user",
-                 "authentication type unavailable for attempted privilege level")
-    KCS_ERRS = ("could not find inband device", "driver timeout")
 
     def __new__(cls):
         """new method"""
@@ -206,22 +191,23 @@ class IPMITool(IPMI):
         _channel_interface = Conf.get(SSPL_CONF, "%s>%s" %
                                 (BMC_INTERFACE, BMC_CHANNEL_IF))
 
-        _active_interface = store.get(self.ACTIVE_INTERFACE, None)
-
+        _active_interface = store.get(BMCInterface.ACTIVE_BMC_IF.value, None)
+        if isinstance(_active_interface, bytes):
+            _active_interface = _active_interface.decode()
         # Set host_conf_cmd based on channel info.
-        if _channel_interface == self.LAN_IF and \
-           _active_interface == self.LAN_IF and \
-           self.ACTIVE_IPMI_TOOL != self.IPMISIMTOOL:
+        if (self.ACTIVE_IPMI_TOOL != self.IPMISIMTOOL and _active_interface
+                in BMCInterface.LAN_IF.value):
             bmc_ip = Conf.get(GLOBAL_CONF, BMC_IP_KEY, '')
             bmc_user = Conf.get(GLOBAL_CONF, BMC_USER_KEY, 'ADMIN')
             bmc_secret = Conf.get(GLOBAL_CONF, BMC_SECRET_KEY, 'ADMIN')
 
-            decryption_key = encryptor.gen_key(MACHINE_ID,
-                                               ServiceTypes.SERVER_NODE.value)
-            bmc_pass = encryptor.decrypt(decryption_key,
-                                         bmc_secret, self.NAME)
+            decryption_key = encryptor.gen_key(
+                MACHINE_ID, ServiceTypes.SERVER_NODE.value)
+            bmc_pass = encryptor.decrypt(
+                decryption_key, bmc_secret, self.NAME)
 
-            host_conf_cmd = f"-I lanplus -H {bmc_ip} -U {bmc_user} -P {bmc_pass}"
+            host_conf_cmd = BMCInterface.LAN_CMD.value.format(
+                    _active_interface, bmc_ip, bmc_user, bmc_pass)
 
         # generate the final cmd and execute on shell.
         command = " ".join([self.ACTIVE_IPMI_TOOL, host_conf_cmd, subcommand])

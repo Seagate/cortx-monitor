@@ -141,7 +141,7 @@ class Iem:
         event_type = "fault_resolved"
         self.create_iem_fields(event, severity, event_type)
 
-    def check_exsisting_fault_iems(self):
+    def check_existing_fault_iems(self):
         """Incase of sspl restart or node reboot, Check if
         previous iems fault are present."""
         fault_events = ["IPMITOOL_ERROR", "HDPARM_ERROR",

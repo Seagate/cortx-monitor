@@ -39,6 +39,12 @@ component = 'sspl_test/config'
 file_store_config_path = f'/opt/seagate/{PRODUCT_FAMILY}/sspl/sspl_test/conf/sspl_tests.conf'
 salt_provisioner_pillar_sls = 'sspl'
 
+
+class BMCInterface(Enum):
+    BMC_IF_CACHE = f"{DATA_PATH}server/BMC_INTERFACE"
+    ACTIVE_BMC_IF = f"{BMC_IF_CACHE}/ACTIVE_BMC_IF"
+
+
 class AlertTypes(Enum):
     GET = "get"
 

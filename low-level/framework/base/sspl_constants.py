@@ -288,6 +288,30 @@ class OperatingSystem(Enum):
     RHEL6 = "rhel6"
     OSX = "osX"
 
+class BMCInterface(Enum):
+    BMC_IF_CACHE = f"{DATA_PATH}server/BMC_INTERFACE"
+    ACTIVE_BMC_IF = f"{BMC_IF_CACHE}/ACTIVE_BMC_IF"
+    LAN_IF_CACHE = f"{BMC_IF_CACHE}/LAN"
+    SYSTEM_IF_CACHE = f"{BMC_IF_CACHE}/SYSTEM"
+    LAN_CMD = "-I {} -H {} -U {} -P {}"
+    LAN = "lan"
+    LANPLUS = "lanplus"
+    SYSTEM = "system"
+    LAN_IF = [LAN, LANPLUS]
+    SUPPORTED_BMC_IF = [LAN, LANPLUS, SYSTEM]
+    LAN_ERRS = ("Unable to establish LAN session",
+                 "Unable to establish IPMI v1.5 / RMCP session",
+                 "Unable to establish IPMI v2 / RMCP+ session",
+                 "connection timeout","session timeout",
+                 "driver timeout","message timeout",
+                 "Address lookup for -U failed","BMC busy","invalid user name",
+                 "password invalid","password verification timeout",
+                 "k_g invalid","privilege level insufficient",
+                 "privilege level cannot be obtained for this user",
+                 "authentication type unavailable for attempted privilege level")
+    KCS_ERRS = ("could not find inband device", "driver timeout")
+
+
 iem_severity_types = {
     "A": "alert",
     "X": "critical",
