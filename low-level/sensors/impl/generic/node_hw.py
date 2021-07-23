@@ -303,7 +303,6 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
 
     def get_interface_from_cache(self):
         """Read the data from persistent cache."""
-
         self.lan_fault = None
         self.system_fault = None
 
@@ -334,7 +333,6 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
 
     def _fetch_channel_info(self):
         """Fetch channel information."""
-
         # fetch bmc interface (KCS or LAN)  information
         command = None
         res, _, retcode = self._run_ipmitool_subcommand("channel info")
@@ -696,7 +694,6 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
 
     def _check_channel_error(self, err, retcode):
         """Check BMC accessibility for active_interface."""
-
         logger.debug(f"Current active bmc interface is: {self.active_bmc_if}")
         if self.active_bmc_if == system:
             self.check_kcs_channel(err, retcode)
@@ -717,7 +714,6 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
 
     def check_kcs_channel(self, err, retcode):
         """Detect fault if err string contains possible cause/error listed in KCS_ERRS."""
-
         # If there is no prev fault raised for system interface and
         # 'err' contains possible error raise the fault alert for system
         # interface.
@@ -745,7 +741,6 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
 
     def get_channel_alert(self, alert, IF_name):
         """create BMC interface alert json msg."""
-
         specific_info = {}
         alert_type = alert.alert
         severity = SeverityReader().map_severity(alert_type)
