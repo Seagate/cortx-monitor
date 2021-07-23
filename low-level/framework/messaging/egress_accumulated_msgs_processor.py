@@ -130,7 +130,7 @@ class EgressAccumulatedMsgsProcessor(ScheduledModuleThread, InternalMsgQ):
                         logger.info(f"Publishing Accumulated Alert: {message}")
                     if isinstance(self._producer, MessageProducer):
                         self._producer.send([message])
-                        logger.error(f"Published Accumulated Message {message}")
+                        logger.info(f"Published Accumulated Message {message}")
                         self.store_queue.delete()
                     else:
                         self.create_MsgProducer_obj()
