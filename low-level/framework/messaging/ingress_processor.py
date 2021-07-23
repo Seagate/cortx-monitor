@@ -73,7 +73,7 @@ class IngressProcessor(ScheduledModuleThread, InternalMsgQ):
 
     def __init__(self):
         super(IngressProcessor, self).__init__(self.MODULE_NAME,
-                                               self.PRIORITY)
+                                                       self.PRIORITY)
 
         # Read in the actuator schema for validating messages
         schema_file = os.path.join(RESOURCE_PATH + '/actuators',
@@ -149,7 +149,7 @@ class IngressProcessor(ScheduledModuleThread, InternalMsgQ):
 
         ingressMsg = {}
         uuid = None
-        hostname = socket.getfqdn()
+        hostname = socket.gethostname()
         try:
             if isinstance(body, dict) is False:
                 ingressMsg = json.loads(body)
@@ -257,7 +257,7 @@ class IngressProcessor(ScheduledModuleThread, InternalMsgQ):
         self._consumer_id = Conf.get(SSPL_CONF,
                                      f"{self.PROCESSOR}>{self.CONSUMER_ID}",
                                      'sspl_actuator')
-        self._consumer_group = socket.getfqdn()
+        self._consumer_group = socket.gethostname()
         self._message_type = Conf.get(SSPL_CONF,
                                       f"{self.PROCESSOR}>{self.MESSAGE_TYPE}",
                                       'requests')
