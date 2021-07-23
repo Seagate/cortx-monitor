@@ -162,7 +162,7 @@ class DiskMonitor(SensorThread, InternalMsgQ):
 
         self._product = product
         self._iem = Iem()
-        self._iem.check_exsisting_fault_iems()
+        self._iem.check_existing_fault_iems()
         self.UDISKS2 = self._iem.EVENT_CODE["UDISKS2_UNAVAILABLE"][1]
         self.HDPARM = self._iem.EVENT_CODE["HDPARM_ERROR"][1]
         self.SMARTCTL = self._iem.EVENT_CODE["SMARTCTL_ERROR"][1]

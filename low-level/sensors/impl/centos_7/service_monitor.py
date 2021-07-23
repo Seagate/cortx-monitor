@@ -338,7 +338,7 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
         super(ServiceMonitor, self).initialize_msgQ(msgQlist)
 
         self.iem = Iem()
-        self.iem.check_exsisting_fault_iems()
+        self.iem.check_existing_fault_iems()
         self.KAFKA = self.iem.EVENT_CODE["KAFKA_ACTIVE"][1]
 
         self.initialize_dbus()

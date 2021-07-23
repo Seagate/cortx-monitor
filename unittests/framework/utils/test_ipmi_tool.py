@@ -34,7 +34,7 @@ class TestIpmiTool(unittest.TestCase):
         """Mock the config values and spwan required class objects."""
         self.mocked_values = {
             "BMC_INTERFACE>default": 'system',
-            "/var/cortx/sspl/data/server/ACTIVE_BMC_IF_SN01": 'system',
+            "/var/cortx/sspl/data/server/BMC_INTERFACE/ACTIVE_BMC_IF": 'system',
             "ip": '10.0.0.1',
             "user": 'adminBMC',
             "secret": ('gAAAAABgi9l0ZR5tSwBoLvDS4m2c6ps5rFzdo1'
