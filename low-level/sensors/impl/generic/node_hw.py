@@ -270,7 +270,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
                 self._bmc_passwd = encryptor.decrypt(
                     decryption_key, _bmc_secret, self.SENSOR_NAME)
             except Exception as err:
-                logger.error(f"BMC password decryption failed due to {err},"
+                logger.critical(f"BMC password decryption failed due to {err},"
                     "NodeHWSensor monitoring disabled.")
                 self.shutdown()
 
