@@ -39,7 +39,8 @@ from files.opt.seagate.sspl.setup.setup_error import SetupError
 from files.opt.seagate.sspl.setup.setup_logger import init_logging, logger
 from framework.base.sspl_constants import (
     PRVSNR_CONFIG_INDEX, GLOBAL_CONFIG_INDEX, global_config_path,
-    file_store_config_path, SSPL_BASE_DIR, TEST_REQ_SERVICE_RESTART)
+    file_store_config_path, SSPL_BASE_DIR, TEST_REQ_SERVICE_RESTART,
+    sspl_config_path)
 from framework.base.conf_upgrade import ConfUpgrade
 
 
@@ -571,14 +572,13 @@ class PostUpgradeCmd(Cmd):
 
     def process(self):
         new_conf_url = 'yaml:///opt/seagate/cortx/sspl/conf/sspl.conf.LR2.yaml'
-        existing_conf_url = 'yaml:///etc/sspl.conf'
         merged_conf_url = 'yaml:///opt/seagate/cortx/sspl/tmp/merged.conf'
         # Only proceed if both existing and new config path are present
-        for filepath in [existing_conf_url, new_conf_url]:
+        for filepath in [sspl_config_path, new_conf_url]:
             if not os.path.exists(filepath.split(":/")[1]):
                 logger.debug("Config not upgraded as existing or new config file is not present.")
                 return
-        conf_upgrade = ConfUpgrade(existing_conf_url, new_conf_url,
+        conf_upgrade = ConfUpgrade(sspl_config_path, new_conf_url,
                                    merged_conf_url)
         try:
             conf_upgrade.create_merged_config()
