@@ -331,7 +331,7 @@ class SSPLPostInstall:
                 break
             except ServiceError as err:
                 if not attempt < 3:
-                    logger.critical("Restarting rsyslog.service is failed " \
+                    logger.critical("Restarting rsyslog.service failed " \
                         "due to error, %s" % err)
                     raise
                 logger.debug("Waiting for rsyslog service to become active..")
