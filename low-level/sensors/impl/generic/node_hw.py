@@ -255,6 +255,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         self._channel_interface = Conf.get(
             SSPL_CONF, f"{BMC_INTERFACE}>{BMC_CHANNEL_IF}", 'system')
         self.active_bmc_if = None
+        # Read existing alert data for interfaces, from persistent cache.
         self.get_interface_from_cache()
 
         self.iem = Iem()
