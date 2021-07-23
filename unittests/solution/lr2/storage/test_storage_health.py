@@ -1,30 +1,48 @@
+# Copyright (c) 2001-2020 Seagate Technology LLC and/or its Affiliates
+#
+# This program is free software: you can redistribute it and/or modify it under the
+# terms of the GNU Affero General Public License as published by the Free Software
+# Foundation, either version 3 of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+# PARTICULAR PURPOSE. See the GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License along
+# with this program. If not, see <https://www.gnu.org/licenses/>. For any questions
+# about this software or licensing, please email opensource@seagate.com or
+# cortx-questions@seagate.com.
+
 import unittest
 import json
 
-from unittest.mock import patch
-
-from files.opt.seagate.sspl.setup.resource_map.lr2.storage import StorageMap
-
+from unittest.mock import patch, Mock
+from solution.lr2.storage.health import StorageHealth
 from encl_api_response import (
     ENCLOSURE_RESPONSE, ENCLOSURE_SENSORS_RESPONSE, ENCLOSURE_RESPONSE_EMPTY,
     ENCLOSURE_NW_RESPONSE, CONTROLLER_RESPONSE, DRIVE_RESPONSE,
     SAS_PORTS_RESPONSE, FANMODULES_RESPONSE)
 
 
-class TestStorageMap(unittest.TestCase):
-    _storage_map = None
+class TestStorageHealth(unittest.TestCase):
+    _storage_health = None
 
     @classmethod
-    def create_storage_obj(cls):
-        if cls._storage_map is None:
-            cls._storage_map = StorageMap()
-        return cls._storage_map
+    @patch(
+        "framework.platforms.storage.platform.Platform."
+        "validate_storage_type_support", new=Mock(return_value=True)
+    )
+    def create_storage_health_obj(cls):
+        if cls._storage_health is None:
+            cls._storage_health = StorageHealth()
+        return cls._storage_health
 
     @patch(
-        "files.opt.seagate.sspl.setup.resource_map.lr2.storage.StorageMap.get_realstor_encl_data"
+        "framework.platforms.realstor.realstor_enclosure.RealStorEnclosure"
+        ".get_realstor_encl_data"
     )
     def test_get_platform_sensors(self, encl_response):
-        storage_map = self.create_storage_obj()
+        storage_map = self.create_storage_health_obj()
         encl_response.return_value = json.loads(ENCLOSURE_SENSORS_RESPONSE)['api-response']['sensors']
         resp = storage_map.get_platform_sensors_info()
 
@@ -44,10 +62,11 @@ class TestStorageMap(unittest.TestCase):
         assert resp["voltage"][0]["health"]["specifics"][0]["value"] == "8.13"
 
     @patch(
-        "files.opt.seagate.sspl.setup.resource_map.lr2.storage.StorageMap.get_realstor_encl_data"
+        "framework.platforms.realstor.realstor_enclosure.RealStorEnclosure"
+        ".get_realstor_encl_data"
     )
     def test_get_platform_sensors_empty(self, encl_response):
-        storage_map = self.create_storage_obj()
+        storage_map = self.create_storage_health_obj()
         encl_response.return_value = ENCLOSURE_RESPONSE_EMPTY
         resp = storage_map.get_platform_sensors_info()
 
@@ -61,10 +80,11 @@ class TestStorageMap(unittest.TestCase):
         assert "voltage" not in resp
 
     @patch(
-        "files.opt.seagate.sspl.setup.resource_map.lr2.storage.StorageMap.get_realstor_encl_data"
+        "framework.platforms.realstor.realstor_enclosure.RealStorEnclosure"
+        ".get_realstor_encl_data"
     )
     def test_get_sideplane_expander_info(self, encl_response):
-        storage_map = self.create_storage_obj()
+        storage_map = self.create_storage_health_obj()
         encl_response.return_value = json.loads(
             ENCLOSURE_RESPONSE)['api-response']['enclosures']
         resp = storage_map.get_sideplane_expanders_info()
@@ -90,10 +110,12 @@ class TestStorageMap(unittest.TestCase):
         assert expander_specifics[0]["name"] == "Sideplane 24-port Expander 0"
         assert expander_specifics[0]["drawer-id"] == 0
 
-    @patch(("files.opt.seagate.sspl.setup.resource_map.lr2.storage."
-            "StorageMap.get_realstor_encl_data"))
+    @patch(
+        "framework.platforms.realstor.realstor_enclosure.RealStorEnclosure"
+        ".get_realstor_encl_data"
+    )
     def test_get_nw_ports_info(self, encl_response):
-        storage_map = self.create_storage_obj()
+        storage_map = self.create_storage_health_obj()
         encl_response.return_value = json.loads(ENCLOSURE_NW_RESPONSE)
         resp = storage_map.get_nw_ports_info()
         assert resp[0]['uid'] == 'mgmtport_a'
@@ -106,10 +128,11 @@ class TestStorageMap(unittest.TestCase):
         assert specifics['controller'] == 'controller-a'
 
     @patch(
-        "files.opt.seagate.sspl.setup.resource_map.lr2.storage.StorageMap.get_realstor_encl_data"
+        "framework.platforms.realstor.realstor_enclosure.RealStorEnclosure"
+        ".get_realstor_encl_data"
     )
     def test_get_controllers(self, encl_response):
-        storage_map = self.create_storage_obj()
+        storage_map = self.create_storage_health_obj()
         encl_response.return_value = json.loads(
             CONTROLLER_RESPONSE)['api-response']['controllers']
         resp = storage_map.get_controllers_info()
@@ -125,10 +148,11 @@ class TestStorageMap(unittest.TestCase):
         assert specifics['location'] == 'Left'
 
     @patch(
-        "files.opt.seagate.sspl.setup.resource_map.lr2.storage.StorageMap.get_realstor_encl_data"
+        "framework.platforms.realstor.realstor_enclosure.RealStorEnclosure"
+        ".get_realstor_encl_data"
     )
     def test_get_drives(self, encl_response):
-        storage_map = self.create_storage_obj()
+        storage_map = self.create_storage_health_obj()
         encl_response.return_value = json.loads(
             DRIVE_RESPONSE)['api-response']['drives']
         resp = storage_map.get_drives_info()
@@ -143,11 +167,13 @@ class TestStorageMap(unittest.TestCase):
         assert specifics['storage-pool-name'] == 'poola'
         assert specifics['location'] == '0.0'
 
-    @patch(("files.opt.seagate.sspl.setup.resource_map.lr2.storage."
-            "StorageMap.get_realstor_encl_data"))
+    @patch(
+        "framework.platforms.realstor.realstor_enclosure.RealStorEnclosure"
+        ".get_realstor_encl_data"
+    )
     def test_get_sas_ports_info(self, encl_response):
         encl_response.return_value = SAS_PORTS_RESPONSE
-        storage_map = self.create_storage_obj()
+        storage_map = self.create_storage_health_obj()
         res = storage_map.get_sas_ports_info()
         assert res[0]['uid'] == "drawer_egress_0.D0.A0"
         assert res[0]['health']['status'] == "OK"
@@ -158,10 +184,11 @@ class TestStorageMap(unittest.TestCase):
         assert specifics['controller'] == "A"
 
     @patch(
-        "files.opt.seagate.sspl.setup.resource_map.lr2.storage.StorageMap.get_realstor_encl_data"
+        "framework.platforms.realstor.realstor_enclosure.RealStorEnclosure"
+        ".get_realstor_encl_data"
     )
     def test_get_fanmodules_info(self, encl_response):
-        storage_map = self.create_storage_obj()
+        storage_map = self.create_storage_health_obj()
         encl_response.return_value = json.loads(
             FANMODULES_RESPONSE
         )['api-response']['fan-modules']

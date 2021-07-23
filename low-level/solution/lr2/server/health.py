@@ -23,14 +23,13 @@ from pathlib import Path
 
 import psutil
 from cortx.utils.process import SimpleProcess
-from dbus import PROPERTIES_IFACE, DBusException, Interface
+from cortx.utils.discovery.error import ResourceMapError
 from framework.base import sspl_constants as const
 from framework.platforms.server.disk import Disk
-from framework.platforms.server.error import (NetworkError, SASError,
-                                              ServiceError)
+from framework.platforms.server.error import NetworkError, SASError
 from framework.platforms.server.network import Network
 from framework.platforms.server.platform import Platform
-from framework.platforms.server.raid.raid import RAIDs
+from framework.platforms.server.raid import RAIDs
 from framework.platforms.server.sas import SAS
 from framework.platforms.server.software import BuildInfo, Service
 from framework.utils.conf_utils import (GLOBAL_CONF, NODE_TYPE_KEY, SSPL_CONF,
@@ -38,37 +37,37 @@ from framework.utils.conf_utils import (GLOBAL_CONF, NODE_TYPE_KEY, SSPL_CONF,
 from framework.utils.ipmi_client import IpmiFactory
 from framework.utils.service_logging import CustomLog, logger
 from framework.utils.tool_factory import ToolFactory
-
-from error import ResourceMapError
-from resource_map import ResourceMap
+from server.server_resource_map import ServerResourceMap
 
 
-class ServerMap(ResourceMap):
-    """ServerMap class provides resource map and related information
-    like health, manifest, etc,.
+class ServerHealth():
+    """
+    ServerHealth class provides resource map and related information
+    like health.
     """
 
-    name = "server"
+    name = "server_health"
 
     def __init__(self):
         """Initialize server."""
         super().__init__()
         self.log = CustomLog(const.HEALTH_SVC_NAME)
-        self.validate_server_type_support()
+        server_type = Conf.get(GLOBAL_CONF, NODE_TYPE_KEY)
+        Platform.validate_server_type_support(self.log, ResourceMapError, server_type)
         self.sysfs = ToolFactory().get_instance('sysfs')
         self.sysfs.initialize()
         self.sysfs_base_path = self.sysfs.get_sysfs_base_path()
         self.cpu_path = self.sysfs_base_path + const.CPU_PATH
         hw_resources = {
             'cpu': self.get_cpu_info,
-            'platform_sensors': self.get_platform_sensors_info,
+            'platform_sensor': self.get_platform_sensors_info,
             'memory': self.get_mem_info,
-            'fans': self.get_fans_info,
-            'nw_ports': self.get_nw_ports_info,
+            'fan': self.get_fans_info,
+            'nw_port': self.get_nw_ports_info,
             'sas_hba': self.get_sas_hba_info,
-            'sas_ports': self.get_sas_ports_info,
-            'disks': self.get_disks_info,
-            'psus': self.get_psu_info
+            'sas_port': self.get_sas_ports_info,
+            'disk': self.get_disks_info,
+            'psu': self.get_psu_info
         }
         sw_resources = {
             'cortx_sw_services': self.get_cortx_service_info,
@@ -81,36 +80,16 @@ class ServerMap(ResourceMap):
         }
         self._ipmi = IpmiFactory().get_implementor("ipmitool")
         self.platform_sensor_list = ['Temperature', 'Voltage', 'Current']
+        self.service = Service()
 
-    def validate_server_type_support(self):
-        """Check for supported server type."""
-        server_type = Conf.get(GLOBAL_CONF, NODE_TYPE_KEY)
-        logger.debug(self.log.svc_log(f"Server Type:{server_type}"))
-        if not server_type:
-            msg = "ConfigError: server type is unknown."
-            logger.error(self.log.svc_log(msg))
-            raise ResourceMapError(errno.EINVAL, msg)
-        if server_type.lower() not in const.RESOURCE_MAP["server_type_supported"]:
-            msg = f"Health provider is not supported for server type '{server_type}'"
-            logger.error(self.log.svc_log(msg))
-            raise ResourceMapError(errno.EINVAL, msg)
-
-    def get_health_info(self, rpath):
-        """
-        Fetch health information for given rpath.
-
-        rpath: Resource path to fetch its health
-               Examples:
-                    node>compute[0]
-                    node>compute[0]>hw
-                    node>compute[0]>hw>disks
-        """
+    def get_data(self, rpath):
+        """Fetch health information for given rpath."""
         logger.info(self.log.svc_log(
             f"Get Health data for rpath:{rpath}"))
         info = {}
         resource_found = False
         nodes = rpath.strip().split(">")
-        leaf_node, _ = self.get_node_details(nodes[-1])
+        leaf_node, _ = ServerResourceMap.get_node_info(nodes[-1])
 
         # Fetch health information for all sub nodes
         if leaf_node == "compute":
@@ -127,7 +106,7 @@ class ServerMap(ResourceMap):
                     info = None
         else:
             for node in nodes:
-                resource, _ = self.get_node_details(node)
+                resource, _ = ServerResourceMap.get_node_info(node)
                 for res_type in self.server_resources:
                     method = self.server_resources[res_type].get(resource)
                     if not method:
@@ -162,8 +141,43 @@ class ServerMap(ResourceMap):
                     return True
         return False
 
+    @staticmethod
+    def get_health_template(uid, is_fru: bool):
+        """Returns health template."""
+        return {
+            "uid": uid,
+            "fru": str(is_fru).lower(),
+            "last_updated": "",
+            "health": {
+                "status": "",
+                "description": "",
+                "recommendation": "",
+                "specifics": []
+            }
+        }
+
+    @staticmethod
+    def set_health_data(health_data: dict, status, description=None,
+                        recommendation=None, specifics=None):
+        """Sets health attributes for a component."""
+        good_state = (status == "OK")
+        if not description:
+            description = "%s %s in good health." % (
+                health_data.get("uid"),
+                'is' if good_state else 'is not')
+        if not recommendation:
+            recommendation = 'NA' if good_state\
+                else const.DEFAULT_RECOMMENDATION
+        health_data["last_updated"] = int(time.time())
+        health_data["health"].update({
+            "status": status,
+            "description": description,
+            "recommendation": recommendation,
+            "specifics": specifics
+        })
+
     def get_server_health_info(self):
-        """Returns overall server information"""
+        """Returns overall server information."""
         unhealthy_resource_found = False
         server_details = Platform().get_server_details()
         # Currently only one instance of server is considered
@@ -308,9 +322,11 @@ class ServerMap(ResourceMap):
         return disk_data
 
     def format_ipmi_platform_sensor_reading(self, reading):
-        """builds json resposne from ipmi tool response.
-        reading arg sample: ('CPU1 Temp', '01', 'ok', '3.1', '36 degrees C')
         """
+        builds json response from ipmi tool response.
+        reading arg sample: ('CPU1 Temp', '01', 'ok', '3.1', '36 degrees C').
+        """
+
         uid = '_'.join(reading[0].split())
         sensor_id = reading[0]
         sensor_props = self._ipmi.get_sensor_props(sensor_id)
@@ -379,9 +395,9 @@ class ServerMap(ResourceMap):
         total_memory = {}
         for key, value in self.mem_info.items():
             if key == 'percent':
-                total_memory['percent'] = str(self.mem_info['percent']) + '%'
+                total_memory[key] = str(value) + '%'
             else:
-                total_memory[key] = str(self.mem_info[key] >> 20) + 'MB'
+                total_memory[key] = str(value >> 20) + 'MB'
         uid = "main_memory"
         specifics = [
                     {
@@ -420,7 +436,7 @@ class ServerMap(ResourceMap):
         data = []
         sensor_reading = self._ipmi.get_sensor_list_by_type('Fan')
         if sensor_reading is None:
-            msg = f"Failed to get Fan sensor reading using ipmitool"
+            msg = "Failed to get Fan sensor reading using ipmitool"
             logger.error(self.log.svc_log(msg))
             return
         for fan_reading in sensor_reading:
@@ -529,7 +545,7 @@ class ServerMap(ResourceMap):
                 except SASError as err:
                     phy_data = {}
                     logger.error(self.log.svc_log(err))
-                except Exception:
+                except Exception as err:
                     phy_data = {}
                     logger.exception(self.log.svc_log(err))
                 specifics['phys'].append(phy_data)
@@ -602,115 +618,28 @@ class ServerMap(ResourceMap):
 
     def get_cortx_service_info(self):
         """Get cortx service info in required format."""
-        service_info = []
-        cortx_services = Service().get_cortx_service_list()
-        for service in cortx_services:
-            response = self.get_systemd_service_info(service)
-            if response is not None:
-                service_info.append(response)
-        return service_info
+        cortx_services = self.service.get_cortx_service_list()
+        cortx_service_info = self.get_service_info(cortx_services)
+        return cortx_service_info
 
     def get_external_service_info(self):
         """Get external service info in required format."""
-        service_info = []
-        external_services = Service().get_external_service_list()
-        for service in external_services:
-            response = self.get_systemd_service_info(service)
+        external_services = self.service.get_external_service_list()
+        external_service_info = self.get_service_info(external_services)
+        return external_service_info
+
+    def get_service_info(self, services):
+        services_info = []
+        for service in services:
+            response = self.service.get_systemd_service_info(self.log, service)
             if response is not None:
-                service_info.append(response)
-        return service_info
-
-    def get_systemd_service_info(self, service_name):
-        """Get info of specified service using dbus API."""
-        try:
-            unit = Service()._bus.get_object(
-                const.SYSTEMD_BUS, Service()._manager.LoadUnit(service_name))
-            properties_iface = Interface(unit, dbus_interface=PROPERTIES_IFACE)
-        except DBusException as err:
-            logger.error(self.log.svc_log(
-                f"Unable to initialize {service_name} due to {err}"))
-            return None
-        path_array = properties_iface.Get(const.SERVICE_IFACE, 'ExecStart')
-        try:
-            command_line_path = str(path_array[0][0])
-        except IndexError as err:
-            logger.error(self.log.svc_log(
-                f"Unable to find {service_name} path due to {err}"))
-            command_line_path = "NA"
-
-        is_installed = True if command_line_path != "NA" or 'invalid' in properties_iface.Get(
-            const.UNIT_IFACE, 'UnitFileState') else False
-        uid = str(properties_iface.Get(const.UNIT_IFACE, 'Id'))
-        if not is_installed:
-            health_status = "NA"
-            health_description = f"Software enabling {uid} is not installed"
-            recommendation = "NA"
-            specifics = [
-                {
-                    "service_name": uid,
-                    "description": "NA",
-                    "installed": str(is_installed).lower(),
-                    "pid": "NA",
-                    "state": "NA",
-                    "substate": "NA",
-                    "status": "NA",
-                    "license": "NA",
-                    "version": "NA",
-                    "command_line_path": "NA"
-                }
-            ]
-        else:
-            service_license = "NA"
-            version = "NA"
-            service_description = str(
-                properties_iface.Get(const.UNIT_IFACE, 'Description'))
-            state = str(properties_iface.Get(const.UNIT_IFACE, 'ActiveState'))
-            substate = str(properties_iface.Get(const.UNIT_IFACE, 'SubState'))
-            service_status = 'enabled' if 'disabled' not in properties_iface.Get(
-                const.UNIT_IFACE, 'UnitFileState') else 'disabled'
-            pid = "NA" if state == "inactive" else str(
-                properties_iface.Get(const.SERVICE_IFACE, 'ExecMainPID'))
-            try:
-                version = Service().get_service_info_from_rpm(
-                    uid, "VERSION")
-            except ServiceError as err:
-                logger.error(self.log.svc_log(
-                    f"Unable to get service version due to {err}"))
-            try:
-                service_license = Service().get_service_info_from_rpm(
-                    uid, "LICENSE")
-            except ServiceError as err:
-                logger.error(self.log.svc_log(
-                    f"Unable to get service license due to {err}"))
-
-            specifics = [
-                {
-                    "service_name": uid,
-                    "description": service_description,
-                    "installed": str(is_installed).lower(),
-                    "pid": pid,
-                    "state": state,
-                    "substate": substate,
-                    "status": service_status,
-                    "license": service_license,
-                    "version": version,
-                    "command_line_path": command_line_path
-                }
-            ]
-            if service_status == 'enabled' and state == 'active' \
-                    and substate == 'running':
-                health_status = 'OK'
-                health_description = f"{uid} is in good health"
-                recommendation = "NA"
-            else:
-                health_status = state
-                health_description = f"{uid} is not in good health"
-                recommendation = const.DEFAULT_RECOMMENDATION
-
-        service_info = self.get_health_template(uid, is_fru=False)
-        self.set_health_data(service_info, health_status,
-                             health_description, recommendation, specifics)
-        return service_info
+                uid, health_status, health_description, recommendation, \
+                    specifics = response
+                service_info = self.get_health_template(uid, is_fru=False)
+                self.set_health_data(service_info, health_status,
+                    health_description, recommendation, specifics)
+                services_info.append(service_info)
+        return services_info
 
     def get_raid_info(self):
         raids_data = []

@@ -16,6 +16,3 @@
 # please email opensource@seagate.com or cortx-questions@seagate.com
 
 """LR2 solution platform monitor"""
-
-from server import ServerMap
-from storage import StorageMap

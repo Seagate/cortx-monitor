@@ -77,6 +77,7 @@ class RealStorEnclosure(StorageEnclosure):
     URI_CLIAPI_NETWORKHEALTHSTATUS = "/show/network"
     URI_CLIAPI_SHOWEVENTS = "/show/events"
     URI_CLIAPI_SHOWVERSION = "/show/version/detail"
+    URI_CLIAPI_SHOWFRUS = "/show/frus"
     URI_CLIAPI_BASE = "/"
     URI_CLIAPI_DOWNLOADDEBUGDATA = "/downloadDebugData"
     URL_ENCLLOGS_POSTDATA = "/api/collectDebugData"
@@ -451,6 +452,36 @@ class RealStorEnclosure(StorageEnclosure):
                      self.existing_faults = False
             else:
                 logger.error("poll system failed with err %d" % api_resp)
+
+    def get_realstor_encl_data(self, fru: str):
+        """Fetch fru information through webservice API."""
+        fru_data = []
+        fru_uri_map = {
+            "controllers": self.URI_CLIAPI_SHOWCONTROLLERS,
+            "power-supplies": self.URI_CLIAPI_SHOWPSUS,
+            "sensors": self.URI_CLIAPI_SHOWSENSORSTATUS,
+            "volumes": self.URI_CLIAPI_SHOWVOLUMES,
+            "disk-groups": self.URI_CLIAPI_SHOWDISKGROUPS,
+            "enclosures": self.URI_CLIAPI_SHOWENCLOSURE,
+            "network-parameters": self.URI_CLIAPI_NETWORKHEALTHSTATUS,
+            "drives": self.URI_CLIAPI_SHOWDISKS,
+            "expander-ports": self.URI_CLIAPI_SASHEALTHSTATUS,
+            "fan-modules": self.URI_CLIAPI_SHOWFANMODULES,
+            "frus": self.URI_CLIAPI_SHOWFRUS,
+            "versions": self.URI_CLIAPI_SHOWVERSION
+        }
+        url = self.build_url(fru_uri_map.get(fru))
+        response = self.ws_request(url, self.ws.HTTP_GET)
+        if fru == "frus":
+            fru = "enclosure-fru"
+
+        if not response or response.status_code != self.ws.HTTP_OK:
+            return []
+        elif response or response.status_code == self.ws.HTTP_OK:
+            response_data = json.loads(response.text)
+            fru_data = response_data.get(fru)
+
+        return fru_data
 
 # Object to use as singleton instance
 singleton_realstorencl = RealStorEnclosure()
