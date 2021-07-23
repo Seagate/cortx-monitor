@@ -98,9 +98,6 @@ SSPL_DIR=/opt/seagate/%{product_family}/sspl
     ln -sf $SSPL_DIR/low-level/solution $SSPL_DIR/bin/solution
 }
 
-# upgrade conf
-[ -f $SSPL_DIR/low-level/framework/base/conf_upgrade.py ] && python3 $SSPL_DIR/low-level/framework/base/conf_upgrade.py
-
 # restore of data & iem folder
 [ -d /opt/seagate/%{product_family}/backup/%{version}/sspl ] &&
     cp -Rp /opt/seagate/%{product_family}/backup/%{version}/sspl/* /var/%{product_family}/sspl/
@@ -111,12 +108,6 @@ SSPL_DIR=/opt/seagate/%{product_family}/sspl
 
 # [ -f /etc/rsyslog.d/1-ssplfwd.conf ] ||
 #    cp /opt/seagate/%{product_family}/sspl/low-level/files/etc/rsyslog.d/1-ssplfwd.conf /etc/rsyslog.d/1-ssplfwd.conf
-
-# In case of upgrade start sspl-ll after upgrade
-if [ "$1" == "2" ]; then
-    echo "Restarting sspl-ll service..."
-    systemctl restart sspl-ll.service 2> /dev/null
-fi
 
 if [ "$1" == "1" ]; then
     echo "Installation complete. Follow the instructions."
