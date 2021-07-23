@@ -262,11 +262,11 @@ class IPMITool(IPMI):
             for line in output.split('\n'):
                 self.fru_list.append(line.split(': ')[1])
             keywords = ['Pwr Supply', 'power', 'PS', 'PSU']
-            for match in keywords:
-                for fru in self.fru_list:
-                    if match in fru:
-                        self.fru_list[self.fru_list.index(fru)] = 'psu'
-            self.fru_list = list(dict.fromkeys(self.fru_list))        
+            fru_regex = re.compile("|".join(keywords))
+            for fru in self.fru_list:
+                if fru_regex.search(fru):
+                    self.fru_list[self.fru_list.index(fru)] = 'psu'
+            self.fru_list = list(set(self.fru_list))       
         try:
             default_frus = Conf.get(SSPL_CONF,
                 "NODEHWSENSOR>server_decalre_frus")
