@@ -117,7 +117,8 @@ class DiskMonitor(SensorThread, InternalMsgQ):
         self._hpi_base_dir = "/tmp/dcs/hpi"
         self._start_delay = 10
 
-
+        # This value will be overridden in SensorThread before initialize
+        self.recovery_enabled = False
 
     def initialize(self, conf_reader, msgQlist, product):
         """initialize configuration reader and internal msg queues"""

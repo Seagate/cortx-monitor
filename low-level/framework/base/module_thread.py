@@ -72,6 +72,7 @@ class ScheduledModuleThread(ModuleThread, Debug):
         self._module_name = module_name
         self._priority    = priority
         self._running     = False
+        self.recovery_enabled = False
 
     def initialize(self, conf_reader):
         """Initialize the monitoring thread"""
@@ -86,7 +87,8 @@ class ScheduledModuleThread(ModuleThread, Debug):
         self._running = True
         self._scheduler.run()
 
-    def start_thread(self, conf_reader, msgQlist, product):
+    def start_thread(self, conf_reader, msgQlist, product, recovery_enabled=False):
+        self.recovery_enabled = recovery_enabled
         self.initialize(conf_reader, msgQlist, product)
         self.start()
 
@@ -157,6 +159,7 @@ class SensorThread(ScheduledModuleThread):
         self.current_timeout_wait = 0
 
         self.status = SensorThreadState.WAITING
+        self.recovery_enabled = False
 
 
     def initialize(self, conf_reader):
@@ -250,8 +253,10 @@ class SensorThread(ScheduledModuleThread):
         self.lock.release()
 
 
-    def start_thread(self, conf_reader, msgQlist, product):
+    def start_thread(self, conf_reader, msgQlist, product, recovery_enabled=False):
+        self.recovery_enabled = recovery_enabled
         logger.debug("Begin {}.start_thread()".format(self.__class__.__name__))
+
         status = self.initialize(conf_reader, msgQlist, product)
 
         self.lock.acquire()
