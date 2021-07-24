@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/python3.6
 
 # Copyright (c) 2001-2020 Seagate Technology LLC and/or its Affiliates
 #
