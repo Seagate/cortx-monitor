@@ -110,29 +110,31 @@ class RealStorActuator(Actuator, Debug):
                 (request_type, _, component, component_type) = \
                     enclosure_request_data
 
+            resource_type = ":".join(enclosure_request_data[1:])
             resource = jsonMsg.get("actuator_request_type").get("storage_enclosure").get("resource")
+
             if ctrl_action in self.CTRL_ACTION_LST:
                 response = self.make_response(
                     self._put_enclosure_action(ctrl_action, ctrl_type,
                     resource.strip(), enclosure_request),
-                    component, component_type, resource,
+                    component, component_type, resource_type, resource,
                     ctrl_action = ctrl_action)
             elif component == "hw":
                 if component_type == "platform_sensor":
                     response = self.make_response(
                         self._get_sensor_data(sensor_type=sensor, sensor_name=resource),
-                        component, component_type, resource, sensor=sensor)
+                        component, component_type, resource_type, resource)
                 elif component_type == "sas_port":
                     response = self._handle_ports_request(enclosure_request, resource)
                 else:
                     response = self.make_response(
                         self.request_fru_func[request_type][component_type](resource),
-                        component, component_type, resource)
+                        component, component_type, resource_type, resource)
             elif component == "system":
                 if component_type == 'info':
                     response = self.make_response(
                         self._get_system_info(),
-                        component, component_type, resource)
+                        component, component_type, resource_type, resource)
                 else:
                     logger.error("Unsupported system request :{}".format(enclosure_request))
 
@@ -143,12 +145,7 @@ class RealStorActuator(Actuator, Debug):
         return response
 
     def make_response(self, component_details, component, component_type,
-            resource_id, ctrl_action=None, sensor=None):
-        if sensor:
-            resource_type = "storage:{}:{}:{}".format(
-                component, component_type, sensor)
-        else:
-            resource_type = "storage:{}:{}".format(component, component_type)
+            resource_type, resource_id, ctrl_action=None):
         epoch_time = str(int(time.time()))
         alert_id = MonUtils.get_alert_id(epoch_time)
         fru = self.rssencl.is_storage_fru(component_type)
@@ -162,7 +159,7 @@ class RealStorActuator(Actuator, Debug):
             del component_details['severity']
             if self.SEVERITY == "warning":
                 del component_details['description']
-        elif component == "hw" and not sensor:
+        elif component_type != "platform_sensor":
             if resource_id == self.RESOURCE_ALL:
                 for comp in component_details:
                     comp['resource_id'] = self.fru_response_manipulators[
