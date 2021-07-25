@@ -28,6 +28,10 @@ cs_legacy_products = ["CS-L", "CS-G"]
 RESOURCE_PATH = f"/opt/seagate/{PRODUCT_FAMILY}/sspl/low-level/json_msgs/schemas/"
 DATA_PATH = f"/var/{PRODUCT_FAMILY}/sspl/data/"
 IEM_DATA_PATH = "/var/%s/sspl/data/iem/sspl_iems"  %(PRODUCT_FAMILY)
+CONFIG_SPEC_TYPE = "yaml"
+SSPL_TEST_BKP_CONFIG = "SSPL_TEST_BACKUP"
+file_store_bkp_file = '/etc/sspl_tests.conf.back'
+sspl_test_bkp_config = "%s://%s" % (CONFIG_SPEC_TYPE, file_store_bkp_file)
 
 SSPL_STORE_TYPE = 'file'
 CONSUL_HOST = '127.0.0.1'

@@ -32,7 +32,8 @@ from cortx.utils.message_bus import MessageConsumer
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
-from framework.base.sspl_constants import RESOURCE_PATH
+from framework.base.sspl_constants import (RESOURCE_PATH,
+    sspl_test_bkp_config, SSPL_TEST_BKP_CONFIG)
 
 from framework.utils.conf_utils import Conf, SSPL_TEST_CONF, NODE_ID_KEY
 
@@ -94,7 +95,7 @@ class IngressProcessorTests(ScheduledModuleThread, InternalMsgQ):
 
         return schema
 
-    def initialize(self, conf_reader, msgQlist, product):
+    def initialize(self, conf_reader, msgQlist, product, alerts_on_csm):
         """initialize configuration reader and internal msg queues"""
         # Initialize ScheduledMonitorThread
         super(IngressProcessorTests, self).initialize(conf_reader)
@@ -102,6 +103,7 @@ class IngressProcessorTests(ScheduledModuleThread, InternalMsgQ):
         # Initialize internal message queues for this module
         super(IngressProcessorTests, self).initialize_msgQ(msgQlist)
 
+        self.alerts_on_csm = alerts_on_csm
         self._read_config()
 
         producer_initialized.wait()
@@ -109,6 +111,16 @@ class IngressProcessorTests(ScheduledModuleThread, InternalMsgQ):
                                          consumer_group=self._consumer_group,
                                          message_types=[self._message_type],
                                          auto_ack=False, offset=self._offset)
+
+        if self.alerts_on_csm:
+            Conf.load(SSPL_TEST_BKP_CONFIG, sspl_test_bkp_config)
+            msg_type = Conf.get(SSPL_TEST_BKP_CONFIG,
+                                "INGRESSPROCESSORTESTS>message_type",
+                                "alerts")
+
+            self._producer = MessageProducer(producer_id=self._producer_id,             
+                                             message_type=msg_type,
+                                             method=self._method)
 
     def run(self):
         # self._set_debug(True)
@@ -125,6 +137,9 @@ class IngressProcessorTests(ScheduledModuleThread, InternalMsgQ):
                     logger.info(
                         f"IngressProcessorTests, Message Recieved: {message}")
                     self._process_msg(message)
+                    # if alerts_on_csm is enabled, send messages on MessageBus
+                    if self.alerts_on_csm:
+                        self._producer(message)
                     # Acknowledge message was received
                     self._consumer.ack()
                 else:
@@ -217,10 +232,18 @@ class IngressProcessorTests(ScheduledModuleThread, InternalMsgQ):
                                         'cortx_monitor')
         self._message_type = Conf.get(SSPL_TEST_CONF,
                                       f"{self.PROCESSOR}>{self.MESSAGE_TYPE}",
-                                      'Requests')
+                                      'test-alerts')
         self._offset = Conf.get(SSPL_TEST_CONF,
                                 f"{self.PROCESSOR}>{self.OFFSET}",
                                 'earliest')
+        if self.alerts_on_csm:
+            self._producer_id = Conf.get(SSPL_TEST_CONF,
+                                         "EGRESSPROCESSORTESTS>producer_id",
+                                         "sspl-sensor")
+            self._method = Conf.get(SSPL_TEST_CONF,
+                                    "EGRESSPROCESSORTESTS>method",
+                                    "sync")
+
 
     def shutdown(self):
         """Clean up scheduler queue and gracefully shutdown thread"""

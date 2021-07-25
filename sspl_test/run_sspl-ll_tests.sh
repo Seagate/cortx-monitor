@@ -20,6 +20,7 @@ script_dir=$(dirname $0)
 source "$script_dir"/constants.sh
 # Default test plan is sanity
 PLAN=${1:-dev_sanity}
+ALERTS=${2:-False}
 
 SRVNODE=""
 
@@ -52,4 +53,4 @@ fi
 systemctl start crond
 
 # Execute tests
-sudo /opt/seagate/"$PRODUCT_FAMILY"/sspl/sspl_test/run_test.py -t "$script_dir"/plans/"$PLAN".pln
+sudo /opt/seagate/"$PRODUCT_FAMILY"/sspl/sspl_test/run_test.py -t "$script_dir"/plans/"$PLAN".pln -a "$ALERTS"

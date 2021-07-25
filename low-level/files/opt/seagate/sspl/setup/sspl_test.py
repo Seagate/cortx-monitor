@@ -20,6 +20,7 @@ from pkg_resources import Requirement, working_set, VersionConflict
 from cortx.utils.process import SimpleProcess
 from cortx.utils.conf_store import Conf
 from cortx.utils.service import DbusServiceHandler
+from cortx.utils.message_bus import MessageBus, MessageBusAdmin
 from cortx.utils.validator.v_pkg import PkgV
 from .conf_based_sensors_enable import update_sensor_info
 from files.opt.seagate.sspl.setup.setup_logger import logger
@@ -42,6 +43,7 @@ class SSPLTestCmd:
         self.name = "sspl_test"
         self.plan = "sanity"
         self.coverage_enabled = self.args.coverage
+        self.alerts_on_csm = self.args.alerts
 
         self.dbus_service = DbusServiceHandler()
         if args.config and args.config[0]:
@@ -115,6 +117,9 @@ class SSPLTestCmd:
             "server_node>%s>storage>enclosure_id" % machine_id)
         self.enclosure_type = Conf.get(SSPL_TEST_GLOBAL_CONFIG,
             "storage_enclosure>%s>type" % enclosure_id)
+
+        # Validate message bus is accessible
+        self.mb = MessageBus()
 
     def process(self):
         """Run test using user requested test plan."""
@@ -215,11 +220,38 @@ class SSPLTestCmd:
                 memory_usage_alert_wait_new)
             Conf.save(SSPL_CONFIG_INDEX)
 
-            # TODO: Convert shell script to python
+            # Egress & Ingress Processors will send/receive messages
+            # on internal queues: test-alerts & test-requests.
+            # for QA Framework
+
+            # Configure message bus
+            # create sspl-test message_types 
+            mbadmin = MessageBusAdmin(admin_id="admin")
+            try:
+                mbadmin.register_message_type(message_types=[
+                                              'test-alerts',
+                                              'test-requests'],
+                                              partitions=1)
+            except MessageBusError as e:
+                msg = f"MessageBusError:{e}"
+                logger.exception(msg)
+                raise SetupError(1, msg)
+ 
+            egress_msg_type = Conf.get(SSPL_CONFIG_INDEX,
+                "EGRESSPROCESSOR>message_type")
+            Conf.set(SSPL_CONFIG_INDEX, "EGRESSPROCESSOR>message_type",
+                     'test-alerts')
+            ingress_msg_type = Conf.get(SSPL_CONFIG_INDEX,
+                "INGRESSPROCESSOR>message_type")
+            Conf.set(SSPL_CONFIG_INDEX, "INGRESSPROCESSOR>message_type",
+                     "test-requests")
+            Conf.save(SSPL_CONFIG_INDEX)
+
             # from cortx.sspl.sspl_test.run_qa_test import RunQATest
             # RunQATest(self.plan, self.coverage_enabled).run()
-            CMD = "%s/run_qa_test.sh --plan %s --coverage %s"\
-                   %(TEST_DIR, self.plan, self.coverage_enabled)
+            CMD = "%s/run_qa_test.sh --plan %s --coverage %s --alerts %s"\
+                   %(TEST_DIR, self.plan, self.coverage_enabled,
+                     self.alerts_on_csm)
             try:
                 _, error, rc = SimpleProcess(CMD).run(
                     realtime_output=True)
@@ -247,6 +279,10 @@ class SSPLTestCmd:
             Conf.set(SSPL_CONFIG_INDEX,
                      "NODEDATAMSGHANDLER>high_memory_usage_wait_threshold",
                      memory_usage_alert_wait)
+            Conf.set(SSPL_CONFIG_INDEX, "EGRESSPROCESSOR>message_type",
+                     egress_msg_type)
+            Conf.set(SSPL_CONFIG_INDEX, "INGRESSPROCESSOR>message_type",
+                     ingress_msg_type)
             Conf.save(SSPL_CONFIG_INDEX)
             shutil.copyfile(sspl_test_backup, sspl_test_file_path)
             if rc != 0:

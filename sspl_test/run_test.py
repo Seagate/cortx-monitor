@@ -133,14 +133,16 @@ def tmain(argp, argv):
 if __name__ == '__main__':
     try:
         argParser = argparse.ArgumentParser(
-            usage = "%(prog)s [-h] [-t]",
+            usage = "%(prog)s [-h] [-t] [-a]",
             formatter_class = argparse.RawDescriptionHelpFormatter)
         argParser.add_argument("-t",
                 help="Enter path of testlist file")
+        argParser.add_argument("-a",
+                help="Boolean - Enable alerts on CSM.")
         args = argParser.parse_args()
 
         args = argParser.parse_args()
-        init_messaging_msg_processors()
+        init_messaging_msg_processors(args, sys.argv[0])
         tmain(args, sys.argv[0])
         generate_html_report(result)
         stop_messaging_msg_processors()

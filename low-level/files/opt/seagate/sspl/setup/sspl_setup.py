@@ -303,6 +303,8 @@ class TestCmd(Cmd):
                              help='Test plan type')
         parsers.add_argument('--coverage', action="store_true",
                              help='Boolean - Enable Code Coverage.')
+        parsers.add_argument('--alerts', action="store_true",
+                             help='Boolean - Enable alerts on CSM.')
         parsers.set_defaults(command=cls)
 
     def validate(self):

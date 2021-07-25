@@ -71,7 +71,7 @@ class EgressProcessorTests(ScheduledModuleThread, InternalMsgQ):
         super(EgressProcessorTests, self).__init__(self.MODULE_NAME,
                                                       self.PRIORITY)
 
-    def initialize(self, conf_reader, msgQlist, product):
+    def initialize(self, conf_reader, msgQlist, product, alerts_on_csm):
         """initialize configuration reader and internal msg queues"""
         # Initialize ScheduledMonitorThread
         super(EgressProcessorTests, self).initialize(conf_reader)
@@ -147,7 +147,7 @@ class EgressProcessorTests(ScheduledModuleThread, InternalMsgQ):
                                          "sspl-sensor")
             self._message_type = Conf.get(SSPL_TEST_CONF,
                                           f"{self.PROCESSOR}>{self.MESSAGE_TYPE}",
-                                          "Alerts")
+                                          "test-requests")
             self._method = Conf.get(SSPL_TEST_CONF,
                                     f"{self.PROCESSOR}>{self.METHOD}",
                                     "Sync")

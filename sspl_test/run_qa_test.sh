@@ -25,6 +25,7 @@ source $script_dir/constants.sh
 SSPL_STORE_TYPE=confstor
 
 coverage_enabled="False"
+alerts_on_csm="False"
 while [ $# -gt 0 ]; do
     case $1 in
         --plan )
@@ -33,6 +34,8 @@ while [ $# -gt 0 ]; do
         --coverage )
             declare coverage_enabled="$2"
             ;;
+        --alerts )
+            declare alerts_on_csm="$2"
         * ) ;;
     esac
     shift
@@ -175,7 +178,7 @@ trap cleanup 1 2 3 6 9 15
 
 execute_test()
 {
-    $sudo $script_dir/run_sspl-ll_tests.sh $plan
+    $sudo $script_dir/run_sspl-ll_tests.sh $plan $alerts_on_csm
 }
 
 if [ "$plan" == "sanity" ]

@@ -58,7 +58,7 @@ class TestFailed(Exception):
         desc = '[%s] %s' %(inspect.stack()[1][3], desc)
         super(TestFailed, self).__init__(desc)
 
-def init_messaging_msg_processors():
+def init_messaging_msg_processors(argp, argv):
     """The main bootstrap for sspl automated tests"""
 
     # Initialize logging
@@ -70,6 +70,9 @@ def init_messaging_msg_processors():
         print(err)
         print("Exiting ...")
         exit(os.EX_USAGE)
+
+    if argp.a is not None:
+        alerts_on_csm = argp.a
 
     # Modules to be used for testing
     conf_modules = Conf.get(SSPL_TEST_CONF, f"{SSPL_SETTING}>{MODULES}")
@@ -103,7 +106,8 @@ def init_messaging_msg_processors():
             logger.info("SSPL-Tests Starting %s" % curr_module.name())
             curr_module._set_debug(True)
             thread = Thread(target=_run_thread_capture_errors,
-                            args=(curr_module, msgQlist, conf_reader, product))
+                            args=(curr_module, msgQlist, conf_reader, product,
+                                  alerts_on_csm))
             thread.start()
             threads.append(thread)
 
@@ -119,13 +123,14 @@ def init_messaging_msg_processors():
 
 
 # Global method used by Thread to capture and log errors.  This must be global.
-def _run_thread_capture_errors(curr_module, msgQlist, conf_reader, product):
+def _run_thread_capture_errors(curr_module, msgQlist, conf_reader, product,
+                               alerts):
     """Run the given thread and log any errors that happen on it.
     Will stop all sspl_modules if one of them fails."""
     try:
         # Each module is passed a reference list to message queues so it can transmit
         #  internal messages to other modules as desired
-        curr_module.initialize(conf_reader, msgQlist, product)
+        curr_module.initialize(conf_reader, msgQlist, product, alerts)
         curr_module.start()
 
     except BaseException as ex:
