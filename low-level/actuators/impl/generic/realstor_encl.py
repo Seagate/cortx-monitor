@@ -159,7 +159,7 @@ class RealStorActuator(Actuator, Debug):
             del component_details['severity']
             if self.SEVERITY == "warning":
                 del component_details['description']
-        elif component_type != "platform_sensor":
+        elif component == "hw" and component_type != "platform_sensor":
             if resource_id == self.RESOURCE_ALL:
                 for comp in component_details:
                     comp['resource_id'] = self.fru_response_manipulators[
