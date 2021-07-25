@@ -90,9 +90,15 @@ class SetupYumRepo:
 
     def _validate_os_release_support(self):
         """Get CORTX url based on centos release."""
+        os = None
         with open("/etc/os-release") as f:
             os_release = f.read()
             os = re.search("ID=\"(.*)\"\n", os_release).group(1)
+        if not os:
+            raise Exception("%s: %s" % (
+                self.name,
+                "Failed to fetch the OS name from /etc/os-release file.")
+                )
         file = f"/etc/{os}-release"
         with open(file) as fObj:
             content = fObj.read()
@@ -104,9 +110,10 @@ class SetupYumRepo:
             self.url_local_repo_commons="%s/third-party-deps/centos/centos-7.7.1908/" % (CORTX_BASE_URL)
             self.url_uploads_repo="%s/uploads/centos/centos-7.7.1908/" % (CORTX_BASE_URL)
         else:
-            raise Exception("%s: %s" % (self.name,
-                                        "OS version not supported. " +
-                                        "Supported OS versions are CentOS-7.7 and CentOS-7.8"))
+            raise Exception("%s: %s" % (
+                self.name,
+                "OS version not supported. Supported OS versions are " +
+                "CentOS-7.7, CentOS-7.8 and Rocky8.4"))
 
     def set_repo_url(self):
         """Make build specific url."""
