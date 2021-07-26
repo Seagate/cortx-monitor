@@ -27,7 +27,7 @@ import socket
 from jsonschema import Draft3Validator
 from jsonschema import validate
 
-from cortx.utils.message_bus import MessageConsumer
+from cortx.utils.message_bus import MessageConsumer, MessageProducer
 
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ

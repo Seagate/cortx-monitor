@@ -21,6 +21,7 @@ from cortx.utils.process import SimpleProcess
 from cortx.utils.conf_store import Conf
 from cortx.utils.service import DbusServiceHandler
 from cortx.utils.message_bus import MessageBus, MessageBusAdmin
+from cortx.utils.message_bus.error import MessageBusError
 from cortx.utils.validator.v_pkg import PkgV
 from .conf_based_sensors_enable import update_sensor_info
 from files.opt.seagate.sspl.setup.setup_logger import logger
@@ -233,9 +234,9 @@ class SSPLTestCmd:
                                               'test-requests'],
                                               partitions=1)
             except MessageBusError as e:
-                msg = f"MessageBusError:{e}"
-                logger.exception(msg)
-                raise SetupError(1, msg)
+                if "ALREADY_EXISTS" not in e.desc:
+                    msg = f"MessageBusError:{e}"
+                    logger.exception(msg)
  
             egress_msg_type = Conf.get(SSPL_CONFIG_INDEX,
                 "EGRESSPROCESSOR>message_type")
@@ -284,6 +285,14 @@ class SSPLTestCmd:
             Conf.set(SSPL_CONFIG_INDEX, "INGRESSPROCESSOR>message_type",
                      ingress_msg_type)
             Conf.save(SSPL_CONFIG_INDEX)
+            try:
+                mbadmin.deregister_message_type(message_types=[
+                                              'test-alerts',
+                                              'test-requests'])
+            except MessageBusError as e:
+                msg = f"MessageBusError:{e}"
+                logger.exception(msg)
+
             shutil.copyfile(sspl_test_backup, sspl_test_file_path)
             if rc != 0:
                 raise TestException(

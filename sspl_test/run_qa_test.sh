@@ -36,6 +36,7 @@ while [ $# -gt 0 ]; do
             ;;
         --alerts )
             declare alerts_on_csm="$2"
+            ;;
         * ) ;;
     esac
     shift
