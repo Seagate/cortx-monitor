@@ -25,7 +25,7 @@
 #include <math.h>
 #include <openssl/bio.h>
 #include <openssl/evp.h>
-const BIO_METHOD* BIO_f_base64(void);
+// const BIO_METHOD* BIO_f_base64(void);
 
 size_t b64encode(
     const unsigned char* bytes_to_encode, size_t bytes_to_encode_length,

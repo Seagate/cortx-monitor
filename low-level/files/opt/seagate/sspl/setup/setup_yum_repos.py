@@ -24,7 +24,6 @@ import os
 import shutil
 import argparse
 import subprocess
-import re
 
 CORTX_BASE_URL = "http://cortx-storage.colo.seagate.com/releases/cortx"
 
@@ -89,17 +88,8 @@ class SetupYumRepo:
         self.sspl_uploads_repo = "/etc/yum.repos.d/sspl_uploads.repo"
 
     def _validate_os_release_support(self):
-        """Get CORTX url based on centos release."""
-        os = None
-        with open("/etc/os-release") as f:
-            os_release = f.read()
-            os = re.search("ID=\"(.*)\"\n", os_release).group(1)
-        if not os:
-            raise Exception("%s: %s" % (
-                self.name,
-                "Failed to fetch the OS name from /etc/os-release file.")
-                )
-        file = f"/etc/{os}-release"
+        """Get CORTX url based on system os release."""
+        file = "/etc/system-release"
         with open(file) as fObj:
             content = fObj.read()
         if "CentOS Linux release 7.8" in content or \
