@@ -111,7 +111,6 @@ SSPL_SB_REQUEST = f"{SB_DATA_PATH}/sspl-sb-req.txt"
 # required only for system health
 HEALTH_UNDESIRED_VALS = ["N/A", ""]
 
-
 # required only for manifest
 MANIFEST_SVC_NAME = 'manifest'
 LSHW_FILE = f'{DATA_PATH}lshw.json'
