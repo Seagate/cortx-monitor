@@ -247,7 +247,7 @@ class IPMITool(IPMI):
         though its most common FRU in servers, and
         practically it can be replaced easily.
         So if for a solution, FRU list needs to be extended
-        beyond what server publishes, 'server_declare_fru' config in sspl.conf
+        beyond what server publishes, 'server_fru_list' from global config
         can be used.
         Some of the usual FRU examples are:- disk, psu."""
 
@@ -268,10 +268,11 @@ class IPMITool(IPMI):
                     self.fru_list[self.fru_list.index(fru)] = 'psu'
             self.fru_list = list(set(self.fru_list))
         try:
-            default_frus = Conf.get(SSPL_CONF,
-                "NODEHWSENSOR>server_declare_frus")
+            default_frus = Conf.get(GLOBAL_CONF,
+                "server_node>server_fru_list>hot_swappable",
+                ['disk', 'psu'])
         except ValueError as e:
-            logger.error("Failed to get server_declare_frus from config."
+            logger.error("Failed to get server_fru_list from config."
                          f"Error:{e}")
         if len(self.fru_list)!= 0:
             self.fru_list = list(set(self.fru_list + default_frus))
