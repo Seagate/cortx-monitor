@@ -158,6 +158,12 @@ SERVICEMONITOR:
       - scsi-network-relay.service
       - kafka.service
       - kafka-zookeeper.service
+   excluded_services:
+      vm:
+         - multipathd.service
+         - glusterd.service
+         - scsi-network-relay.service
+      hw:
 
 NODEHWACTUATOR:
    ipmi_client: ipmitool

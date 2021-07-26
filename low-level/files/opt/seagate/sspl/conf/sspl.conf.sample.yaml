@@ -139,7 +139,7 @@ NODEDATAMSGHANDLER:
 
 SYSTEMDWATCHDOG:
    threaded: true
-   monitored_services: 
+   monitored_services:
       - m0t1fs@*.service
       - m0d@*.service
       - motr.service
