@@ -278,12 +278,8 @@ class IPMITool(IPMI):
         except ValueError as e:
             logger.error("Failed to get server_fru_list from config."
                          f"Error:{e}")
-        if len(self.fru_list)!= 0:
-            self.fru_list = list(set(self.fru_list + self.hot_swapped_frus +
-                                     self.cold_swapped_frus))
-        else:
-            self.fru_list = list(set(self.hot_swapped_frus +
-                                     self.cold_swapped_frus))
+        self.fru_list = list(set(self.fru_list + self.hot_swapped_frus +
+                                 self.cold_swapped_frus))
         logger.info(f"Fetched server FRU list:{self.fru_list}")
 
     def is_fru(self, fru):
