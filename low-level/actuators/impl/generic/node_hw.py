@@ -27,6 +27,7 @@ from actuators.impl.actuator import Actuator
 from framework.base.debug import Debug
 from framework.utils.service_logging import logger
 from framework.base.sspl_constants import AlertTypes, SensorTypes, SeverityTypes
+from framework.utils.ipmi_client import IpmiFactory
 
 
 class NodeHWactuator(Actuator, Debug):
@@ -60,6 +61,7 @@ class NodeHWactuator(Actuator, Debug):
         self.sensor_id_map = self._executor.get_fru_list_by_type(
             ['fan', 'power supply', 'drive slot / bay'],
             sensor_id_map={})
+        self.ipmi_client = IpmiFactory().get_implementor('ipmitool')
 
     def _get_fru_instances(self, fru, fru_instance):
         """Get the fru information based on fru_type and instance"""
@@ -131,7 +133,7 @@ class NodeHWactuator(Actuator, Debug):
         node_request = json_msg.get("node_controller")
         node_request_instance = node_request.get("node_request").split(":")[:3]
 
-        if node_request_instance == ['NDHW', 'node', 'fru']:
+        if node_request_instance == ['NDHW', 'node', 'hw']:
             response = self._process_fru_request(node_request)
         elif node_request_instance == ['NDHW', 'node', 'sensor']:
             response = self._process_sensor_request(node_request)
@@ -163,7 +165,8 @@ class NodeHWactuator(Actuator, Debug):
     def _create_node_fru_json_message(self, specifics, resource_id):
         """Creates JSON response to be sent out to Node Controller Message
            Handler for further validation"""
-        resource_type = "node:fru:{0}".format(self.fru_node_request)
+        resource_type = "node:hw:{0}".format(self.fru_node_request)
+        fru = self.ipmi_client.is_fru(self.fru_node_request)
         epoch_time = str(calendar.timegm(time.gmtime()))
         response = {
           "alert_type":"GET",
@@ -172,6 +175,7 @@ class NodeHWactuator(Actuator, Debug):
           "instance_id": resource_id,
           "info": {
             "resource_id": resource_id,
+            "fru": fru,
             "resource_type": resource_type,
             "event_time": epoch_time
           },
@@ -262,6 +266,7 @@ class NodeHWactuator(Actuator, Debug):
         response['severity'] = SeverityTypes.INFORMATIONAL.value
         response['info'] = {
             "resource_type": "node:sensor:" + self._sensor_type.lower(),
+            "fru": "false",
             "resource_id": self._resource_id,
             "event_time": str(calendar.timegm(time.gmtime())),
         }

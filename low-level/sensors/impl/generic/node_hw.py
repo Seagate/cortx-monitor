@@ -95,6 +95,14 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
     TYPE_VOLTAGE = "Voltage"
     TYPE_CURRENT = "Current"
 
+    fru_map = {
+        "Drive Slot / Bay": "disk",
+        "Fan": "fan",
+        "Power Supply": "psu",
+        "Power Unit": "psu"
+    }
+
+
     SEL_USAGE_THRESHOLD = 90
     SEL_INFO_PERC_USED = "Percent Used"
     SEL_INFO_FREESPACE = "Free Space"
@@ -972,6 +980,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         fan_info = fan_specific_data
         fan_info.update({"fru_id" : device_id, "event" : event})
         resource_type = NodeDataMsgHandler.IPMI_RESOURCE_TYPE_FAN
+        fru = self.ipmi_client.is_fru(self.fru_map[self.TYPE_FAN])
         severity_reader = SeverityReader()
         if alert_type:
             severity = severity_reader.map_severity(alert_type)
@@ -983,6 +992,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
             severity = "informational"
 
         fru_info = {    "resource_type": resource_type,
+                        "fru": fru,
                         "resource_id": sensor_name,
                         "event_time": self._get_epoch_time_from_date_and_time(date, _time),
                         "description": event
@@ -1030,8 +1040,10 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
 
         sensor_id = self.sensor_id_map[self.TYPE_PSU_SUPPLY][sensor_num]
         resource_type = NodeDataMsgHandler.IPMI_RESOURCE_TYPE_PSU
+        fru = self.ipmi_client.is_fru(self.fru_map[self.TYPE_PSU_SUPPLY])
         info = {
             "resource_type": resource_type,
+            "fru": fru,
             "resource_id": sensor,
             "event_time": self._get_epoch_time_from_date_and_time(date, _time),
             "description": event
@@ -1113,9 +1125,10 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
 
         sensor_id = self.sensor_id_map[self.TYPE_PSU_UNIT][sensor_num]
         resource_type = NodeDataMsgHandler.IPMI_RESOURCE_TYPE_PSU
-
+        fru = self.ipmi_client.is_fru(self.fru_map[self.TYPE_PSU_UNIT])
         info = {
             "resource_type": resource_type,
+            "fru": fru,
             "resource_id": sensor,
             "event_time": self._get_epoch_time_from_date_and_time(date, _time),
             "description": event
@@ -1176,10 +1189,11 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
                 ("Drive Present", "Asserted"): ("insertion", "informational"),
                 ("Drive Present", "Deasserted"): ("missing", "critical"),
                 }
-
             resource_type = NodeDataMsgHandler.IPMI_RESOURCE_TYPE_DISK
+            fru = self.ipmi_client.is_fru(self.fru_map[self.TYPE_DISK])
             info = {
                 "resource_type": resource_type,
+                "fru": fru,
                 "resource_id": sensor,
                 "event_time": self._get_epoch_time_from_date_and_time(date, _time),
                 "description": description

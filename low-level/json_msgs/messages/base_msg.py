@@ -64,7 +64,8 @@ class BaseMsg(metaclass=abc.ABCMeta):
             if payload.get(f"message>{message_type}>info>cluster_id") is None:
                 jsonMsg["message"][message_type]["info"]["cluster_id"] = Conf.get(
                     GLOBAL_CONF, CLUSTER_ID_KEY, DEFAULT_CLUSTER)
-
+            if payload.get(f"message>{message_type}>info>fru") is None:
+                jsonMsg["message"][message_type]["info"]["fru"] = "false"
             logger.debug("prepare_message, jsonMsg: %s" % jsonMsg)
         except KeyError as ex:
             logger.exception(f"Failed to prepare json message. JsonMsg:{jsonMsg}."

@@ -60,6 +60,7 @@ from framework.utils.config_reader import ConfigReader
 from framework.utils.service_logging import init_logging, logger
 from framework.utils.store_factory import store
 from framework.utils.utility import Utility
+from framework.utils.ipmi_client import IpmiFactory
 from cortx.utils.iem_framework.error import EventMessageError
 # Message to send to HAlon upon critical thread errors
 from json_msgs.messages.actuators.thread_controller import ThreadControllerMsg
@@ -814,6 +815,10 @@ if __name__ == "__main__":
                 fileObj.write(str(os.getpid()))
 
         #DO NOT EDIT: Marker comment to dynamically add code to start the code coverage scope
+
+        # load server fru list
+        executor = IpmiFactory().get_implementor("ipmitool")
+        executor.load_server_fru_list()
 
         # Start sspl-ll as a main process running multiple threads
         main(conf_reader, systemd_support)

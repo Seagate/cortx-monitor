@@ -67,9 +67,9 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
     SYSTEM_INFORMATION = "SYSTEM_INFORMATION"
 
-    IPMI_RESOURCE_TYPE_PSU = "node:fru:psu"
-    IPMI_RESOURCE_TYPE_FAN = "node:fru:fan"
-    IPMI_RESOURCE_TYPE_DISK = "node:fru:disk"
+    IPMI_RESOURCE_TYPE_PSU = "node:hw:psu"
+    IPMI_RESOURCE_TYPE_FAN = "node:hw:fan"
+    IPMI_RESOURCE_TYPE_DISK = "node:hw:disk"
     IPMI_RESOURCE_TYPE_TEMPERATURE = "node:sensor:temperature"
     IPMI_RESOURCE_TYPE_VOLTAGE = "node:sensor:voltage"
     IPMI_RESOURCE_TYPE_CURRENT = "node:sensor:current"

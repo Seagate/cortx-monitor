@@ -238,6 +238,63 @@ class IPMITool(IPMI):
 
         return out, error, retcode
 
+    def load_server_fru_list(self):
+        """Get Server FRU list and merge it with server_fru_list,
+        maintained in global config, with which FRU list can be extended
+        for a solution.
+
+        Ex: Supermicro servers not listing disk as FRU,
+        though its most common FRU in servers, and
+        practically it can be replaced easily.
+        So if for a solution, FRU list needs to be extended
+        beyond what server publishes, 'server_fru_list' from global config
+        can be used.
+        Some of the usual FRU examples are:- disk, psu.
+
+        """
+        cmd = 'fru list'
+        self.fru_list = []
+        output, err, rc = self._run_ipmitool_subcommand(cmd,
+        grep_args="FRU Device Description : ")
+        if rc != 0:
+            logger.error("Failed in fetching FRU info from server."
+                         f"Error:{err}")
+        if output:
+            for line in output.split('\n'):
+                self.fru_list.append(line.split(': ')[1])
+            keywords = ['Pwr Supply', 'power', 'PS', 'PSU']
+            fru_regex = re.compile("|".join(keywords))
+            for fru in self.fru_list:
+                if fru_regex.search(fru):
+                    self.fru_list[self.fru_list.index(fru)] = 'psu'
+            self.fru_list = list(set(self.fru_list))
+        try:
+            self.hot_swapped_frus = Conf.get(GLOBAL_CONF,
+                "server_node>server_fru_list>hot_swappable",
+                ['disk', 'psu'])
+            self.cold_swapped_frus = Conf.get(GLOBAL_CONF,
+                "server_node>server_fru_list",
+                [])
+        except ValueError as e:
+            logger.error("Failed to get server_fru_list from config."
+                         f"Error:{e}")
+        self.fru_list = list(set(self.fru_list + self.hot_swapped_frus +
+                                 self.cold_swapped_frus))
+        logger.info(f"Fetched server FRU list:{self.fru_list}")
+
+    def is_fru(self, fru):
+        is_fru = True if fru in self.fru_list else False
+        fru_str = str(is_fru).lower()
+        if is_fru:
+            if fru in self.hot_swapped_frus:
+                fru_str = str(is_fru).lower() + ":" + "hot_swappable"
+            elif fru in self.cold_swapped_frus:
+                fru_str = str(is_fru).lower() + ":" + "cold_swappable"
+            else:
+                fru_str = str(is_fru).lower() + ":" + "unknown"
+        return fru_str
+
+
 
 class IpmiFactory(object):
     """Factory class which returns instance of specific IPMI related
