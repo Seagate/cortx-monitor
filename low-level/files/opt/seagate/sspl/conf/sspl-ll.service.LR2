@@ -29,6 +29,7 @@ PIDFile=/var/run/sspl_ll/sspl_ll.pid
 User=sspl-ll
 Restart=no
 TimeoutStartSec=190
+TimeoutStopSec=90
 
 [Install]
 WantedBy=multi-user.target
