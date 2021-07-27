@@ -1,4 +1,4 @@
-#!/usr/bin/python3.6
+#!/usr/bin/python3
 
 # Copyright (c) 2020 Seagate Technology LLC and/or its Affiliates
 #
@@ -287,6 +287,7 @@ class OperatingSystem(Enum):
     RHEL7 = "rhel7"
     RHEL6 = "rhel6"
     OSX = "osX"
+    ROCKY8 = "rocky8"
 
 class BMCInterface(Enum):
     BMC_IF_CACHE = f"{DATA_PATH}server/BMC_INTERFACE"

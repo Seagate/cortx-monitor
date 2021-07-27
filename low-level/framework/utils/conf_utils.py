@@ -1,4 +1,4 @@
-#!/usr/bin/python3.6
+#!/usr/bin/python3
 
 # Copyright (c) 2020 Seagate Technology LLC and/or its Affiliates
 #
@@ -148,7 +148,7 @@ OPERATING_SYSTEM = utility.get_os()
 
 Conf.load(SSPL_CONF, "yaml:///etc/sspl.conf")
 global_config = Conf.get(SSPL_CONF, "SYSTEM_INFORMATION>global_config_copy_url")
-Conf.load(GLOBAL_CONF, global_config)
+Conf.load(GLOBAL_CONF, global_config, fail_reload=False)
 
 SRVNODE = Conf.get(GLOBAL_CONF, "server_node>%s>name" % MACHINE_ID)
 ENCLOSURE = Conf.get(GLOBAL_CONF, "server_node>%s>storage>enclosure_id" % MACHINE_ID)

@@ -1,4 +1,4 @@
-#!/bin/env python3
+#!/usr/bin/python3
 
 # Copyright (c) 2020 Seagate Technology LLC and/or its Affiliates
 # This program is free software: you can redistribute it and/or modify
@@ -38,6 +38,7 @@ from files.opt.seagate.sspl.setup.setup_error import SetupError
 from files.opt.seagate.sspl.setup.setup_logger import logger
 from framework.base import sspl_constants as consts
 from framework.utils.utility import Utility
+from framework.platforms.server.platform import Platform
 
 
 class SSPLPostInstall:
@@ -120,19 +121,31 @@ class SSPLPostInstall:
             "zope.interface": "5.2.0"
             }
         rpm_3ps_packages = {
-            "hdparm": "9.43",
-            "ipmitool": "1.8.18",
-            "lshw": "B.02.18",
-            "python3": "3.6.8",
-            "python36-dbus": "1.2.4",
-            "python36-gobject": "3.22.0",
-            "python36-paramiko": "2.1.1",
-            "python36-psutil": "5.6.7",
-            "shadow-utils": "4.6",
-            "smartmontools": "7.0",
-            "systemd-python36": "1.0.0",
-            "udisks2": "2.8.4"
+            "common": {
+                "ipmitool": "1.8.18",
+                "python36-dbus": "1.2.4",
+                "python36-gobject": "3.22.0",
+                "python36-paramiko": "2.1.1",
+                "python36-psutil": "5.6.7",
+                "shadow-utils": "4.6",
+            },
+            "el7": {
+                "hdparm": "9.43",
+                "lshw": "B.02.18",
+                "python3": "3.6.8",
+                "smartmontools": "7.0",
+                "systemd-python36": "1.0.0",
+                "udisks2": "2.8.4"
+            },
+            "el8": {
+                "hdparm": "9.54",
+                "lshw": "B.02.19.2",
+                "python36": "3.6.8",
+                "smartmontools": "7.1",
+                "python3-systemd": "234",
+                "udisks2": "2.9.0"
             }
+        }
         ssu_dependency_rpms = [
             "sg3_utils",
             "gemhpi",
@@ -153,9 +166,14 @@ class SSPLPostInstall:
         pkg_validator = PkgV()
         pkg_validator.validate_pip3_pkgs(host=socket.getfqdn(),
             pkgs=pip3_3ps_packages_main, skip_version_check=False)
-        pkg_validator.validate_rpm_pkgs(host=socket.getfqdn(),
-            pkgs=rpm_3ps_packages, skip_version_check=False)
-
+        pkg_validator.validate_rpm_pkgs(
+                host=socket.getfqdn(), pkgs=rpm_3ps_packages["common"],
+                skip_version_check=False)
+        os_release_version = Platform.get_os_info()['version_id']
+        pkg_validator.validate_rpm_pkgs(
+                host=socket.getfqdn(),
+                pkgs=rpm_3ps_packages["el" + os_release_version[0]],
+                skip_version_check=False)
         # Check for sspl required processes and misc dependencies if
         # setup/role is other than cortx
         if setup == "ssu":
@@ -177,7 +195,8 @@ class SSPLPostInstall:
 
         # Create and load sspl config
         self.create_sspl_conf()
-        Conf.load(consts.SSPL_CONFIG_INDEX, consts.sspl_config_path)
+        Conf.load(consts.SSPL_CONFIG_INDEX, consts.sspl_config_path,
+                  fail_reload=False)
 
         # Update sspl.conf with provisioner supplied input config copy
         Conf.set(

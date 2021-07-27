@@ -1,4 +1,4 @@
-#!/usr/bin/python3.6
+#!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
 # Copyright (c) 2020 Seagate Technology LLC and/or its Affiliates
