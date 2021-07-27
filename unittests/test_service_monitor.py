@@ -38,7 +38,6 @@ class TestServiceMonitor(unittest.TestCase):
 
     def setUp(self):
         self.mocked_conf_values = {
-            "SERVICEMONITOR>monitored_services": ["spam.service"],
             "SERVICEMONITOR>thread_sleep": "1",
             "SERVICEMONITOR>polling_frequency": "5",
             "SERVICEMONITOR>threshold_inactive_time": "10"
@@ -56,7 +55,10 @@ class TestServiceMonitor(unittest.TestCase):
         Service.dump_to_cache = Mock()
         Service.cache_exists = Mock(return_value=False)
         with patch("cortx.utils.conf_store.Conf.get", new=Mock(side_effect=self.mocked_conf)):
-            self.service_monitor = ServiceMonitor()
+            with patch(
+                "framework.platforms.server.platform.Platform.get_effective_monitored_services",
+                new=Mock(return_value=["spam.service"])):
+                self.service_monitor = ServiceMonitor()
         self.service_monitor._write_internal_msgQ = Mock()
         self.service_monitor.is_running = Mock(return_value=True)
         time.sleep = Mock(side_effect=self.terminate_run)

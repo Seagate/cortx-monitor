@@ -90,10 +90,16 @@ class EgressProcessorTests(ScheduledModuleThread, InternalMsgQ):
         # Configure messaging Exchange to transmit messages
         self._connection = None
         self._read_config()
-        self._producer = MessageProducer(producer_id=self._producer_id,
-                                         message_type=self._message_type,
-                                         method=self._method)
+        self.create_MsgProducer_obj()
         producer_initialized.set()
+
+    def create_MsgProducer_obj(self):
+        self._producer = None
+        try:
+            self._producer = MessageProducer(producer_id=self._producer_id,
+                message_type=self._message_type, method=self._method)
+        except Exception as err:
+            logger.error('Instance creation for MessageProducer class failed due to %s' % err)
 
     def run(self):
         """Run the module periodically on its own thread. """
@@ -221,7 +227,10 @@ class EgressProcessorTests(ScheduledModuleThread, InternalMsgQ):
                          "thread_controller") is not None):
                 self._add_signature()
                 jsonMsg = json.dumps(self._jsonMsg)
-                self._producer.send([json.dumps(self._jsonMsg)])
+                if isinstance(self._producer, MessageProducer):
+                    self._producer.send([json.dumps(self._jsonMsg)])
+                else:
+                    self.create_MsgProducer_obj()
 
             elif self._jsonMsg.get("message") is not None:
                 message = self._jsonMsg.get("message")
@@ -230,7 +239,10 @@ class EgressProcessorTests(ScheduledModuleThread, InternalMsgQ):
                     logger.info("inside egress, test actuator")
                     self._add_signature()
                     jsonMsg = json.dumps(self._jsonMsg)
-                    self._producer.send([jsonMsg])
+                    if isinstance(self._producer, MessageProducer):
+                        self._producer.send([jsonMsg])
+                    else:
+                        self.create_MsgProducer_obj()
 
             else:
                 self._add_signature()

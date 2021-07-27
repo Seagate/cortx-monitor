@@ -33,6 +33,7 @@ from zope.interface import implementer
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.base.module_thread import SensorThread, ThreadException
 from framework.base.sspl_constants import DATA_PATH
+from framework.platforms.server.platform import Platform
 from framework.utils.conf_utils import (SSPL_CONF, Conf)
 from framework.utils.iem import Iem
 from framework.utils.mon_utils import get_alert_id
@@ -293,7 +294,6 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
     # Section and keys in configuration file
     SERVICEMONITOR = SENSOR_NAME.upper()
 
-    MONITORED_SERVICES = 'monitored_services'
     THREAD_SLEEP = 'thread_sleep'
     POLLING_FREQUENCY = 'polling_frequency'
 
@@ -312,8 +312,7 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
         super(ServiceMonitor, self).__init__(self.SENSOR_NAME,
                                              self.PRIORITY)
 
-        self.services_to_monitor = set(Conf.get(
-            SSPL_CONF, f"{self.SERVICEMONITOR}>{self.MONITORED_SERVICES}", []))
+        self.services_to_monitor = set(Platform.get_effective_monitored_services())
 
         self.services = {}
 

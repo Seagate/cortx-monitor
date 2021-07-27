@@ -60,6 +60,7 @@ mkdir -p ${RPM_BUILD_ROOT}/etc/{systemd/system,dbus-1/system.d,polkit-1/rules.d,
 cp -afv files/etc ${RPM_BUILD_ROOT}/
 cp -afv files/opt/seagate/sspl/conf $SSPL_BASE/
 mkdir -p $SSPL_BASE/bin
+mkdir -p $SSPL_BASE/extension
 
 # Copy the service into /opt/seagate/%{product_family}/sspl where it will execute from
 cp -rp __init__.py $SSPL_BASE
@@ -95,7 +96,7 @@ SSPL_DIR=/opt/seagate/%{product_family}/sspl
     ln -sf $SSPL_DIR/low-level/sspl_bundle_generate /usr/bin/sspl_bundle_generate
     ln -sf $SSPL_DIR/low-level/manifest_support_bundle /usr/bin/manifest_support_bundle
     ln -sf $SSPL_DIR/low-level/framework $SSPL_DIR/low-level/solution/lr2/
-    ln -sf $SSPL_DIR/low-level/solution $SSPL_DIR/bin/solution
+    ln -sf $SSPL_DIR/low-level/solution $SSPL_DIR/extension/solution
 }
 
 # restore of data & iem folder
@@ -127,7 +128,7 @@ SSPL_DIR=/opt/seagate/%{product_family}/sspl
 rm -f /etc/polkit-1/rules.d/sspl-ll_dbus_policy.rules
 rm -f /etc/dbus-1/system.d/sspl-ll_dbus_policy.conf
 rm -f /usr/bin/resource_health_view /usr/bin/sspl_bundle_generate /usr/bin/manifest_support_bundle
-rm -f $SSPL_DIR/bin/solution
+rm -f $SSPL_DIR/extension/solution
 
 %files
 %defattr(-,root,root,-)

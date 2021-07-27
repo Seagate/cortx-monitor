@@ -105,10 +105,17 @@ class IngressProcessorTests(ScheduledModuleThread, InternalMsgQ):
         self._read_config()
 
         producer_initialized.wait()
-        self._consumer = MessageConsumer(consumer_id=self._consumer_id,
+        self.create_MsgConsumer_obj()
+
+    def create_MsgConsumer_obj(self):
+        self._consumer = None
+        try:
+            self._consumer = MessageConsumer(consumer_id=self._consumer_id,
                                          consumer_group=self._consumer_group,
                                          message_types=[self._message_type],
                                          auto_ack=False, offset=self._offset)
+        except Exception as err:
+            logger.error('Instance creation for MessageConsumer class failed due to %s' % err)
 
     def run(self):
         # self._set_debug(True)
@@ -120,13 +127,20 @@ class IngressProcessorTests(ScheduledModuleThread, InternalMsgQ):
 
         try:
             while True:
-                message = self._consumer.receive()
+                message = None
+                if isinstance(self._consumer, MessageConsumer):
+                    message = self._consumer.receive()
+                else:
+                    self.create_MsgConsumer_obj()
                 if message:
                     logger.info(
                         f"IngressProcessorTests, Message Recieved: {message}")
                     self._process_msg(message)
                     # Acknowledge message was received
-                    self._consumer.ack()
+                    if isinstance(self._consumer, MessageConsumer):
+                        self._consumer.ack()
+                    else:
+                        self.create_MsgConsumer_obj()
                 else:
                     time.sleep(1)
         except Exception as e:
