@@ -107,7 +107,7 @@ class Cmd:
         if not os.path.exists(path) or stage == "post_install":
             with open(path, "w") as f:
                 f.write("")
-        Conf.load(GLOBAL_CONFIG_INDEX, global_config_path, skip_reload=True)
+        Conf.load(GLOBAL_CONFIG_INDEX, global_config_path, fail_reload=False)
         Conf.copy(PRVSNR_CONFIG_INDEX, GLOBAL_CONFIG_INDEX)
         Conf.save(GLOBAL_CONFIG_INDEX)
 

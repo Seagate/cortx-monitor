@@ -196,7 +196,7 @@ class SSPLPostInstall:
         # Create and load sspl config
         self.create_sspl_conf()
         Conf.load(consts.SSPL_CONFIG_INDEX, consts.sspl_config_path,
-                  skip_reload=True)
+                  fail_reload=False)
 
         # Update sspl.conf with provisioner supplied input config copy
         Conf.set(
