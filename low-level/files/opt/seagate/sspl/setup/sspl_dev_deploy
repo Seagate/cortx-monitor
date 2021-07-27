@@ -63,7 +63,7 @@ class SSPLDevDeploy:
         """Initialize required config variables."""
         self.args = args
         self.CORTX_MONITOR_BASE_URL = "https://raw.githubusercontent.com/Seagate/cortx-monitor/main"
-        file = "/etc/centos-release"
+        file = "/etc/system-release"
         with open(file) as fObj:
             content = fObj.read()
         if "CentOS Linux release 7.9" in content:
@@ -198,9 +198,6 @@ class SSPLDevDeploy:
         pkg_name = "cortx-py-utils"
         print("INFO: INSTALLING cortx-py-utils...")
         print("Downloading pyutils from %s" % self.build_url)
-        # build_url = ("http://cortx-storage.colo.seagate.com/releases/"
-        #              "cortx/components/github/main/centos-7.8.2003/"
-        #              "dev/cortx-utils/last_successful/")
         pkg = [re.findall("<a .*>(.*?)</a>", str(line))[0]
                for line in urllib.request.urlopen(self.cortx_utils_build_url).readlines()
                if pkg_name in str(line)]
