@@ -1,4 +1,4 @@
-#!/bin/python3
+#!/usr/bin/python3
 
 # CORTX Python common library.
 # Copyright (c) 2021 Seagate Technology LLC and/or its Affiliates
