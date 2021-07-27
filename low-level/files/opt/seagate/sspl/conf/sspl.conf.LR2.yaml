@@ -46,7 +46,7 @@ SSPL_LL_SETTING:
 
 INGRESSPROCESSOR:
    consumer_id: sspl_actuator
-   consumer_group: cortx_monitor
+   consumer_group_prefix: cortx_monitor_
    message_type: requests
    offset: latest
 

@@ -23,7 +23,6 @@ import ctypes
 import json
 import os
 import time
-import socket
 
 from cortx.utils.message_bus import MessageConsumer
 from jsonschema import Draft3Validator, validate
@@ -33,7 +32,8 @@ from framework.base.module_thread import ScheduledModuleThread
 from framework.base.sspl_constants import RESOURCE_PATH
 from framework.messaging.egress_processor import \
     EgressProcessor
-from framework.utils.conf_utils import CLUSTER, SRVNODE, SSPL_CONF, Conf
+from framework.utils.conf_utils import (
+    SSPL_CONF, Conf, GLOBAL_CONF, NODE_ID_KEY)
 from framework.utils.service_logging import logger
 from json_msgs.messages.actuators.ack_response import AckResponseMsg
 from . import producer_initialized
@@ -61,7 +61,6 @@ class IngressProcessor(ScheduledModuleThread, InternalMsgQ):
     OFFSET = "offset"
     SYSTEM_INFORMATION_KEY = 'SYSTEM_INFORMATION'
     CLUSTER_ID_KEY = 'cluster_id'
-    NODE_ID_KEY = 'node_id'
 
     JSON_ACTUATOR_SCHEMA = "SSPL-LL_Actuator_Request.json"
     JSON_SENSOR_SCHEMA = "SSPL-LL_Sensor_Request.json"
@@ -107,7 +106,7 @@ class IngressProcessor(ScheduledModuleThread, InternalMsgQ):
         # Initialize internal message queues for this module
         super(IngressProcessor, self).initialize_msgQ(msgQlist)
 
-        self._read_config()
+        self._init_config()
         producer_initialized.wait()
         self._consumer = MessageConsumer(consumer_id=self._consumer_id,
                                          consumer_group=self._consumer_group,
@@ -149,7 +148,6 @@ class IngressProcessor(ScheduledModuleThread, InternalMsgQ):
 
         ingressMsg = {}
         uuid = None
-        hostname = socket.gethostname()
         try:
             if isinstance(body, dict) is False:
                 ingressMsg = json.loads(body)
@@ -173,40 +171,41 @@ class IngressProcessor(ScheduledModuleThread, InternalMsgQ):
                     "IngressProcessor, Authentication failed on message: %s" % ingressMsg)
                 return
 
+            # Check for debugging being activated in the message header
+            self._check_debug(message)
+            self._log_debug("_process_msg, ingressMsg: %s" % ingressMsg)
+
             # Get the incoming message type
             if message.get("actuator_request_type") is not None:
                 msgType = message.get("actuator_request_type")
 
                 # Validate against the actuator schema
                 validate(ingressMsg, self._actuator_schema)
+                # Compare hostname from the request to determine
+                # if request is meant for the current node
+                target_node_id = message.get("target_node_id")
+                if target_node_id is None:
+                    logger.warning(
+                        "Required attribute target_node_id is missing "
+                        "from actuator request")
+                    return
+                elif target_node_id == self._node_id:
+                    self._send_to_msg_handler(msgType, message, uuid)
+                else:
+                    logger.info(
+                        "Node identifier mismatch, actuator request rejected.")
+                    return
 
             elif message.get("sensor_request_type") is not None:
                 msgType = message.get("sensor_request_type")
 
                 # Validate against the sensor schema
                 validate(ingressMsg, self._sensor_schema)
+                self._send_to_msg_handler(msgType, message, uuid)
 
             else:
                 # We only handle incoming actuator and sensor requests, ignore
                 # everything else.
-                return
-
-            # Check for debugging being activated in the message header
-            self._check_debug(message)
-            self._log_debug("_process_msg, ingressMsg: %s" % ingressMsg)
-
-            # Compare hostname from the request to determine
-            # if request is meant for the current node
-            node_identifier = message.get("node_identifier")
-            if node_identifier is None:
-                logger.warning(
-                    "Required attribute node_identifier is missing from actuator request")
-                return
-            elif node_identifier == hostname:
-                self._send_to_msg_handler(msgType, message, uuid)
-            else:
-                logger.info(
-                    "Node identifier mismatch, actuator request rejected.")
                 return
 
         except Exception:
@@ -248,16 +247,17 @@ class IngressProcessor(ScheduledModuleThread, InternalMsgQ):
             self._write_internal_msgQ(EgressProcessor.name(),
                                       ack_msg)
 
-    def _read_config(self):
+    def _init_config(self):
         """Read config for messaging bus."""
         # Make methods locally available
-        self._node_id = Conf.get(SSPL_CONF,
-                                 f"{CLUSTER}>{SRVNODE}>{self.NODE_ID_KEY}",
-                                 'SN01')
+        self._node_id = Conf.get(GLOBAL_CONF, NODE_ID_KEY, 'SN01')
+        self._consumer_group_prefix = Conf.get(
+            SSPL_CONF, f"{self.PROCESSOR}>{self.CONSUMER_GROUP}",
+            'cortx_monitor')
+        self._consumer_group = self._consumer_group_prefix + str(self._node_id)
         self._consumer_id = Conf.get(SSPL_CONF,
                                      f"{self.PROCESSOR}>{self.CONSUMER_ID}",
                                      'sspl_actuator')
-        self._consumer_group = socket.gethostname()
         self._message_type = Conf.get(SSPL_CONF,
                                       f"{self.PROCESSOR}>{self.MESSAGE_TYPE}",
                                       'requests')

@@ -123,7 +123,7 @@ def test_systemd_service_invalid_request(args):
     assert (specific_info[0].get("error_msg") is not None)
 
 
-def service_actuator_request(service_name, action):
+def service_actuator_request(service_name, action, target_node_id="SN01"):
     egressMsg = {
                 "title": "SSPL-LL Actuator Request",
                 "description": "Seagate Storage Platform Library - Actuator Request",
@@ -148,6 +148,7 @@ def service_actuator_request(service_name, action):
                         "node_id": "1"
                     },
                     "response_dest": {},
+                    "target_node_id": target_node_id,
                         "actuator_request_type": {
                             "service_controller": {
                                 "service_request": action,

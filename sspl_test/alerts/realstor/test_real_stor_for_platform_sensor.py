@@ -186,7 +186,7 @@ def check_sspl_ll_is_running():
     while not world.sspl_modules[IngressProcessorTests.name()]._is_my_msgQ_empty():
         world.sspl_modules[IngressProcessorTests.name()]._read_my_msgQ()
 
-def enclosure_sensor_message_request(resource_type, resource_id):
+def enclosure_sensor_message_request(resource_type, resource_id, target_node_id='SN01'):
 
     egressMsg = {
         "title": "SSPL Actuator Request",
@@ -214,6 +214,7 @@ def enclosure_sensor_message_request(resource_type, resource_id):
                 "node_id": "1"
             },
             "response_dest": {},
+            "target_node_id": target_node_id,
             "actuator_request_type": {
                 "storage_enclosure": {
                     "enclosure_request": resource_type,
