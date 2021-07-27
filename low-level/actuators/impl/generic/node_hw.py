@@ -166,11 +166,7 @@ class NodeHWactuator(Actuator, Debug):
         """Creates JSON response to be sent out to Node Controller Message
            Handler for further validation"""
         resource_type = "node:hw:{0}".format(self.fru_node_request)
-        is_fru, fru_type_unit = self.ipmi_client.is_fru(
-            self.fru_node_request)
-        fru = False
-        if is_fru:
-            fru = str(is_fru) + "/" + fru_type_unit
+        fru = self.ipmi_client.is_fru(self.fru_node_request)
         epoch_time = str(calendar.timegm(time.gmtime()))
         response = {
           "alert_type":"GET",
@@ -270,7 +266,7 @@ class NodeHWactuator(Actuator, Debug):
         response['severity'] = SeverityTypes.INFORMATIONAL.value
         response['info'] = {
             "resource_type": "node:sensor:" + self._sensor_type.lower(),
-            "fru": False,
+            "fru": "false",
             "resource_id": self._resource_id,
             "event_time": str(calendar.timegm(time.gmtime())),
         }

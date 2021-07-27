@@ -741,7 +741,6 @@ def refresh_iem_log_file(signal_number, frame):
 
 #DO NOT EDIT: Marker comment to dynamically add code to stop coverage, save and generate code coverage report
 
-
 if __name__ == "__main__":
     # Retrieve configuration file for sspl-ll service
     try:
