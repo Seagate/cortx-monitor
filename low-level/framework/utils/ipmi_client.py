@@ -267,20 +267,30 @@ class IPMITool(IPMI):
                     self.fru_list[self.fru_list.index(fru)] = 'psu'
             self.fru_list = list(set(self.fru_list))
         try:
-            default_frus = Conf.get(GLOBAL_CONF,
+            self.hot_swapped_frus = Conf.get(GLOBAL_CONF,
                 "server_node>server_fru_list>hot_swappable",
                 ['disk', 'psu'])
+            self.cold_swapped_frus = Conf.get(GLOBAL_CONF,
+                "server_node>server_fru_list", [])
         except ValueError as e:
             logger.error("Failed to get server_fru_list from config."
                          f"Error:{e}")
         if len(self.fru_list)!= 0:
-            self.fru_list = list(set(self.fru_list + default_frus))
+            self.fru_list = list(set(self.fru_list + self.hot_swapped_frus +
+                                     self.cold_swapped_frus))
         else:
-            self.fru_list = default_frus
+            self.fru_list = self.hot_swapped_frus
         logger.info(f"Fetched server FRU list:{self.fru_list}")
 
     def is_fru(self, fru):
-        return True if fru in self.fru_list else False
+        is_fru = True if fru in self.fru_list else False
+        fru_type = "NA"
+        if is_fru:
+            if fru in self.hot_swapped_frus:
+                fru_type = "hot_swappable"
+            elif fru in self.cold_swapped_frus:
+                fru_type = "cold_swappable"
+        return is_fru, fru_type
 
 
 class IpmiFactory(object):
