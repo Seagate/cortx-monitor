@@ -242,13 +242,16 @@ class IPMITool(IPMI):
         """Get Server FRU list and merge it with server_fru_list,
         maintained in global config, with which FRU list can be extended
         for a solution.
+
         Ex: Supermicro servers not listing disk as FRU,
         though its most common FRU in servers, and
         practically it can be replaced easily.
         So if for a solution, FRU list needs to be extended
         beyond what server publishes, 'server_fru_list' from global config
         can be used.
-        Some of the usual FRU examples are:- disk, psu."""
+        Some of the usual FRU examples are:- disk, psu.
+
+        """
         cmd = 'fru list'
         self.fru_list = []
         output, err, rc = self._run_ipmitool_subcommand(cmd,
