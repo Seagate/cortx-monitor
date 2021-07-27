@@ -242,7 +242,6 @@ class IPMITool(IPMI):
         """Get Server FRU list and merge it with server_fru_list,
         maintained in global config, with which FRU list can be extended
         for a solution.
-
         Ex: Supermicro servers not listing disk as FRU,
         though its most common FRU in servers, and
         practically it can be replaced easily.
@@ -272,7 +271,7 @@ class IPMITool(IPMI):
                 ['disk', 'psu'])
             self.cold_swapped_frus = Conf.get(GLOBAL_CONF,
                 "server_node>server_fru_list",
-                ['fan'])
+                [])
         except ValueError as e:
             logger.error("Failed to get server_fru_list from config."
                          f"Error:{e}")
@@ -286,7 +285,7 @@ class IPMITool(IPMI):
 
     def is_fru(self, fru):
         is_fru = True if fru in self.fru_list else False
-        fru_str = is_fru
+        fru_str = str(is_fru).lower()
         if is_fru:
             if fru in self.hot_swapped_frus:
                 fru_str = str(is_fru).lower() + ":" + "hot_swappable"
