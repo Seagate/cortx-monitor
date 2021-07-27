@@ -56,7 +56,7 @@ class IngressProcessor(ScheduledModuleThread, InternalMsgQ):
     # Section and keys in configuration file
     PROCESSOR = MODULE_NAME.upper()
     CONSUMER_ID = "consumer_id"
-    CONSUMER_GROUP = "consumer_group"
+    CONSUMER_GROUP_PREFIX = "consumer_group_prefix"
     MESSAGE_TYPE = "message_type"
     OFFSET = "offset"
     SYSTEM_INFORMATION_KEY = 'SYSTEM_INFORMATION'
@@ -266,8 +266,8 @@ class IngressProcessor(ScheduledModuleThread, InternalMsgQ):
         # Make methods locally available
         self._node_id = Conf.get(GLOBAL_CONF, NODE_ID_KEY, 'SN01')
         self._consumer_group_prefix = Conf.get(
-            SSPL_CONF, f"{self.PROCESSOR}>{self.CONSUMER_GROUP}",
-            'cortx_monitor')
+            SSPL_CONF, f"{self.PROCESSOR}>{self.CONSUMER_GROUP_PREFIX}",
+            'cortx_monitor_')
         self._consumer_group = self._consumer_group_prefix + str(self._node_id)
         self._consumer_id = Conf.get(SSPL_CONF,
                                      f"{self.PROCESSOR}>{self.CONSUMER_ID}",
