@@ -36,6 +36,7 @@ from framework.utils.service_logging import init_logging
 from framework.utils.service_logging import logger
 from messaging.ingress_processor_tests import IngressProcessorTests
 from messaging.egress_processor_tests import EgressProcessorTests
+from framework.base.sspl_constants import DEFAULT_NODE_ID
 from framework.utils.conf_utils import (
     Conf, SSPL_TEST_CONF, GLOBAL_CONF, PRODUCT_KEY, NODE_ID_KEY)
 
@@ -215,7 +216,8 @@ def get_fru_response(resource_type, instance_id):
             resource_type))
     return ingressMsg
 
-def send_node_controller_message_request(uuid, resource_type, instance_id="*", target_node_id='SN01'):
+
+def send_node_controller_message_request(uuid, resource_type, instance_id="*", target_node_id=DEFAULT_NODE_ID):
     """
     This method creates actuator request using resource_type and instance_id.
 
@@ -255,7 +257,8 @@ def send_node_controller_message_request(uuid, resource_type, instance_id="*", t
     }
     write_to_egress_msgQ(request)
 
-def send_enclosure_request(resource_type, resource_id, target_node_id='SN01'):
+
+def send_enclosure_request(resource_type, resource_id, target_node_id=DEFAULT_NODE_ID):
     request = {
         "title": "SSPL Actuator Request",
         "description": "Seagate Storage Platform Library - Actuator Request",

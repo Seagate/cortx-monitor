@@ -16,7 +16,8 @@
 # -*- coding: utf-8 -*-
 
 from common import check_sspl_ll_is_running, get_fru_response, send_node_controller_message_request
-
+from framework.utils.conf_utils import Conf, SSPL_TEST_CONF, NODE_ID_KEY
+from framework.base.sspl_constants import DEFAULT_NODE_ID
 
 UUID="16476007-a739-4785-b5c6-f3de189cdf12"
 
@@ -27,7 +28,8 @@ def test_node_fan_module_actuator(agrs):
     check_sspl_ll_is_running()
     instance_id = "*"
     resource_type = "node:fru:fan"
-    send_node_controller_message_request(UUID, "NDHW:%s" % resource_type, instance_id)
+    target_node_id = Conf.get(SSPL_TEST_CONF, NODE_ID_KEY, DEFAULT_NODE_ID)
+    send_node_controller_message_request(UUID, "NDHW:%s" % resource_type, instance_id, target_node_id)
     ingressMsg = get_fru_response(resource_type, instance_id)
 
     assert(ingressMsg.get("sspl_ll_msg_header").get("uuid") == UUID)

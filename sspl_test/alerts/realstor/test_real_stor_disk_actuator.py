@@ -16,6 +16,8 @@
 # -*- coding: utf-8 -*-
 
 from common import check_sspl_ll_is_running, get_fru_response, send_enclosure_request
+from framework.utils.conf_utils import Conf, SSPL_TEST_CONF, NODE_ID_KEY
+from framework.base.sspl_constants import DEFAULT_NODE_ID
 
 
 def init(args):
@@ -24,7 +26,8 @@ def init(args):
 def test_real_stor_disk_actuator(agrs):
     instance_id = "*"
     resource_type = "enclosure:fru:disk"
-    send_enclosure_request("ENCL:%s" % resource_type, instance_id)
+    target_node_id = Conf.get(SSPL_TEST_CONF, NODE_ID_KEY, DEFAULT_NODE_ID)
+    send_enclosure_request("ENCL:%s" % resource_type, instance_id, target_node_id)
     ingressMsg = get_fru_response(resource_type, instance_id)
     disk_actuator_msg = ingressMsg.get("actuator_response_type")
 

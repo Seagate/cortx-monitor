@@ -187,7 +187,7 @@ class IngressProcessor(ScheduledModuleThread, InternalMsgQ):
 
             # Check for debugging being activated in the message header
             self._check_debug(message)
-            self._log_debug("_process_msg, ingressMsg: %s" % ingressMsg)
+            logger.debug("_process_msg, ingressMsg: %s" % ingressMsg)
 
             # Get the incoming message type
             if message.get("actuator_request_type") is not None:
@@ -201,13 +201,13 @@ class IngressProcessor(ScheduledModuleThread, InternalMsgQ):
                 if target_node_id is None:
                     logger.warning(
                         "Required attribute target_node_id is missing "
-                        "from actuator request")
+                        "from actuator request with %s, IGNORING!!")
                     return
                 elif target_node_id == self._node_id:
                     self._send_to_msg_handler(msgType, message, uuid)
                 else:
-                    logger.info(
-                        "Node identifier mismatch, actuator request rejected.")
+                    logger.debug(
+                        "Node identifier mismatch, actuator request ignored.")
                     return
 
             elif message.get("sensor_request_type") is not None:
@@ -222,7 +222,7 @@ class IngressProcessor(ScheduledModuleThread, InternalMsgQ):
                 # everything else.
                 return
 
-        except Exception:
+        except Exception as ex:
             logger.error(
                 "IngressProcessor, _process_msg unrecognized message: %r" % ingressMsg)
             ack_msg = AckResponseMsg("Error Processing Msg",
@@ -267,8 +267,8 @@ class IngressProcessor(ScheduledModuleThread, InternalMsgQ):
         self._node_id = Conf.get(GLOBAL_CONF, NODE_ID_KEY, 'SN01')
         self._consumer_group_prefix = Conf.get(
             SSPL_CONF, f"{self.PROCESSOR}>{self.CONSUMER_GROUP_PREFIX}",
-            'cortx_monitor_')
-        self._consumer_group = self._consumer_group_prefix + str(self._node_id)
+            'cortx_monitor')
+        self._consumer_group = self._consumer_group_prefix + "_" + str(self._node_id)
         self._consumer_id = Conf.get(SSPL_CONF,
                                      f"{self.PROCESSOR}>{self.CONSUMER_ID}",
                                      'sspl_actuator')
