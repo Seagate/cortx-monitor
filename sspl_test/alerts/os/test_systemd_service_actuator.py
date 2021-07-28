@@ -21,7 +21,7 @@ from default import world
 from messaging.ingress_processor_tests import IngressProcessorTests
 from messaging.egress_processor_tests import EgressProcessorTests
 from common import check_sspl_ll_is_running
-from framework.utils.conf_utils import Conf, SSPL_TEST_CONF, NODE_ID_KEY
+from framework.utils.conf_utils import Conf, GLOBAL_CONF, NODE_ID_KEY
 from framework.base.sspl_constants import DEFAULT_NODE_ID
 
 RESOURCE_TYPE = "node:sw:os:service"
@@ -29,13 +29,17 @@ RESOURCE_TYPE = "node:sw:os:service"
 def init(args):
     pass
 
+def get_current_node_id():
+    """Get current node id."""
+    node_id = Conf.get(GLOBAL_CONF, NODE_ID_KEY, DEFAULT_NODE_ID)
+    return node_id
+
 def test_systemd_service_valid_request(args):
     service_name = "rsyslog.service"
     request = "status"
     check_sspl_ll_is_running()
-    target_node_id = Conf.get(SSPL_TEST_CONF, NODE_ID_KEY, DEFAULT_NODE_ID)
     # TODO: Change service name, once get final 3rd party service name
-    service_actuator_request(service_name, request, target_node_id)
+    service_actuator_request(service_name, request)
     service_actuator_msg = None
     ingressMsg = {}
     for i in range(10):
@@ -81,8 +85,7 @@ def test_systemd_service_invalid_request(args):
     service_name = "temp_dummy.service"
     request = "start"
     check_sspl_ll_is_running()
-    target_node_id = Conf.get(SSPL_TEST_CONF, NODE_ID_KEY, DEFAULT_NODE_ID)
-    service_actuator_request(service_name, request, target_node_id)
+    service_actuator_request(service_name, request)
     service_actuator_msg = None
     ingressMsg = {}
     for i in range(10):
@@ -127,7 +130,8 @@ def test_systemd_service_invalid_request(args):
     assert (specific_info[0].get("error_msg") is not None)
 
 
-def service_actuator_request(service_name, action, target_node_id=DEFAULT_NODE_ID):
+def service_actuator_request(service_name, action):
+    node_id = get_current_node_id()
     egressMsg = {
                 "title": "SSPL-LL Actuator Request",
                 "description": "Seagate Storage Platform Library - Actuator Request",
@@ -152,7 +156,7 @@ def service_actuator_request(service_name, action, target_node_id=DEFAULT_NODE_I
                         "node_id": "1"
                     },
                     "response_dest": {},
-                    "target_node_id": target_node_id,
+                    "target_node_id": node_id,
                         "actuator_request_type": {
                             "service_controller": {
                                 "service_request": action,

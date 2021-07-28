@@ -60,6 +60,13 @@ class TestFailed(Exception):
         desc = '[%s] %s' %(inspect.stack()[1][3], desc)
         super(TestFailed, self).__init__(desc)
 
+
+def get_current_node_id():
+    """Get current node id."""
+    node_id = Conf.get(GLOBAL_CONF, NODE_ID_KEY, DEFAULT_NODE_ID)
+    return node_id
+
+
 def init_messaging_msg_processors():
     """The main bootstrap for sspl automated tests"""
 
@@ -217,7 +224,7 @@ def get_fru_response(resource_type, instance_id):
     return ingressMsg
 
 
-def send_node_controller_message_request(uuid, resource_type, instance_id="*", target_node_id=DEFAULT_NODE_ID):
+def send_node_controller_message_request(uuid, resource_type, instance_id="*"):
     """
     This method creates actuator request using resource_type and instance_id.
 
@@ -227,6 +234,7 @@ def send_node_controller_message_request(uuid, resource_type, instance_id="*", t
         resource_type: Type of resource
         instance_id: Numeric or "*"
     """
+    node_id = get_current_node_id()
     request = {
         "username":"sspl-ll",
         "expires":3600,
@@ -246,7 +254,7 @@ def send_node_controller_message_request(uuid, resource_type, instance_id="*", t
                 "debug_enabled": True
             },
             "response_dest": {},
-            "target_node_id": target_node_id,
+            "target_node_id": node_id,
             "actuator_request_type": {
                 "node_controller": {
                     "node_request": resource_type,
@@ -258,7 +266,8 @@ def send_node_controller_message_request(uuid, resource_type, instance_id="*", t
     write_to_egress_msgQ(request)
 
 
-def send_enclosure_request(resource_type, resource_id, target_node_id=DEFAULT_NODE_ID):
+def send_enclosure_request(resource_type, resource_id):
+    node_id = get_current_node_id()
     request = {
         "title": "SSPL Actuator Request",
         "description": "Seagate Storage Platform Library - Actuator Request",
@@ -285,7 +294,7 @@ def send_enclosure_request(resource_type, resource_id, target_node_id=DEFAULT_NO
                 "node_id": "1"
             },
             "response_dest": {},
-            "target_node_id": target_node_id,
+            "target_node_id": node_id,
             "actuator_request_type": {
                 "storage_enclosure": {
                     "enclosure_request": resource_type,

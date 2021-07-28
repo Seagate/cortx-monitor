@@ -34,7 +34,8 @@ from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
 from framework.base.sspl_constants import RESOURCE_PATH, DEFAULT_NODE_ID
 
-from framework.utils.conf_utils import Conf, SSPL_TEST_CONF, NODE_ID_KEY
+from framework.utils.conf_utils import (
+    Conf, SSPL_TEST_CONF, NODE_ID_KEY, GLOBAL_CONF)
 
 import ctypes
 from . import producer_initialized
@@ -222,7 +223,7 @@ class IngressProcessorTests(ScheduledModuleThread, InternalMsgQ):
     def _init_config(self):
         """Configure the messaging exchange with defaults available."""
         # Make methods locally available
-        self._node_id = Conf.get(SSPL_TEST_CONF, NODE_ID_KEY, DEFAULT_NODE_ID)
+        self._node_id = Conf.get(GLOBAL_CONF, NODE_ID_KEY, DEFAULT_NODE_ID)
         self._consumer_id = Conf.get(SSPL_TEST_CONF,
                                      f"{self.PROCESSOR}>{self.CONSUMER_ID}",
                                      'sspl_actuator')
