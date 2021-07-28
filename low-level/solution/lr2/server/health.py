@@ -164,11 +164,11 @@ class ServerHealth():
                         recommendation=None, specifics=None):
         """Sets health attributes for a component."""
         good_state = (status == "OK")
-        if description in ["NA", "N/A", None, ""]:
+        if description in const.RESOURCE_MAP["undesired_values"]:
             description = "%s %s in good health." % (
                 health_data.get("uid"),
                 'is' if good_state else 'is not')
-        if recommendation in ["NA", "N/A", None, ""]:
+        if recommendation in const.RESOURCE_MAP["undesired_values"]:
             recommendation = 'NA' if good_state\
                 else const.DEFAULT_RECOMMENDATION
         health_data["last_updated"] = int(time.time())
