@@ -52,4 +52,4 @@ fi
 systemctl start crond
 
 # Execute tests
-sudo /opt/seagate/"$PRODUCT_FAMILY"/sspl/sspl_test/run_test.py -t "$script_dir"/plans/"$PLAN".pln
+sudo /opt/seagate/"$PRODUCT_FAMILY"/sspl/sspl_test/run_test.py --plan dev_sanity --type vm --mode sender

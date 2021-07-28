@@ -58,11 +58,11 @@ class TestFailed(Exception):
         desc = '[%s] %s' %(inspect.stack()[1][3], desc)
         super(TestFailed, self).__init__(desc)
 
-def init_messaging_msg_processors():
+def init_messaging_msg_processors(message_processor_class):
     """The main bootstrap for sspl automated tests"""
 
-    # Initialize logging
-    try:
+    # Initialize logging 
+    try: 
         init_logging("SSPL-Tests", "DEBUG")
     except Exception as err:
         # We don't have logger since it threw an exception, use generic 'print'
@@ -85,12 +85,10 @@ def init_messaging_msg_processors():
     product = Conf.get(GLOBAL_CONF, PRODUCT_KEY)
     logger.info("sspl-ll Bootstrap: product name supported: %s" % product)
     # Use reflection to instantiate the class based upon its class name in config file
-    for conf_thread in conf_modules:
-        klass = globals()[conf_thread]
-
-        # Create mappings of modules and their message queues
-        world.sspl_modules[klass.name()] = klass()
-        msgQlist[klass.name()] = queue.Queue()
+    klass = globals()[message_processor_class]
+    # Create mappings of modules and their message queues
+    world.sspl_modules[klass.name()] = klass()
+    msgQlist[klass.name()] = queue.Queue()
 
     # Convert to a dict
     # TODO: Check use of this
@@ -165,8 +163,9 @@ def check_sspl_ll_is_running():
     assert found == True
 
     # Clear the message queue buffer out
-    while not world.sspl_modules[IngressProcessorTests.name()]._is_my_msgQ_empty():
-        world.sspl_modules[IngressProcessorTests.name()]._read_my_msgQ()
+    if IngressProcessorTests.name() in world.sspl_modules:
+        while not world.sspl_modules[IngressProcessorTests.name()]._is_my_msgQ_empty():
+            world.sspl_modules[IngressProcessorTests.name()]._read_my_msgQ()
 
 def stop_messaging_msg_processors():
     """Shuts down messaging threads and terminates tests"""
