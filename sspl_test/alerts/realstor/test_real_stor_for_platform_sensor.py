@@ -22,6 +22,8 @@ import sys
 from default import world
 from messaging.ingress_processor_tests import IngressProcessorTests
 from messaging.egress_processor_tests import EgressProcessorTests
+from framework.utils.conf_utils import Conf, SSPL_TEST_CONF, NODE_ID_KEY
+from framework.base.sspl_constants import DEFAULT_NODE_ID
 
 
 def init(args):
@@ -29,7 +31,8 @@ def init(args):
 
 def test_real_stor_sensor_current(agrs):
     check_sspl_ll_is_running()
-    enclosure_sensor_message_request("ENCL:enclosure:sensor:current", "*")
+    target_node_id = Conf.get(SSPL_TEST_CONF, NODE_ID_KEY, DEFAULT_NODE_ID)
+    enclosure_sensor_message_request("ENCL:enclosure:sensor:current", "*", target_node_id)
     enclosure_sensor_msg = None
     time.sleep(4)
     while not world.sspl_modules[IngressProcessorTests.name()]._is_my_msgQ_empty():
@@ -68,7 +71,8 @@ def test_real_stor_sensor_current(agrs):
 
 def test_real_stor_sensor_voltage(agrs):
     check_sspl_ll_is_running()
-    enclosure_sensor_message_request("ENCL:enclosure:sensor:voltage", "*")
+    target_node_id = Conf.get(SSPL_TEST_CONF, NODE_ID_KEY, DEFAULT_NODE_ID)
+    enclosure_sensor_message_request("ENCL:enclosure:sensor:voltage", "*", target_node_id)
     enclosure_sensor_msg = None
     time.sleep(4)
     while not world.sspl_modules[IngressProcessorTests.name()]._is_my_msgQ_empty():
@@ -107,7 +111,8 @@ def test_real_stor_sensor_voltage(agrs):
 
 def test_real_stor_sensor_temperature(agrs):
     check_sspl_ll_is_running()
-    enclosure_sensor_message_request("ENCL:enclosure:sensor:temperature", "*")
+    target_node_id = Conf.get(SSPL_TEST_CONF, NODE_ID_KEY, DEFAULT_NODE_ID)
+    enclosure_sensor_message_request("ENCL:enclosure:sensor:temperature", "*", target_node_id)
     enclosure_sensor_msg = None
     time.sleep(4)
     while not world.sspl_modules[IngressProcessorTests.name()]._is_my_msgQ_empty():
@@ -186,7 +191,7 @@ def check_sspl_ll_is_running():
     while not world.sspl_modules[IngressProcessorTests.name()]._is_my_msgQ_empty():
         world.sspl_modules[IngressProcessorTests.name()]._read_my_msgQ()
 
-def enclosure_sensor_message_request(resource_type, resource_id, target_node_id='SN01'):
+def enclosure_sensor_message_request(resource_type, resource_id, target_node_id=DEFAULT_NODE_ID):
 
     egressMsg = {
         "title": "SSPL Actuator Request",
