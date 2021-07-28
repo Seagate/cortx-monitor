@@ -38,7 +38,6 @@ from messaging.ingress_processor_tests import IngressProcessorTests
 from messaging.egress_processor_tests import EgressProcessorTests
 from framework.utils.conf_utils import Conf, SSPL_TEST_CONF, GLOBAL_CONF, PRODUCT_KEY
 
-
 PY2 = sys.version_info[0] == 2
 PY3 = sys.version_info[0] == 3
 
@@ -48,20 +47,23 @@ else:
     import Queue as queue
 
 # Section and key in config file for bootstrap
-SSPL_SETTING    = 'SSPL-TESTS_SETTING'
-MODULES         = 'modules'
+SSPL_SETTING = 'SSPL-TESTS_SETTING'
+MODULES = 'modules'
 SYS_INFORMATION = 'SYSTEM_INFORMATION'
-PRODUCT_NAME    = 'product'
+PRODUCT_NAME = 'product'
 conf_reader = None
-class TestFailed(Exception):
+
+
+class TestFailed(Exception): 
     def __init__(self, desc):
-        desc = '[%s] %s' %(inspect.stack()[1][3], desc)
+        desc = '[%s] %s' % (inspect.stack()[1][3], desc)
         super(TestFailed, self).__init__(desc)
 
-def init_messaging_msg_processors():
+
+def init_messaging_msg_processors(message_processor_class):
     """The main bootstrap for sspl automated tests"""
 
-    # Initialize logging
+    # Initialize logging 
     try:
         init_logging("SSPL-Tests", "DEBUG")
     except Exception as err:
@@ -85,12 +87,10 @@ def init_messaging_msg_processors():
     product = Conf.get(GLOBAL_CONF, PRODUCT_KEY)
     logger.info("sspl-ll Bootstrap: product name supported: %s" % product)
     # Use reflection to instantiate the class based upon its class name in config file
-    for conf_thread in conf_modules:
-        klass = globals()[conf_thread]
-
-        # Create mappings of modules and their message queues
-        world.sspl_modules[klass.name()] = klass()
-        msgQlist[klass.name()] = queue.Queue()
+    klass = globals()[message_processor_class]
+    # Create mappings of modules and their message queues
+    world.sspl_modules[klass.name()] = klass()
+    msgQlist[klass.name()] = queue.Queue()
 
     # Convert to a dict
     # TODO: Check use of this
@@ -98,7 +98,7 @@ def init_messaging_msg_processors():
 
     try:
         # Loop through the list of instanced modules and start them on threads
-        threads=[]
+        threads = []
         for name, curr_module in list(world.sspl_modules.items()):
             logger.info("SSPL-Tests Starting %s" % curr_module.name())
             curr_module._set_debug(True)
@@ -111,10 +111,11 @@ def init_messaging_msg_processors():
         time.sleep(2)
 
         # Clear the message queue buffer out from msgs sent at startup
-        while not world.sspl_modules[IngressProcessorTests.name()]._is_my_msgQ_empty():
-            world.sspl_modules[IngressProcessorTests.name()]._read_my_msgQ()
+        while not world.sspl_modules[message_processor_class]._is_my_msgQ_empty():
+            world.sspl_modules[message_processor_class]._read_my_msgQ()
 
     except Exception as ex:
+        logger.error(traceback.format_exc())
         logger.exception(ex)
 
 
@@ -135,13 +136,14 @@ def _run_thread_capture_errors(curr_module, msgQlist, conf_reader, product):
         # Populate an actuator response message and transmit back to HAlon
         error_msg = "SSPL-Tests encountered an error, terminating service Error: " + \
                     ", Exception: " + logger.exception(ex)
-        jsonMsg   = ThreadControllerMsg(curr_module, error_msg).getJson()
+        jsonMsg = ThreadControllerMsg(curr_module, error_msg).getJson()
         curr_module._write_internal_msgQ(EgressProcessorTests.name(), jsonMsg)
 
         # Shut it down, error is non-recoverable
         for name, other_module in list(world.sspl_modules.items()):
             if other_module is not curr_module:
                 other_module.shutdown()
+
 
 # Common method used by test to check sspl service state
 def check_sspl_ll_is_running():
@@ -151,22 +153,24 @@ def check_sspl_ll_is_running():
     # Support for python-psutil < 2.1.3
     for proc in psutil.process_iter():
         if proc.name == "sspl_ll_d" and \
-           proc.status in (psutil.STATUS_RUNNING, psutil.STATUS_SLEEPING):
-               found = True
+                proc.status in (psutil.STATUS_RUNNING, psutil.STATUS_SLEEPING):
+            found = True
 
     # Support for python-psutil 2.1.3+
     if found == False:
         for proc in psutil.process_iter():
             pinfo = proc.as_dict(attrs=['cmdline', 'status'])
             if "sspl_ll_d" in str(pinfo['cmdline']) and \
-                pinfo['status'] in (psutil.STATUS_RUNNING, psutil.STATUS_SLEEPING):
-                    found = True
+                    pinfo['status'] in (psutil.STATUS_RUNNING, psutil.STATUS_SLEEPING):
+                found = True
 
     assert found == True
 
     # Clear the message queue buffer out
-    while not world.sspl_modules[IngressProcessorTests.name()]._is_my_msgQ_empty():
-        world.sspl_modules[IngressProcessorTests.name()]._read_my_msgQ()
+    if IngressProcessorTests.name() in world.sspl_modules:
+        while not world.sspl_modules[IngressProcessorTests.name()]._is_my_msgQ_empty():
+            world.sspl_modules[IngressProcessorTests.name()]._read_my_msgQ()
+
 
 def stop_messaging_msg_processors():
     """Shuts down messaging threads and terminates tests"""
@@ -189,32 +193,55 @@ def check_os_platform():
     if error:
         print("Failed to get the os platform: error:{}".format(error.decode().rstrip('\n')))
 
+
+def actuator_response_filter(msg, resource_type, resource_id=None):
+    # import pdb; pdb.set_trace()
+    msg_type = msg.get("actuator_response_type", None)
+    try:
+        if msg_type and msg_type["info"]["resource_type"] == resource_type:
+            return True
+        if resource_id:
+            if msg_type and msg_type["info"]["resource_type"] == resource_type and \
+                    msg_type["info"]["resource_id"] == resource_id:
+                return True
+    except KeyError:
+        return False
+
+
+def sensor_response_filter(msg, resource_type):
+    # import pdb; pdb.set_trace()
+    msg_type = msg.get("sensor_response_type", None)
+    try:
+        if msg_type and msg_type["info"]["resource_type"] == resource_type:
+            return True
+    except KeyError:
+        return False
+
+
 def get_fru_response(resource_type, instance_id):
     sensor_msg = None
-    for _ in range(30):
-        if world.sspl_modules[IngressProcessorTests.name()]._is_my_msgQ_empty():
-            time.sleep(2)
-        while not world.sspl_modules[IngressProcessorTests.name()]._is_my_msgQ_empty():
-            ingressMsg = world.sspl_modules[IngressProcessorTests.name()]._read_my_msgQ()
-            time.sleep(0.1)
-            print("Received: %s " % ingressMsg)
-            try:
-                # Make sure we get back the message type that matches the request
-                msg_type = ingressMsg.get("actuator_response_type")
-                if msg_type["info"]["resource_type"] == resource_type:
-                    # Break if condition is satisfied.
-                    sensor_msg = msg_type
-                    break
-            except Exception as exception:
-                print(exception)
+    while True:
+        ingressMsg = world.sspl_modules[IngressProcessorTests.name()]._read_my_msgQ()
+        time.sleep(0.1)
+        print("Received: %s " % ingressMsg, flush=True)
+        try:
+            # Make sure we get back the message type that matches the request
+            msg_type = ingressMsg.get("actuator_response_type")
+            if msg_type["info"]["resource_type"] == resource_type:
+                # Break if condition is satisfied.
+                sensor_msg = msg_type
+                break
+        except Exception as exception:
+            print(exception)
         if sensor_msg:
             break
     if not sensor_msg:
-        raise Exception("Failed to get expected response message for '%s'" %(
+        raise Exception("Failed to get expected response message for '%s'" % (
             resource_type))
     return ingressMsg
 
-def send_node_controller_message_request(uuid, resource_type, instance_id="*"):
+
+def get_node_controller_message_request(uuid, resource_type, instance_id="*"):
     """
     This method creates actuator request using resource_type and instance_id.
 
@@ -224,22 +251,22 @@ def send_node_controller_message_request(uuid, resource_type, instance_id="*"):
         resource_type: Type of resource
         instance_id: Numeric or "*"
     """
-    request = {
-        "username":"sspl-ll",
-        "expires":3600,
-        "description":"Seagate Storage Platform Library - Actuator Request",
-        "title":"SSPL-LL Actuator Request",
-        "signature":"None",
-        "time":"2018-07-31 04:08:04.071170",
-        "message":{
-            "sspl_ll_msg_header":{
-                "msg_version":"1.0.0",
+    return {
+        "username": "sspl-ll",
+        "expires": 3600,
+        "description": "Seagate Storage Platform Library - Actuator Request",
+        "title": "SSPL-LL Actuator Request",
+        "signature": "None",
+        "time": "2018-07-31 04:08:04.071170",
+        "message": {
+            "sspl_ll_msg_header": {
+                "msg_version": "1.0.0",
                 "uuid": uuid,
-                "schema_version":"1.0.0",
-                "sspl_version":"1.0.0"
+                "schema_version": "1.0.0",
+                "sspl_version": "1.0.0"
             },
-            "sspl_ll_debug":{
-                "debug_component":"sensor",
+            "sspl_ll_debug": {
+                "debug_component": "sensor",
                 "debug_enabled": True
             },
             "response_dest": {},
@@ -251,27 +278,27 @@ def send_node_controller_message_request(uuid, resource_type, instance_id="*"):
             }
         }
     }
-    write_to_egress_msgQ(request)
 
-def send_enclosure_request(resource_type, resource_id):
-    request = {
+
+def get_enclosure_request(resource_type, resource_id):
+    return {
         "title": "SSPL Actuator Request",
         "description": "Seagate Storage Platform Library - Actuator Request",
 
-        "username" : "JohnDoe",
-        "signature" : "None",
-        "time" : "2015-05-29 14:28:30.974749",
-        "expires" : 500,
+        "username": "JohnDoe",
+        "signature": "None",
+        "time": "2015-05-29 14:28:30.974749",
+        "expires": 500,
 
-        "message" : {
+        "message": {
             "sspl_ll_msg_header": {
                 "schema_version": "1.0.0",
                 "sspl_version": "1.0.0",
                 "msg_version": "1.0.0"
             },
-             "sspl_ll_debug": {
-                "debug_component" : "sensor",
-                "debug_enabled" : True
+            "sspl_ll_debug": {
+                "debug_component": "sensor",
+                "debug_enabled": True
             },
             "request_path": {
                 "site_id": "1",
@@ -288,9 +315,6 @@ def send_enclosure_request(resource_type, resource_id):
             }
         }
     }
-    write_to_egress_msgQ(request)
 
-def write_to_egress_msgQ(request):
-    world.sspl_modules[
-        EgressProcessorTests.name()
-        ]._write_internal_msgQ(EgressProcessorTests.name(), request)
+
+

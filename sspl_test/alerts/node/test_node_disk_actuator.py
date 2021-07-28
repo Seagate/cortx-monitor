@@ -15,72 +15,76 @@
 
 # -*- coding: utf-8 -*-
 
-from common import check_sspl_ll_is_running, get_fru_response, send_node_controller_message_request
+from common import actuator_response_filter, get_node_controller_message_request
+from framework.base.testcase_base import TestCaseBase
 
 
-UUID="16476007-a739-4785-b5c6-f3de189cdf18"
-
-def init(args):
-    pass
-
-def test_node_disk_module_actuator(agrs):
-    check_sspl_ll_is_running()
+class NodeDiskActuatorTest(TestCaseBase):
+    UUID = "16476007-a739-4785-b5c6-f3de189cdf18"
     instance_id = "*"
     resource_type = "node:fru:disk"
-    send_node_controller_message_request(UUID, "NDHW:%s" % resource_type, instance_id)
-    ingressMsg = get_fru_response(resource_type, instance_id)
 
-    assert(ingressMsg.get("sspl_ll_msg_header").get("uuid") == UUID)
+    def init(self):
+        pass
 
-    disk_actuator_msg = ingressMsg.get("actuator_response_type")
-    assert(disk_actuator_msg is not None)
-    assert(disk_actuator_msg.get("alert_type") is not None)
-    assert(disk_actuator_msg.get("severity") is not None)
-    assert(disk_actuator_msg.get("host_id") is not None)
-    assert(disk_actuator_msg.get("info") is not None)
-    assert(disk_actuator_msg.get("instance_id") == instance_id)
+    def filter(self, msg):
+        return actuator_response_filter(msg, self.resource_type)
 
-    disk_actuator_info = disk_actuator_msg.get("info")
-    assert(disk_actuator_info.get("site_id") is not None)
-    assert(disk_actuator_info.get("node_id") is not None)
-    assert(disk_actuator_info.get("rack_id") is not None)
-    assert(disk_actuator_info.get("resource_type") is not None)
-    assert(disk_actuator_info.get("event_time") is not None)
-    assert(disk_actuator_info.get("resource_id") is not None)
+    def request(self):
+        return get_node_controller_message_request(self.UUID, "NDHW:%s" % self.resource_type, self.instance_id)
 
-    disk_specific_infos = disk_actuator_msg.get("specific_info")
-    assert(disk_specific_infos is not None)
+    def response(self, response):
+        assert (response.get("sspl_ll_msg_header").get("uuid") == self.UUID)
 
-    if disk_actuator_info.get("resource_id") == "*":
-        for disk_specific_info in disk_specific_infos:
-            assert(disk_specific_info is not None)
-            if disk_specific_info.get("ERROR"):
-                # Skip any validation on specific info if ERROR seen on FRU
-                continue
-            resource_id = disk_specific_info.get("resource_id", "")
-            if disk_specific_info.get(resource_id):
-                assert(disk_specific_info.get(resource_id).get("ERROR") is not None)
-                # Skip any validation on specific info if ERROR seen on sensor
-                continue
-            sensor_type = [
-                k if k.startswith("Sensor Type") else None
-                for k in disk_specific_info.keys()
+        disk_actuator_msg = response.get("actuator_response_type")
+        assert (disk_actuator_msg is not None)
+        assert (disk_actuator_msg.get("alert_type") is not None)
+        assert (disk_actuator_msg.get("severity") is not None)
+        assert (disk_actuator_msg.get("host_id") is not None)
+        assert (disk_actuator_msg.get("info") is not None)
+        assert (disk_actuator_msg.get("instance_id") == self.instance_id)
+
+        disk_actuator_info = disk_actuator_msg.get("info")
+        assert (disk_actuator_info.get("site_id") is not None)
+        assert (disk_actuator_info.get("node_id") is not None)
+        assert (disk_actuator_info.get("rack_id") is not None)
+        assert (disk_actuator_info.get("resource_type") is not None)
+        assert (disk_actuator_info.get("event_time") is not None)
+        assert (disk_actuator_info.get("resource_id") is not None)
+
+        disk_specific_infos = disk_actuator_msg.get("specific_info")
+        assert (disk_specific_infos is not None)
+
+        if disk_actuator_info.get("resource_id") == "*":
+            for disk_specific_info in disk_specific_infos:
+                assert (disk_specific_info is not None)
+                if disk_specific_info.get("ERROR"):
+                    # Skip any validation on specific info if ERROR seen on FRU
+                    continue
+                resource_id = disk_specific_info.get("resource_id", "")
+                if disk_specific_info.get(resource_id):
+                    assert (disk_specific_info.get(resource_id).get("ERROR") is not None)
+                    # Skip any validation on specific info if ERROR seen on sensor
+                    continue
+                sensor_type = [
+                    k if k.startswith("Sensor Type") else None
+                    for k in disk_specific_info.keys()
                 ][0]
-            assert(sensor_type is not None)
-            assert(disk_specific_info.get("resource_id") is not None)
-            if "States Asserted" in disk_specific_info:
-                assert(disk_specific_info.get("States Asserted") is not None)
-    else:
-        # Skip any validation if ERROR seen on the specifc FRU
-        if not disk_specific_infos.get("ERROR"):
-            sensor_type = [
-                k if k.startswith("Sensor Type") else None
-                for k in disk_specific_infos.keys()
+                assert (sensor_type is not None)
+                assert (disk_specific_info.get("resource_id") is not None)
+                if "States Asserted" in disk_specific_info:
+                    assert (disk_specific_info.get("States Asserted") is not None)
+        else:
+            # Skip any validation if ERROR seen on the specifc FRU
+            if not disk_specific_infos.get("ERROR"):
+                sensor_type = [
+                    k if k.startswith("Sensor Type") else None
+                    for k in disk_specific_infos.keys()
                 ][0]
-            assert(sensor_type is not None)
-            assert(disk_specific_infos.get("resource_id") is not None)
-            if "States Asserted" in disk_specific_infos:
-                assert(disk_specific_infos.get("States Asserted") is not None)
+                assert (sensor_type is not None)
+                assert (disk_specific_infos.get("resource_id") is not None)
+                if "States Asserted" in disk_specific_infos:
+                    assert (disk_specific_infos.get("States Asserted") is not None)
 
 
-test_list = [test_node_disk_module_actuator]
+test_list = [NodeDiskActuatorTest]

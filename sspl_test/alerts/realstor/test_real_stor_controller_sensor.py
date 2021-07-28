@@ -14,149 +14,114 @@
 # cortx-questions@seagate.com.
 
 # -*- coding: utf-8 -*-
-import json
-import os
-import psutil
-import time
-import sys
 
-from default import world
-from messaging.ingress_processor_tests import IngressProcessorTests
-from messaging.egress_processor_tests import EgressProcessorTests
+from framework.base.testcase_base import TestCaseBase
+from common import sensor_response_filter
 
 
-def init(args):
-    pass
+class RealStorControllerSensorTest(TestCaseBase):
+    resource_type = "enclosure:fru:controller"
 
-def test_real_stor_controller_sensor(agrs):
-    check_sspl_ll_is_running()
-    controller_sensor_message_request("enclosure:fru:controller")
-    controller_sensor_msg = None
-    time.sleep(4)
-    while not world.sspl_modules[IngressProcessorTests.name()]._is_my_msgQ_empty():
-        ingressMsg = world.sspl_modules[IngressProcessorTests.name()]._read_my_msgQ()
-        time.sleep(0.1)
-        print("Received: %s" % ingressMsg)
-        try:
-            msg_type = ingressMsg.get("sensor_response_type")
-            if msg_type["info"]["resource_type"] == "enclosure:fru:controller":
-                controller_sensor_msg = msg_type
-                break
-        except Exception as exception:
-            time.sleep(0.1)
-            print(exception)
+    def init(self):
+        pass
 
-    assert(controller_sensor_msg is not None)
-    assert(controller_sensor_msg.get("alert_type") is not None)
-    assert(controller_sensor_msg.get("alert_id") is not None)
-    assert(controller_sensor_msg.get("severity") is not None)
-    assert(controller_sensor_msg.get("host_id") is not None)
-    assert(controller_sensor_msg.get("info") is not None)
-    assert(controller_sensor_msg.get("specific_info") is not None)
+    def request(self):
+        return self.controller_sensor_message_request(self.resource_type)
 
-    info = controller_sensor_msg.get("info")
-    assert(info.get("site_id") is not None)
-    assert(info.get("node_id") is not None)
-    assert(info.get("cluster_id") is not None)
-    assert(info.get("rack_id") is not None)
-    assert(info.get("resource_type") is not None)
-    assert(info.get("event_time") is not None)
-    assert(info.get("resource_id") is not None)
-    assert(info.get("description") is not None)
+    def filter(self, msg):
+        return sensor_response_filter(msg, self.resource_type)
 
-    specific_info = controller_sensor_msg.get("specific_info")
-    assert(specific_info.get("object_name") is not None)
-    assert(specific_info.get("controller_id") is not None)
-    assert(specific_info.get("serial_number") is not None)
-    assert(specific_info.get("hardware_version") is not None)
-    assert(specific_info.get("cpld_version") is not None)
-    assert(specific_info.get("mac_address") is not None)
-    assert(specific_info.get("node_wwn") is not None)
-    assert(specific_info.get("ip_address") is not None)
-    assert(specific_info.get("ip_subnet_mask") is not None)
-    assert(specific_info.get("ip_gateway") is not None)
-    assert(specific_info.get("disks") is not None)
-    assert(specific_info.get("number_of_storage_pools") is not None)
-    assert(specific_info.get("virtual_disks") is not None)
-    assert(specific_info.get("host_ports") is not None)
-    assert(specific_info.get("drive_channels") is not None)
-    assert(specific_info.get("drive_bus_type") is not None)
-    assert(specific_info.get("status") is not None)
-    assert(specific_info.get("failed_over") is not None)
-    assert(specific_info.get("fail_over_reason") is not None)
-    assert(specific_info.get("vendor") is not None)
-    assert(specific_info.get("model") is not None)
-    assert(specific_info.get("platform_type") is not None)
-    assert(specific_info.get("write_policy") is not None)
-    assert(specific_info.get("description") is not None)
-    assert(specific_info.get("part_number") is not None)
-    assert(specific_info.get("revision") is not None)
-    assert(specific_info.get("mfg_vendor_id") is not None)
-    assert(specific_info.get("locator_led") is not None)
-    assert(specific_info.get("health") is not None)
-    assert(specific_info.get("health_reason") is not None)
-    assert(specific_info.get("position") is not None)
-    assert(specific_info.get("redundancy_mode") is not None)
-    assert(specific_info.get("redundancy_status") is not None)
-    assert(specific_info.get("compact_flash") is not None)
-    assert(specific_info.get("network_parameters") is not None)
-    assert(specific_info.get("expander_ports") is not None)
-    assert(specific_info.get("expanders") is not None)
-    assert(specific_info.get("port") is not None)
+    def response(self, msg):
+        controller_sensor_msg = msg.get("sensor_response_type")
 
-def check_sspl_ll_is_running():
-    # Check that the state for sspl service is active
-    found = False
+        assert(controller_sensor_msg is not None)
+        assert(controller_sensor_msg.get("alert_type") is not None)
+        assert(controller_sensor_msg.get("alert_id") is not None)
+        assert(controller_sensor_msg.get("severity") is not None)
+        assert(controller_sensor_msg.get("host_id") is not None)
+        assert(controller_sensor_msg.get("info") is not None)
+        assert(controller_sensor_msg.get("specific_info") is not None)
 
-    # Support for python-psutil < 2.1.3
-    for proc in psutil.process_iter():
-        if proc.name == "sspl_ll_d" and \
-           proc.status in (psutil.STATUS_RUNNING, psutil.STATUS_SLEEPING):
-               found = True
+        info = controller_sensor_msg.get("info")
+        assert(info.get("site_id") is not None)
+        assert(info.get("node_id") is not None)
+        assert(info.get("cluster_id") is not None)
+        assert(info.get("rack_id") is not None)
+        assert(info.get("resource_type") is not None)
+        assert(info.get("event_time") is not None)
+        assert(info.get("resource_id") is not None)
+        assert(info.get("description") is not None)
 
-    # Support for python-psutil 2.1.3+
-    if found == False:
-        for proc in psutil.process_iter():
-            pinfo = proc.as_dict(attrs=['cmdline', 'status'])
-            if "sspl_ll_d" in str(pinfo['cmdline']) and \
-                pinfo['status'] in (psutil.STATUS_RUNNING, psutil.STATUS_SLEEPING):
-                    found = True
+        specific_info = controller_sensor_msg.get("specific_info")
+        assert(specific_info.get("object_name") is not None)
+        assert(specific_info.get("controller_id") is not None)
+        assert(specific_info.get("serial_number") is not None)
+        assert(specific_info.get("hardware_version") is not None)
+        assert(specific_info.get("cpld_version") is not None)
+        assert(specific_info.get("mac_address") is not None)
+        assert(specific_info.get("node_wwn") is not None)
+        assert(specific_info.get("ip_address") is not None)
+        assert(specific_info.get("ip_subnet_mask") is not None)
+        assert(specific_info.get("ip_gateway") is not None)
+        assert(specific_info.get("disks") is not None)
+        assert(specific_info.get("number_of_storage_pools") is not None)
+        assert(specific_info.get("virtual_disks") is not None)
+        assert(specific_info.get("host_ports") is not None)
+        assert(specific_info.get("drive_channels") is not None)
+        assert(specific_info.get("drive_bus_type") is not None)
+        assert(specific_info.get("status") is not None)
+        assert(specific_info.get("failed_over") is not None)
+        assert(specific_info.get("fail_over_reason") is not None)
+        assert(specific_info.get("vendor") is not None)
+        assert(specific_info.get("model") is not None)
+        assert(specific_info.get("platform_type") is not None)
+        assert(specific_info.get("write_policy") is not None)
+        assert(specific_info.get("description") is not None)
+        assert(specific_info.get("part_number") is not None)
+        assert(specific_info.get("revision") is not None)
+        assert(specific_info.get("mfg_vendor_id") is not None)
+        assert(specific_info.get("locator_led") is not None)
+        assert(specific_info.get("health") is not None)
+        assert(specific_info.get("health_reason") is not None)
+        assert(specific_info.get("position") is not None)
+        assert(specific_info.get("redundancy_mode") is not None)
+        assert(specific_info.get("redundancy_status") is not None)
+        assert(specific_info.get("compact_flash") is not None)
+        assert(specific_info.get("network_parameters") is not None)
+        assert(specific_info.get("expander_ports") is not None)
+        assert(specific_info.get("expanders") is not None)
+        assert(specific_info.get("port") is not None)
 
-    assert found == True
+    def controller_sensor_message_request(self, resource_type):
+        egressMsg = {
+            "title": "SSPL Actuator Request",
+            "description": "Seagate Storage Platform Library - Actuator Request",
 
-    # Clear the message queue buffer out
-    while not world.sspl_modules[IngressProcessorTests.name()]._is_my_msgQ_empty():
-        world.sspl_modules[IngressProcessorTests.name()]._read_my_msgQ()
+            "username": "JohnDoe",
+            "signature": "None",
+            "time": "2015-05-29 14:28:30.974749",
+            "expires": 500,
 
-def controller_sensor_message_request(resource_type):
-    egressMsg = {
-        "title": "SSPL Actuator Request",
-        "description": "Seagate Storage Platform Library - Actuator Request",
-
-        "username" : "JohnDoe",
-        "signature" : "None",
-        "time" : "2015-05-29 14:28:30.974749",
-        "expires" : 500,
-
-        "message" : {
-            "sspl_ll_msg_header": {
-                "schema_version": "1.0.0",
-                "sspl_version": "1.0.0",
-                "msg_version": "1.0.0"
-            },
-             "sspl_ll_debug": {
-                "debug_component" : "sensor",
-                "debug_enabled" : True
-            },
-            "sensor_request_type": {
-                "enclosure_alert": {
-                    "info": {
-                        "resource_type": resource_type
+            "message": {
+                "sspl_ll_msg_header": {
+                    "schema_version": "1.0.0",
+                    "sspl_version": "1.0.0",
+                    "msg_version": "1.0.0"
+                },
+                "sspl_ll_debug": {
+                    "debug_component": "sensor",
+                    "debug_enabled": True
+                },
+                "sensor_request_type": {
+                    "enclosure_alert": {
+                        "info": {
+                            "resource_type": resource_type
+                        }
                     }
                 }
             }
         }
-    }
-    world.sspl_modules[EgressProcessorTests.name()]._write_internal_msgQ(EgressProcessorTests.name(), egressMsg)
+        return egressMsg
 
-test_list = [test_real_stor_controller_sensor]
+
+test_list = [RealStorControllerSensorTest]

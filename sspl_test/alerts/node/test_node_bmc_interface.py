@@ -14,100 +14,87 @@
 # cortx-questions@seagate.com.
 
 # -*- coding: utf-8 -*-
-import time
 import subprocess
 
-from default import world
-from messaging.ingress_processor_tests import IngressProcessorTests
-from messaging.egress_processor_tests import EgressProcessorTests
-from common import check_sspl_ll_is_running
 from framework.base.sspl_constants import DATA_PATH
 from alerts.node import simulate_bmc_interface_alert
+from framework.base.testcase_base import TestCaseBase
 
 
-def init(args):
-    pass
+class BmcInterfaceTest(TestCaseBase):
+    def init(self):
+        pass
 
-def test_bmc_interface(args):
-    check_sspl_ll_is_running()
-    # backup active bmc interface
-    BMC_IF_CONSUL_KEY,BMC_IF_CONSUL_VAL = backup_bmc_config()
-
-    if BMC_IF_CONSUL_VAL == "lan":
-        simulate_bmc_interface_alert.lan_channel_alert(BMC_IF_CONSUL_KEY,BMC_IF_CONSUL_VAL)
-    else:
-        simulate_bmc_interface_alert.kcs_channel_alert(BMC_IF_CONSUL_KEY,BMC_IF_CONSUL_VAL)
-
-    bmc_interface_message = None
-    for i in range(30):
-        if world.sspl_modules[IngressProcessorTests.name()]._is_my_msgQ_empty():
-            time.sleep(2)
-        while not world.sspl_modules[IngressProcessorTests.name()]._is_my_msgQ_empty():
-            ingressMsg = world.sspl_modules[IngressProcessorTests.name()]._read_my_msgQ()
-            print("Received: %s" % ingressMsg)
-            try:
-                # Make sure we get back the message type that matches the request
-                msg_type = ingressMsg.get("sensor_response_type")
-                if msg_type["info"]["resource_type"] == "node:bmc:interface:kcs" or \
+    def filter(self, msg):
+        try:
+            # Make sure we get back the message type that matches the request
+            msg_type = msg.get("sensor_response_type")
+            if msg_type["info"]["resource_type"] == "node:bmc:interface:kcs" or \
                     msg_type["info"]["resource_type"] == "node:bmc:interface:rmcp":
-                    bmc_interface_message = msg_type
-                    break
-            except Exception as exception:
-                print(exception)
+                return True
+        except Exception as exception:
+            print(exception)
 
-        if bmc_interface_message:
-            break
-        time.sleep(1)
+    def request(self):
+        # check_sspl_ll_is_running()
+        # backup active bmc interface
+        BMC_IF_CONSUL_KEY, BMC_IF_CONSUL_VAL = self.backup_bmc_config()
 
-    #restore bmc config and activate ipmisimtool
-    simulate_bmc_interface_alert.restore_config()
+        if BMC_IF_CONSUL_VAL == "lan":
+            simulate_bmc_interface_alert.lan_channel_alert(BMC_IF_CONSUL_KEY, BMC_IF_CONSUL_VAL)
+        else:
+            simulate_bmc_interface_alert.kcs_channel_alert(BMC_IF_CONSUL_KEY, BMC_IF_CONSUL_VAL)
 
-    assert(bmc_interface_message is not None)
-    assert(bmc_interface_message.get("alert_type") is not None)
-    alert_type = bmc_interface_message.get("alert_type")
-    assert(alert_type=="fault")
-    assert(bmc_interface_message.get("alert_id") is not None)
-    assert(bmc_interface_message.get("severity") is not None)
-    assert(bmc_interface_message.get("host_id") is not None)
-    assert(bmc_interface_message.get("info") is not None)
+    def response(self, msg):
+        bmc_interface_message = msg.get("sensor_response_type")
 
-    bmc_interface_info = bmc_interface_message.get("info")
-    assert(bmc_interface_info.get("site_id") is not None)
-    assert(bmc_interface_info.get("rack_id") is not None)
-    assert(bmc_interface_info.get("node_id") is not None)
-    assert(bmc_interface_info.get("cluster_id") is not None)
-    assert(bmc_interface_info.get("resource_id") is not None)
-    assert(bmc_interface_info.get("description") is not None )
+        assert(bmc_interface_message is not None)
+        assert(bmc_interface_message.get("alert_type") is not None)
+        alert_type = bmc_interface_message.get("alert_type")
+        assert(alert_type == "fault")
+        assert(bmc_interface_message.get("alert_id") is not None)
+        assert(bmc_interface_message.get("severity") is not None)
+        assert(bmc_interface_message.get("host_id") is not None)
+        assert(bmc_interface_message.get("info") is not None)
 
-    bmc_interface_specific_info = bmc_interface_message.get("specific_info")
-    if bmc_interface_specific_info:
-        assert(bmc_interface_specific_info.get("channel info") is not None)
+        bmc_interface_info = bmc_interface_message.get("info")
+        assert(bmc_interface_info.get("site_id") is not None)
+        assert(bmc_interface_info.get("rack_id") is not None)
+        assert(bmc_interface_info.get("node_id") is not None)
+        assert(bmc_interface_info.get("cluster_id") is not None)
+        assert(bmc_interface_info.get("resource_id") is not None)
+        assert(bmc_interface_info.get("description") is not None)
 
-def backup_bmc_config():
-    # read active bmc interface
-    cmd = f"cat {DATA_PATH}/server/ACTIVE_BMC_IF_*"
-    bmc_interface,retcode = run_cmd(cmd)
-    bmc_interface = bmc_interface[0]
-    if retcode != 0:
-        print(f"command:{cmd} not executed successfully")
-        return
+        bmc_interface_specific_info = bmc_interface_message.get("specific_info")
+        if bmc_interface_specific_info:
+            assert(bmc_interface_specific_info.get("channel info") is not None)
 
-    # bmc_interface = b'\x80\x03X\x06\x00\x00\x00systemq\x00.\n'
-    # fetch interface key and value from bmc_interface
-    active_bmc_IF_key = f'{DATA_PATH}/server/ACTIVE_BMC_IF'
-    # parse string b'\x80\x03X\x06\x00\x00\x00systemq\x00.\n' to fetch bmc interface value
-    if b'system' in bmc_interface:
-        active_bmc_IF_value = bmc_interface.replace(bmc_interface,b'system').decode()
-    elif b'lan' in bmc_interface:
-        active_bmc_IF_value = bmc_interface.replace(bmc_interface, b'lan').decode()
+    def backup_bmc_config(self):
+        # read active bmc interface
+        cmd = f"cat {DATA_PATH}/server/ACTIVE_BMC_IF_*"
+        bmc_interface, retcode = self.run_cmd(cmd)
+        bmc_interface = bmc_interface[0]
+        if retcode != 0:
+            print(f"command:{cmd} not executed successfully")
+            return
 
-    return active_bmc_IF_key, active_bmc_IF_value
+        # bmc_interface = b'\x80\x03X\x06\x00\x00\x00systemq\x00.\n'
+        # fetch interface key and value from bmc_interface
+        active_bmc_IF_key = f'{DATA_PATH}/server/ACTIVE_BMC_IF'
+        # parse string b'\x80\x03X\x06\x00\x00\x00systemq\x00.\n' to fetch bmc interface value
+        if b'system' in bmc_interface:
+            active_bmc_IF_value = bmc_interface.replace(bmc_interface, b'system').decode()
+        elif b'lan' in bmc_interface:
+            active_bmc_IF_value = bmc_interface.replace(bmc_interface, b'lan').decode()
 
-def run_cmd(cmd):
-    process = subprocess.Popen(cmd, shell=True , stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    result = process.communicate()
-    result = b''.join([val for val in result if val]).split(b':')
-    retcode = process.returncode
-    return result,retcode
+        return active_bmc_IF_key, active_bmc_IF_value
 
-test_list = [test_bmc_interface]
+    def run_cmd(self, cmd):
+        process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        result = process.communicate()
+        result = b''.join([val for val in result if val]).split(b':')
+        retcode = process.returncode
+        return result, retcode
+
+
+test_list = [BmcInterfaceTest]

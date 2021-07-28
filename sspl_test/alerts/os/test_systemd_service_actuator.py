@@ -13,114 +13,79 @@
 # about this software or licensing, please email opensource@seagate.com or
 # cortx-questions@seagate.com.
 
-# -*- coding: utf-8 -*-
+from framework.base.testcase_base import TestCaseBase
+from common import actuator_response_filter
 
-import time
 
-from default import world
-from messaging.ingress_processor_tests import IngressProcessorTests
-from messaging.egress_processor_tests import EgressProcessorTests
-from common import check_sspl_ll_is_running
-
-RESOURCE_TYPE = "node:sw:os:service"
-
-def init(args):
-    pass
-
-def test_systemd_service_valid_request(args):
+class SystemdServiceValidRequestTest(TestCaseBase):
+    resource_type = "node:sw:os:service"
+    action = "status"
     service_name = "rsyslog.service"
-    request = "status"
-    check_sspl_ll_is_running()
-    # TODO: Change service name, once get final 3rd party service name
-    service_actuator_request(service_name, request)
-    service_actuator_msg = None
-    ingressMsg = {}
-    for i in range(10):
-        if world.sspl_modules[IngressProcessorTests.name()]._is_my_msgQ_empty():
-            time.sleep(2)
-        while not world.sspl_modules[IngressProcessorTests.name()]\
-                                                            ._is_my_msgQ_empty():
-            ingressMsg = world.sspl_modules[IngressProcessorTests.name()]\
-                                                        ._read_my_msgQ()
-            print("Received: %s " % ingressMsg)
-            try:
-                # Make sure we get back the message type that matches the request
-                msg_type = ingressMsg.get("actuator_response_type")
-                if msg_type["info"]["resource_type"] == RESOURCE_TYPE and \
-                    msg_type["info"]["resource_id"] == service_name:
-                    # Break if required condition met
-                    service_actuator_msg = msg_type
-                    break
-            except Exception as exception:
-                print(exception)
-        if service_actuator_msg:
-            break
-        time.sleep(1)
 
-    assert(service_actuator_msg is not None)
-    assert(service_actuator_msg.get("alert_type") == "UPDATE")
-    assert(service_actuator_msg.get("severity") is not None)
-    assert(service_actuator_msg.get("host_id") is not None)
-    assert(service_actuator_msg.get("info") is not None)
+    def init(self):
+        pass
 
-    info = service_actuator_msg.get("info")
-    assert(info.get("site_id") is not None)
-    assert(info.get("node_id") is not None)
-    assert(info.get("cluster_id") is not None)
-    assert(info.get("rack_id") is not None)
-    assert(info.get("resource_type") == RESOURCE_TYPE)
-    assert(info.get("event_time") is not None)
-    assert(info.get("resource_id") == service_name)
-    assert(service_actuator_msg.get("specific_info") is not None)
+    def request(self):
+        return service_actuator_request(self.service_name, self.action)
+
+    def filter(self, msg):
+        return actuator_response_filter(msg, self.resource_type, self.service_name)
+
+    def response(self, msg):
+        service_actuator_msg = msg.get("actuator_response_type")
+
+        assert(service_actuator_msg is not None)
+        assert(service_actuator_msg.get("alert_type") == "UPDATE")
+        assert(service_actuator_msg.get("severity") is not None)
+        assert(service_actuator_msg.get("host_id") is not None)
+        assert(service_actuator_msg.get("info") is not None)
+
+        info = service_actuator_msg.get("info")
+        assert(info.get("site_id") is not None)
+        assert(info.get("node_id") is not None)
+        assert(info.get("cluster_id") is not None)
+        assert(info.get("rack_id") is not None)
+        assert(info.get("resource_type") == self.resource_type)
+        assert(info.get("event_time") is not None)
+        assert(info.get("resource_id") == self.service_name)
+        assert(service_actuator_msg.get("specific_info") is not None)
 
 
-def test_systemd_service_invalid_request(args):
+class SystemdServiceInvalidRequestTest(TestCaseBase):
+    resource_type = "node:sw:os:service"
+    action = "start"
     service_name = "temp_dummy.service"
-    request = "start"
-    check_sspl_ll_is_running()
-    service_actuator_request(service_name, request)
-    service_actuator_msg = None
-    ingressMsg = {}
-    for i in range(10):
-        if world.sspl_modules[IngressProcessorTests.name()]._is_my_msgQ_empty():
-            time.sleep(2)
-        while not world.sspl_modules[IngressProcessorTests.name()]\
-                                                        ._is_my_msgQ_empty():
-            ingressMsg = world.sspl_modules[IngressProcessorTests.name()]\
-                                                        ._read_my_msgQ()
-            print("Received: %s " % ingressMsg)
-            try:
-                # Make sure we get back the message type that matches the request
-                msg_type = ingressMsg.get("actuator_response_type")
-                if msg_type["info"]["resource_type"] == RESOURCE_TYPE and \
-                    msg_type["info"]["resource_id"] == service_name:
-                    # Break if required condition met
-                    service_actuator_msg = msg_type
-                    break
-            except Exception as exception:
-                print(exception)
-        if service_actuator_msg:
-            break
-        time.sleep(1)
 
-    assert(service_actuator_msg is not None)
-    assert(service_actuator_msg.get("alert_type") == "UPDATE")
-    assert(service_actuator_msg.get("severity") is not None)
-    assert(service_actuator_msg.get("host_id") is not None)
-    assert(service_actuator_msg.get("info") is not None)
+    def init(self):
+        pass
 
-    info = service_actuator_msg.get("info")
-    assert(info.get("site_id") is not None)
-    assert(info.get("node_id") is not None)
-    assert(info.get("cluster_id") is not None)
-    assert(info.get("rack_id") is not None)
-    assert(info.get("resource_type") == RESOURCE_TYPE)
-    assert(info.get("event_time") is not None)
-    assert(info.get("resource_id") == service_name)
+    def request(self):
+        return service_actuator_request(self.service_name, self.action)
 
-    assert(service_actuator_msg.get("specific_info") is not None)
-    specific_info = service_actuator_msg.get("specific_info")
-    assert (specific_info[0].get("error_msg") is not None)
+    def filter(self, msg):
+        return actuator_response_filter(msg, self.resource_type, self.service_name)
+
+    def response(self, msg):
+        service_actuator_msg = msg.get("actuator_response_type")
+
+        assert(service_actuator_msg is not None)
+        assert(service_actuator_msg.get("alert_type") == "UPDATE")
+        assert(service_actuator_msg.get("severity") is not None)
+        assert(service_actuator_msg.get("host_id") is not None)
+        assert(service_actuator_msg.get("info") is not None)
+
+        info = service_actuator_msg.get("info")
+        assert(info.get("site_id") is not None)
+        assert(info.get("node_id") is not None)
+        assert(info.get("cluster_id") is not None)
+        assert(info.get("rack_id") is not None)
+        assert(info.get("resource_type") == self.resource_type)
+        assert(info.get("event_time") is not None)
+        assert(info.get("resource_id") == self.service_name)
+
+        assert(service_actuator_msg.get("specific_info") is not None)
+        specific_info = service_actuator_msg.get("specific_info")
+        assert (specific_info[0].get("error_msg") is not None)
 
 
 def service_actuator_request(service_name, action):
@@ -148,16 +113,15 @@ def service_actuator_request(service_name, action):
                         "node_id": "1"
                     },
                     "response_dest": {},
-                        "actuator_request_type": {
-                            "service_controller": {
-                                "service_request": action,
-                                "service_name": service_name
-                            }
+                    "actuator_request_type": {
+                        "service_controller": {
+                            "service_request": action,
+                            "service_name": service_name
+                        }
                     }
                 }
             }
-    world.sspl_modules[EgressProcessorTests.name()]._write_internal_msgQ\
-                                    (EgressProcessorTests.name(), egressMsg)
+    return egressMsg
 
-test_list = [test_systemd_service_valid_request,\
-                                         test_systemd_service_invalid_request]
+
+test_list = [SystemdServiceValidRequestTest, SystemdServiceInvalidRequestTest]

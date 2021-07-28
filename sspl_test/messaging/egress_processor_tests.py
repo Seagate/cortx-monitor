@@ -13,34 +13,18 @@
 # about this software or licensing, please email opensource@seagate.com or
 # cortx-questions@seagate.com.
 
-"""
- ****************************************************************************
-  Description:       Handles outgoing messages via messaging over localhost
- ****************************************************************************
-"""
-
 import json
 import time
+
 from cortx.utils.message_bus import MessageProducer
 
-from framework.base.module_thread import ScheduledModuleThread
-from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
 from framework.utils.conf_utils import Conf, SSPL_TEST_CONF
-from . import producer_initialized
 
 import ctypes
 
-try:
-    use_security_lib = True
-    SSPL_SEC = ctypes.cdll.LoadLibrary('libsspl_sec.so.0')
-except Exception as ae:
-    logger.info(
-        "EgressProcessorTests, libsspl_sec not found, disabling authentication on egress msgs")
-    use_security_lib = False
 
-
-class EgressProcessorTests(ScheduledModuleThread, InternalMsgQ):
+class EgressProcessorTests:
     """Handles outgoing messages via messaging over localhost."""
 
     MODULE_NAME = "EgressProcessorTests"
@@ -62,73 +46,15 @@ class EgressProcessorTests(ScheduledModuleThread, InternalMsgQ):
     MESSAGE_TYPE = 'message_type'
     METHOD = 'method'
 
-    @staticmethod
-    def name():
-        """ @return: name of the module."""
-        return EgressProcessorTests.MODULE_NAME
-
     def __init__(self):
-        super(EgressProcessorTests, self).__init__(self.MODULE_NAME,
-                                                      self.PRIORITY)
-
-    def initialize(self, conf_reader, msgQlist, product):
-        """initialize configuration reader and internal msg queues"""
-        # Initialize ScheduledMonitorThread
-        super(EgressProcessorTests, self).initialize(conf_reader)
-
-        # Initialize internal message queues for this module
-        super(EgressProcessorTests, self).initialize_msgQ(msgQlist)
-
-        # Flag denoting that a shutdown message has been placed
-        #  into our message queue from the main sspl_ll_d handler
         self._request_shutdown = False
-
         self._msg_sent_succesfull = True
-
-        self._product = product
-
         # Configure messaging Exchange to transmit messages
         self._connection = None
         self._read_config()
         self._producer = MessageProducer(producer_id=self._producer_id,
                                          message_type=self._message_type,
                                          method=self._method)
-        producer_initialized.set()
-
-    def run(self):
-        """Run the module periodically on its own thread. """
-        self._log_debug("Start accepting requests")
-
-        # self._set_debug(True)
-        # self._set_debug_persist(True)
-
-        try:
-            # Loop thru all messages in queue until and transmit
-            while not self._is_my_msgQ_empty():
-                # Only get a new msg if we've successfully processed the current one
-                if self._msg_sent_succesfull:
-                    self._jsonMsg = self._read_my_msgQ()
-
-                if self._jsonMsg is not None:
-                    self._transmit_msg_on_exchange()
-
-        except Exception:
-            # Log it and restart the whole process when a failure occurs
-            logger.exception("EgressProcessorTests restarting")
-
-            # Configure messaging Exchange to receive messages
-            self._get_connection()
-            self._get_ack_connection()
-
-        self._log_debug("Finished processing successfully")
-
-        # Shutdown is requested by the sspl_ll_d shutdown handler
-        #  placing a 'shutdown' msg into our queue which allows us to
-        #  finish processing any other queued up messages.
-        if self._request_shutdown is True:
-            self.shutdown()
-        else:
-            self._scheduler.enter(1, self._priority, self.run, ())
 
     def _read_config(self):
         """Configure the messaging exchange with defaults available."""
@@ -155,7 +81,7 @@ class EgressProcessorTests(ScheduledModuleThread, InternalMsgQ):
         except Exception as ex:
             logger.error("EgressProcessorTests, _read_config: %r" % ex)
 
-    def _add_signature(self):
+    def _add_signature(self, msg):
         """Adds the authentication signature to the message"""
         self._log_debug("_add_signature, jsonMsg: %s" % self._jsonMsg)
         self._jsonMsg["username"] = self._signature_user
@@ -183,69 +109,9 @@ class EgressProcessorTests(ScheduledModuleThread, InternalMsgQ):
         else:
             self._jsonMsg["signature"] = "SecurityLibNotInstalled"
 
-    def _transmit_msg_on_exchange(self):
+    def publish(self, msg):
         """Transmit json message onto messaging exchange."""
-        self._log_debug(
-            "_transmit_msg_on_exchange, jsonMsg: %s" % self._jsonMsg)
+        # self._add_signature(msg)
+        msg = json.dumps(msg)
+        self._producer.send([msg])
 
-        try:
-            # Check for shut down message from sspl_ll_d and set a flag to shutdown
-            #  once our message queue is empty
-            if self._jsonMsg.get("message").get(
-                    "actuator_response_type") is not None and \
-                    self._jsonMsg.get("message").get(
-                        "actuator_response_type").get(
-                        "thread_controller") is not None and \
-                    self._jsonMsg.get("message").get(
-                        "actuator_response_type").get("thread_controller").get(
-                        "thread_response") == \
-                    "SSPL-LL is shutting down":
-                logger.info(
-                    "EgressProcessorTests, _transmit_msg_on_exchange, received"
-                    "global shutdown message from sspl_ll_d")
-                self._request_shutdown = True
-
-            # Publish json message to the correct channel
-            # NOTE: We need to route ThreadController messages to ACK channel.
-            # We can't modify schema as it will affect other modules too. As a
-            # temporary solution we have added a extra check to see if actuator_response_type
-            # is "thread_controller".
-            # TODO: Find a proper way to solve this issue. Avoid changing
-            # core egress processor code
-            if self._jsonMsg.get("message").get(
-                    "actuator_response_type") is not None and \
-                    (self._jsonMsg.get("message").get(
-                        "actuator_response_type").get("ack") is not None or
-                     self._jsonMsg.get("message").get(
-                         "actuator_response_type").get(
-                         "thread_controller") is not None):
-                self._add_signature()
-                jsonMsg = json.dumps(self._jsonMsg)
-                self._producer.send([json.dumps(self._jsonMsg)])
-
-            elif self._jsonMsg.get("message") is not None:
-                message = self._jsonMsg.get("message")
-                if message.get("actuator_request_type") or \
-                        message.get("sensor_request_type") is not None:
-                    logger.info("inside egress, test actuator")
-                    self._add_signature()
-                    jsonMsg = json.dumps(self._jsonMsg)
-                    self._producer.send([jsonMsg])
-
-            else:
-                self._add_signature()
-                jsonMsg = json.dumps(self._jsonMsg)
-                self._producer.send([jsonMsg])
-                # No exceptions thrown so success
-            self._log_debug(
-                "_transmit_msg_on_exchange, Successfully Sent: %s" % self._jsonMsg)
-            self._msg_sent_succesfull = True
-
-        except Exception as ex:
-            logger.exception(
-                "EgressProcessorTests, _transmit_msg_on_exchange: %r" % ex)
-            self._msg_sent_succesfull = False
-
-    def shutdown(self):
-        """Clean up scheduler queue and gracefully shutdown thread"""
-        super(EgressProcessorTests, self).shutdown()

@@ -13,139 +13,100 @@
 # about this software or licensing, please email opensource@seagate.com or
 # cortx-questions@seagate.com.
 
-# -*- coding: utf-8 -*-
-import json
-import os
-import psutil
-import time
-import sys
 
-from default import world
-from messaging.ingress_processor_tests import IngressProcessorTests
-from messaging.egress_processor_tests import EgressProcessorTests
+from framework.base.testcase_base import TestCaseBase
+from common import sensor_response_filter
 
 
-def init(args):
-    pass
+class RealStorPsuSensorTest(TestCaseBase):
+    resource_type = "enclosure:fru:psu"
+    resource_id = "4"
 
-def test_real_stor_psu_sensor(args):
-    check_sspl_ll_is_running()
-    psu_sensor_message_request("enclosure:fru:psu")
+    def init(self):
+        pass
 
-    psu_sensor_msg = None
-    time.sleep(4)
-    while not world.sspl_modules[IngressProcessorTests.name()]._is_my_msgQ_empty():
-        ingressMsg = world.sspl_modules[IngressProcessorTests.name()]._read_my_msgQ()
-        time.sleep(0.1)
-        print("Received: {0}".format(ingressMsg))
-        try:
-            # Make sure we get back the message type that matches the request
-            msg_type = ingressMsg.get("sensor_response_type")
-            if msg_type["info"]["resource_type"] == "enclosure:fru:psu":
-                psu_sensor_msg = msg_type
-                break
+    def filter(self, msg):
+        return sensor_response_filter(msg, self.resource_type)
 
-        except Exception as exception:
-            time.sleep(0.1)
-            print(exception)
+    def request(self):
+        return self.psu_sensor_message_request()
 
-    assert(psu_sensor_msg is not None)
-    assert(psu_sensor_msg.get("host_id") is not None)
-    assert(psu_sensor_msg.get("alert_type") is not None)
-    assert(psu_sensor_msg.get("severity") is not None)
-    assert(psu_sensor_msg.get("alert_id") is not None)
+    def response(self, msg):
+        psu_sensor_msg = msg.get("sensor_response_type")
 
-    psu_info = psu_sensor_msg.get("info")
-    assert(psu_info is not None)
-    assert(psu_info.get("site_id") is not None)
-    assert(psu_info.get("cluster_id") is not None)
-    assert(psu_info.get("rack_id") is not None)
-    assert(psu_info.get("node_id") is not None)
-    assert(psu_info.get("resource_type") is not None)
-    assert(psu_info.get("resource_id") is not None)
-    assert(psu_info.get("event_time") is not None)
-    assert(psu_info.get("description") is not None)
+        assert(psu_sensor_msg is not None)
+        assert(psu_sensor_msg.get("host_id") is not None)
+        assert(psu_sensor_msg.get("alert_type") is not None)
+        assert(psu_sensor_msg.get("severity") is not None)
+        assert(psu_sensor_msg.get("alert_id") is not None)
 
-    psu_specific_info = psu_sensor_msg.get("specific_info")
-    assert(psu_specific_info is not None)
-    assert(psu_specific_info.get("enclosure_id") is not None)
-    assert(psu_specific_info.get("serial_number") is not None)
-    assert(psu_specific_info.get("description") is not None)
-    assert(psu_specific_info.get("revision") is not None)
-    assert(psu_specific_info.get("model") is not None)
-    assert(psu_specific_info.get("vendor") is not None)
-    assert(psu_specific_info.get("location") is not None)
-    assert(psu_specific_info.get("part_number") is not None)
-    assert(psu_specific_info.get("fru_shortname") is not None)
-    assert(psu_specific_info.get("mfg_date") is not None)
-    assert(psu_specific_info.get("mfg_vendor_id") is not None)
-    assert(psu_specific_info.get("dc12v") is not None)
-    assert(psu_specific_info.get("dc5v") is not None)
-    assert(psu_specific_info.get("dc33v") is not None)
-    assert(psu_specific_info.get("dc12i") is not None)
-    assert(psu_specific_info.get("dc5i") is not None)
-    assert(psu_specific_info.get("dctemp") is not None)
-    assert(psu_specific_info.get("health") is not None)
-    assert(psu_specific_info.get("health_reason") is not None)
-    assert(psu_specific_info.get("health_recommendation") is not None)
-    assert(psu_specific_info.get("status") is not None)
-    assert(psu_specific_info.get("durable_id") is not None)
-    assert(psu_specific_info.get("position") is not None)
+        psu_info = psu_sensor_msg.get("info")
+        assert(psu_info is not None)
+        assert(psu_info.get("site_id") is not None)
+        assert(psu_info.get("cluster_id") is not None)
+        assert(psu_info.get("rack_id") is not None)
+        assert(psu_info.get("node_id") is not None)
+        assert(psu_info.get("resource_type") is not None)
+        assert(psu_info.get("resource_id") is not None)
+        assert(psu_info.get("event_time") is not None)
+        assert(psu_info.get("description") is not None)
 
-def check_sspl_ll_is_running():
-    # Check that the state for sspl_ll service is active
-    found = False
-    # Support for python-psutil < 2.1.3
-    for proc in psutil.process_iter():
-        if proc.name == "sspl_ll_d" and \
-           proc.status in (psutil.STATUS_RUNNING, psutil.STATUS_SLEEPING):
-               found = True
+        psu_specific_info = psu_sensor_msg.get("specific_info")
+        assert(psu_specific_info is not None)
+        assert(psu_specific_info.get("enclosure_id") is not None)
+        assert(psu_specific_info.get("serial_number") is not None)
+        assert(psu_specific_info.get("description") is not None)
+        assert(psu_specific_info.get("revision") is not None)
+        assert(psu_specific_info.get("model") is not None)
+        assert(psu_specific_info.get("vendor") is not None)
+        assert(psu_specific_info.get("location") is not None)
+        assert(psu_specific_info.get("part_number") is not None)
+        assert(psu_specific_info.get("fru_shortname") is not None)
+        assert(psu_specific_info.get("mfg_date") is not None)
+        assert(psu_specific_info.get("mfg_vendor_id") is not None)
+        assert(psu_specific_info.get("dc12v") is not None)
+        assert(psu_specific_info.get("dc5v") is not None)
+        assert(psu_specific_info.get("dc33v") is not None)
+        assert(psu_specific_info.get("dc12i") is not None)
+        assert(psu_specific_info.get("dc5i") is not None)
+        assert(psu_specific_info.get("dctemp") is not None)
+        assert(psu_specific_info.get("health") is not None)
+        assert(psu_specific_info.get("health_reason") is not None)
+        assert(psu_specific_info.get("health_recommendation") is not None)
+        assert(psu_specific_info.get("status") is not None)
+        assert(psu_specific_info.get("durable_id") is not None)
+        assert(psu_specific_info.get("position") is not None)
 
-    # Support for python-psutil 2.1.3+
-    if found == False:
-        for proc in psutil.process_iter():
-            pinfo = proc.as_dict(attrs=['cmdline', 'status'])
-            if "sspl_ll_d" in str(pinfo['cmdline']) and \
-                pinfo['status'] in (psutil.STATUS_RUNNING, psutil.STATUS_SLEEPING):
-                    found = True
+    def psu_sensor_message_request(self):
+        egressMsg = {
+            "title": "SSPL Actuator Request",
+            "description": "Seagate Storage Platform Library - Actuator Request",
 
-    assert found == True
+            "username": "JohnDoe",
+            "signature": "None",
+            "time": "2015-05-29 14:28:30.974749",
+            "expires": 500,
 
-    # Clear the message queue buffer out
-    while not world.sspl_modules[IngressProcessorTests.name()]._is_my_msgQ_empty():
-        world.sspl_modules[IngressProcessorTests.name()]._read_my_msgQ()
-
-
-def psu_sensor_message_request(resource_type):
-    egressMsg = {
-        "title": "SSPL Actuator Request",
-        "description": "Seagate Storage Platform Library - Actuator Request",
-
-        "username" : "JohnDoe",
-        "signature" : "None",
-        "time" : "2015-05-29 14:28:30.974749",
-        "expires" : 500,
-
-        "message" : {
-            "sspl_ll_msg_header": {
-                "schema_version": "1.0.0",
-                "sspl_version": "1.0.0",
-                "msg_version": "1.0.0"
-            },
-             "sspl_ll_debug": {
-                "debug_component" : "sensor",
-                "debug_enabled" : True
-            },
-            "sensor_request_type": {
-                "enclosure_alert": {
-                    "info": {
-                        "resource_type": resource_type
+            "message": {
+                "sspl_ll_msg_header": {
+                    "schema_version": "1.0.0",
+                    "sspl_version": "1.0.0",
+                    "msg_version": "1.0.0"
+                },
+                "sspl_ll_debug": {
+                    "debug_component": "sensor",
+                    "debug_enabled": True
+                },
+                "sensor_request_type": {
+                    "enclosure_alert": {
+                        "info": {
+                            "resource_type": self.resource_type
+                        }
                     }
                 }
             }
         }
-    }
-    world.sspl_modules[EgressProcessorTests.name()]._write_internal_msgQ(EgressProcessorTests.name(), egressMsg)
+        return egressMsg
 
-test_list = [test_real_stor_psu_sensor]
 
+test_list = [RealStorPsuSensorTest]

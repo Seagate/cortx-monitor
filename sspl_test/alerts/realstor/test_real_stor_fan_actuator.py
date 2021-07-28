@@ -14,105 +14,110 @@
 # cortx-questions@seagate.com.
 
 # -*- coding: utf-8 -*-
+from framework.base.testcase_base import TestCaseBase
+from common import actuator_response_filter, get_enclosure_request
 
-from common import check_sspl_ll_is_running, get_fru_response, send_enclosure_request
 
-
-def init(args):
-    pass
-
-def test_real_stor_fan_module_actuator(agrs):
-    check_sspl_ll_is_running()
-    instance_id = "4"
+class RealStorFanModuleActuatorTest(TestCaseBase):
     resource_type = "enclosure:fru:fan"
-    send_enclosure_request("ENCL:%s" % resource_type, instance_id)
-    ingressMsg = get_fru_response(resource_type, instance_id)
-    fan_module_actuator_msg = ingressMsg.get("actuator_response_type")
+    resource_id = "4"
 
-    assert(fan_module_actuator_msg is not None)
-    assert(fan_module_actuator_msg.get("alert_type") is not None)
-    assert(fan_module_actuator_msg.get("alert_id") is not None)
-    assert(fan_module_actuator_msg.get("severity") is not None)
-    assert(fan_module_actuator_msg.get("host_id") is not None)
-    assert(fan_module_actuator_msg.get("info") is not None)
+    def init(self):
+        pass
 
-    fan_module_info = fan_module_actuator_msg.get("info")
-    assert(fan_module_info.get("site_id") is not None)
-    assert(fan_module_info.get("node_id") is not None)
-    assert(fan_module_info.get("cluster_id") is not None)
-    assert(fan_module_info.get("rack_id") is not None)
-    assert(fan_module_info.get("resource_type") is not None)
-    assert(fan_module_info.get("event_time") is not None)
-    assert(fan_module_info.get("resource_id") is not None)
+    def filter(self, msg):
+        return actuator_response_filter(msg, self.resource_type)
 
-    fru_specific_info = fan_module_actuator_msg.get("specific_info", {})
+    def request(self):
+        return get_enclosure_request("ENCL:%s" % self.resource_type, self.resource_id)
 
-    resource_id = fan_module_info.get("resource_id")
-    if resource_id == "*":
-        verify_fan_module_specific_info(fru_specific_info)
-        return
+    def response(self, msg):
+        fan_module_actuator_msg = msg.get("actuator_response_type")
 
-    if fru_specific_info:
-        assert(fru_specific_info.get("durable_id") is not None)
-        assert(fru_specific_info.get("status") is not None)
-        assert(fru_specific_info.get("name") is not None)
-        assert(fru_specific_info.get("enclosure_id") is not None)
-        assert(fru_specific_info.get("health") is not None)
-        assert(fru_specific_info.get("health_reason") is not None)
-        assert(fru_specific_info.get("location") is not None)
-        assert(fru_specific_info.get("health_recommendation") is not None)
-        assert(fru_specific_info.get("position") is not None)
+        assert(fan_module_actuator_msg is not None)
+        assert(fan_module_actuator_msg.get("alert_type") is not None)
+        assert(fan_module_actuator_msg.get("alert_id") is not None)
+        assert(fan_module_actuator_msg.get("severity") is not None)
+        assert(fan_module_actuator_msg.get("host_id") is not None)
+        assert(fan_module_actuator_msg.get("info") is not None)
 
-    fans = fan_module_actuator_msg.get("specific_info").get("fans", [])
-    if fans:
-        for fan in fans:
-            assert(fan.get("durable_id") is not None)
-            assert(fan.get("status") is not None)
-            assert(fan.get("name") is not None)
-            assert(fan.get("speed") is not None)
-            assert(fan.get("locator_led") is not None)
-            assert(fan.get("position") is not None)
-            assert(fan.get("location") is not None)
-            assert(fan.get("part_number") is not None)
-            assert(fan.get("serial_number") is not None)
-            assert(fan.get("fw_revision") is not None)
-            assert(fan.get("hw_revision") is not None)
-            assert(fan.get("health") is not None)
-            assert(fan.get("health_reason") is not None)
-            assert(fan.get("health_recommendation") is not None)
+        fan_module_info = fan_module_actuator_msg.get("info")
+        assert(fan_module_info.get("site_id") is not None)
+        assert(fan_module_info.get("node_id") is not None)
+        assert(fan_module_info.get("cluster_id") is not None)
+        assert(fan_module_info.get("rack_id") is not None)
+        assert(fan_module_info.get("resource_type") is not None)
+        assert(fan_module_info.get("event_time") is not None)
+        assert(fan_module_info.get("resource_id") is not None)
 
-def verify_fan_module_specific_info(fru_specific_info):
-    """Verify fan_module specific info"""
+        fru_specific_info = fan_module_actuator_msg.get("specific_info", {})
 
-    if fru_specific_info:
-        for fru_info in fru_specific_info:
-            assert(fru_info.get("durable_id") is not None)
-            assert(fru_info.get("status") is not None)
-            assert(fru_info.get("name") is not None)
-            assert(fru_info.get("enclosure_id") is not None)
-            assert(fru_info.get("health") is not None)
-            assert(fru_info.get("health_reason") is not None)
-            assert(fru_info.get("location") is not None)
-            assert(fru_info.get("health_recommendation") is not None)
-            assert(fru_info.get("position") is not None)
+        resource_id = fan_module_info.get("resource_id")
+        if resource_id == "*":
+            self.verify_fan_module_specific_info(fru_specific_info)
+            return
 
-            fans = fru_info.get("fans", [])
-            if fans:
-                for fan in fans:
-                    assert(fan.get("durable_id") is not None)
-                    assert(fan.get("status") is not None)
-                    assert(fan.get("name") is not None)
-                    assert(fan.get("speed") is not None)
-                    assert(fan.get("locator_led") is not None)
-                    assert(fan.get("position") is not None)
-                    assert(fan.get("location") is not None)
-                    assert(fan.get("part_number") is not None)
-                    assert(fan.get("serial_number") is not None)
-                    assert(fan.get("fw_revision") is not None)
-                    assert(fan.get("hw_revision") is not None)
-                    assert(fan.get("health") is not None)
-                    assert(fan.get("health_reason") is not None)
-                    assert(fan.get("health_recommendation") is not None)
+        if fru_specific_info:
+            assert(fru_specific_info.get("durable_id") is not None)
+            assert(fru_specific_info.get("status") is not None)
+            assert(fru_specific_info.get("name") is not None)
+            assert(fru_specific_info.get("enclosure_id") is not None)
+            assert(fru_specific_info.get("health") is not None)
+            assert(fru_specific_info.get("health_reason") is not None)
+            assert(fru_specific_info.get("location") is not None)
+            assert(fru_specific_info.get("health_recommendation") is not None)
+            assert(fru_specific_info.get("position") is not None)
+
+        fans = fan_module_actuator_msg.get("specific_info").get("fans", [])
+        if fans:
+            for fan in fans:
+                assert(fan.get("durable_id") is not None)
+                assert(fan.get("status") is not None)
+                assert(fan.get("name") is not None)
+                assert(fan.get("speed") is not None)
+                assert(fan.get("locator_led") is not None)
+                assert(fan.get("position") is not None)
+                assert(fan.get("location") is not None)
+                assert(fan.get("part_number") is not None)
+                assert(fan.get("serial_number") is not None)
+                assert(fan.get("fw_revision") is not None)
+                assert(fan.get("hw_revision") is not None)
+                assert(fan.get("health") is not None)
+                assert(fan.get("health_reason") is not None)
+                assert(fan.get("health_recommendation") is not None)
+
+    def verify_fan_module_specific_info(self, fru_specific_info):
+        """Verify fan_module specific info"""
+
+        if fru_specific_info:
+            for fru_info in fru_specific_info:
+                assert(fru_info.get("durable_id") is not None)
+                assert(fru_info.get("status") is not None)
+                assert(fru_info.get("name") is not None)
+                assert(fru_info.get("enclosure_id") is not None)
+                assert(fru_info.get("health") is not None)
+                assert(fru_info.get("health_reason") is not None)
+                assert(fru_info.get("location") is not None)
+                assert(fru_info.get("health_recommendation") is not None)
+                assert(fru_info.get("position") is not None)
+
+                fans = fru_info.get("fans", [])
+                if fans:
+                    for fan in fans:
+                        assert(fan.get("durable_id") is not None)
+                        assert(fan.get("status") is not None)
+                        assert(fan.get("name") is not None)
+                        assert(fan.get("speed") is not None)
+                        assert(fan.get("locator_led") is not None)
+                        assert(fan.get("position") is not None)
+                        assert(fan.get("location") is not None)
+                        assert(fan.get("part_number") is not None)
+                        assert(fan.get("serial_number") is not None)
+                        assert(fan.get("fw_revision") is not None)
+                        assert(fan.get("hw_revision") is not None)
+                        assert(fan.get("health") is not None)
+                        assert(fan.get("health_reason") is not None)
+                        assert(fan.get("health_recommendation") is not None)
 
 
-test_list = [test_real_stor_fan_module_actuator]
+test_list = [RealStorFanModuleActuatorTest]

@@ -18,6 +18,9 @@
 
 import json
 import os
+import logging
+log = logging.getLogger('werkzeug')
+log.setLevel(logging.ERROR)
 
 import flask
 from flask import Flask

@@ -13,69 +13,73 @@
 # about this software or licensing, please email opensource@seagate.com or
 # cortx-questions@seagate.com.
 
-from common import check_sspl_ll_is_running, get_fru_response, send_node_controller_message_request
+from framework.base.testcase_base import TestCaseBase
+from common import actuator_response_filter, get_node_controller_message_request
 
 
-UUID="16476007-a739-4785-b5c6-f3de189cdf12"
-
-def init(args):
-    pass
-
-def test_node_psu_module_actuator(agrs):
-    check_sspl_ll_is_running()
-    instance_id = "*"
+class NodePsuActuatorTest(TestCaseBase):
     resource_type = "node:fru:psu"
-    send_node_controller_message_request(UUID, "NDHW:%s" % resource_type, instance_id)
-    ingressMsg = get_fru_response(resource_type, instance_id)
+    resource_id = "*"
+    UUID = "16476007-a739-4785-b5c6-f3de189cdf12"
 
-    assert(ingressMsg.get("sspl_ll_msg_header").get("uuid") == UUID)
+    def init(self):
+        pass
 
-    psu_module_actuator_msg = ingressMsg.get("actuator_response_type")
-    assert(psu_module_actuator_msg is not None)
-    assert(psu_module_actuator_msg.get("alert_type") is not None)
-    assert(psu_module_actuator_msg.get("severity") is not None)
-    assert(psu_module_actuator_msg.get("host_id") is not None)
-    assert(psu_module_actuator_msg.get("info") is not None)
-    assert(psu_module_actuator_msg.get("instance_id") == instance_id)
+    def request(self):
+        return get_node_controller_message_request(self.UUID, "NDHW:%s" % self.resource_type, self.resource_id)
 
-    psu_module_info = psu_module_actuator_msg.get("info")
-    assert(psu_module_info.get("site_id") is not None)
-    assert(psu_module_info.get("node_id") is not None)
-    assert(psu_module_info.get("rack_id") is not None)
-    assert(psu_module_info.get("resource_type") is not None)
-    assert(psu_module_info.get("event_time") is not None)
-    assert(psu_module_info.get("resource_id") is not None)
+    def filter(self, msg):
+        return actuator_response_filter(msg, self.resource_type)
 
-    fru_specific_infos = psu_module_actuator_msg.get("specific_info")
-    assert(fru_specific_infos is not None)
+    def response(self, msg):
+        assert(msg.get("sspl_ll_msg_header").get("uuid") == self.UUID)
 
-    if psu_module_actuator_msg.get("instance_id") == "*":
-        for fru_specific_info in fru_specific_infos:
-            assert(fru_specific_info is not None)
-            if fru_specific_info.get("ERROR"):
-                # Skip any validation on specific info if ERROR seen on FRU
-                continue
-            assert(fru_specific_info.get("resource_id") is not None)
-            resource_id = fru_specific_info.get("resource_id")
-            if fru_specific_info.get(resource_id):
-                assert(fru_specific_info.get(resource_id).get("ERROR") is not None)
-                # Skip any validation on specific info if ERROR seen on sensor
-                continue
-            assert(fru_specific_info.get("States Asserted") is not None)
-            sensor_type = [
-                k if k.startswith("Sensor Type") else None
-                for k in fru_specific_info.keys()
-                ][0]
-            assert(sensor_type is not None)
-    else:
-        # Skip any validation if ERROR seen on the specifc FRU
-        if not fru_specific_infos.get("ERROR"):
-            assert(fru_specific_infos.get("States Asserted") is not None)
-            sensor_type = [
-                k if k.startswith("Sensor Type") else None
-                for k in fru_specific_infos.keys()
-                ][0]
-            assert(sensor_type is not None)
+        psu_module_actuator_msg = msg.get("actuator_response_type")
+        assert(psu_module_actuator_msg is not None)
+        assert(psu_module_actuator_msg.get("alert_type") is not None)
+        assert(psu_module_actuator_msg.get("severity") is not None)
+        assert(psu_module_actuator_msg.get("host_id") is not None)
+        assert(psu_module_actuator_msg.get("info") is not None)
+        assert(psu_module_actuator_msg.get("instance_id") == self.resource_id)
+
+        psu_module_info = psu_module_actuator_msg.get("info")
+        assert(psu_module_info.get("site_id") is not None)
+        assert(psu_module_info.get("node_id") is not None)
+        assert(psu_module_info.get("rack_id") is not None)
+        assert(psu_module_info.get("resource_type") is not None)
+        assert(psu_module_info.get("event_time") is not None)
+        assert(psu_module_info.get("resource_id") is not None)
+
+        fru_specific_infos = psu_module_actuator_msg.get("specific_info")
+        assert(fru_specific_infos is not None)
+
+        if psu_module_actuator_msg.get("instance_id") == "*":
+            for fru_specific_info in fru_specific_infos:
+                assert(fru_specific_info is not None)
+                if fru_specific_info.get("ERROR"):
+                    # Skip any validation on specific info if ERROR seen on FRU
+                    continue
+                assert(fru_specific_info.get("resource_id") is not None)
+                resource_id = fru_specific_info.get("resource_id")
+                if fru_specific_info.get(resource_id):
+                    assert(fru_specific_info.get(resource_id).get("ERROR") is not None)
+                    # Skip any validation on specific info if ERROR seen on sensor
+                    continue
+                assert(fru_specific_info.get("States Asserted") is not None)
+                sensor_type = [
+                    k if k.startswith("Sensor Type") else None
+                    for k in fru_specific_info.keys()
+                    ][0]
+                assert(sensor_type is not None)
+        else:
+            # Skip any validation if ERROR seen on the specifc FRU
+            if not fru_specific_infos.get("ERROR"):
+                assert(fru_specific_infos.get("States Asserted") is not None)
+                sensor_type = [
+                    k if k.startswith("Sensor Type") else None
+                    for k in fru_specific_infos.keys()
+                    ][0]
+                assert(sensor_type is not None)
 
 
-test_list = [test_node_psu_module_actuator]
+test_list = [NodePsuActuatorTest]

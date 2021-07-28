@@ -13,140 +13,102 @@
 # about this software or licensing, please email opensource@seagate.com or
 # cortx-questions@seagate.com.
 
-# -*- coding: utf-8 -*-
-import json
-import os
-import psutil
-import time
-import sys
-
-from default import world
-from messaging.ingress_processor_tests import IngressProcessorTests
-from messaging.egress_processor_tests import EgressProcessorTests
+from framework.base.testcase_base import TestCaseBase
+from common import sensor_response_filter
 
 
-def init(args):
-    pass
+class RealStorFanModuleSensorTest(TestCaseBase):
+    resource_type = "enclosure:fru:fan"
 
-def test_real_stor_fan_module_sensor(agrs):
-    check_sspl_ll_is_running()
-    fan_sensor_message_request("enclosure:fru:fan")
-    fan_module_sensor_msg = None
-    time.sleep(4)
-    while not world.sspl_modules[IngressProcessorTests.name()]._is_my_msgQ_empty():
-        ingressMsg = world.sspl_modules[IngressProcessorTests.name()]._read_my_msgQ()
-        time.sleep(0.1)
-        print("Received: %s" % ingressMsg)
-        try:
-            # Make sure we get back the message type that matches the request
-            msg_type = ingressMsg.get("sensor_response_type")
-            if msg_type["info"]["resource_type"] == "enclosure:fru:fan":
-                fan_module_sensor_msg = ingressMsg.get("sensor_response_type")
-                break
-        except Exception as exception:
-            time.sleep(0.1)
-            print(exception)
+    def init(self):
+        pass
 
-    assert(fan_module_sensor_msg is not None)
-    assert(fan_module_sensor_msg.get("alert_type") is not None)
-    assert(fan_module_sensor_msg.get("alert_id") is not None)
-    assert(fan_module_sensor_msg.get("severity") is not None)
-    assert(fan_module_sensor_msg.get("host_id") is not None)
-    assert(fan_module_sensor_msg.get("info") is not None)
+    def filter(self, msg):
+        return sensor_response_filter(msg, self.resource_type)
 
-    fan_module_info = fan_module_sensor_msg.get("info")
-    assert(fan_module_info.get("site_id") is not None)
-    assert(fan_module_info.get("node_id") is not None)
-    assert(fan_module_info.get("cluster_id") is not None)
-    assert(fan_module_info.get("rack_id") is not None)
-    assert(fan_module_info.get("resource_type") is not None)
-    assert(fan_module_info.get("event_time") is not None)
-    assert(fan_module_info.get("resource_id") is not None)
-    assert(fan_module_info.get("description") is not None)
+    def request(self):
+        return self.fan_sensor_message_request()
 
-    fru_specific_info = fan_module_sensor_msg.get("specific_info", {})
-    if fru_specific_info:
-        assert(fru_specific_info.get("durable_id") is not None)
-        assert(fru_specific_info.get("status") is not None)
-        assert(fru_specific_info.get("name") is not None)
-        assert(fru_specific_info.get("enclosure_id") is not None)
-        assert(fru_specific_info.get("health") is not None)
-        assert(fru_specific_info.get("health_reason") is not None)
-        assert(fru_specific_info.get("location") is not None)
-        assert(fru_specific_info.get("health_recommendation") is not None)
-        assert(fru_specific_info.get("position") is not None)
+    def response(self, msg):
+        fan_module_sensor_msg = msg.get("sensor_response_type")
 
-    fans = fan_module_sensor_msg.get("specific_info").get("fans", [])
-    if fans:
-        for fan in fans:
-            assert(fan.get("durable_id") is not None)
-            assert(fan.get("status") is not None)
-            assert(fan.get("name") is not None)
-            assert(fan.get("speed") is not None)
-            assert(fan.get("locator_led") is not None)
-            assert(fan.get("position") is not None)
-            assert(fan.get("location") is not None)
-            assert(fan.get("part_number") is not None)
-            assert(fan.get("serial_number") is not None)
-            assert(fan.get("fw_revision") is not None)
-            assert(fan.get("hw_revision") is not None)
-            assert(fan.get("health") is not None)
-            assert(fan.get("health_reason") is not None)
-            assert(fan.get("health_recommendation") is not None)
+        assert(fan_module_sensor_msg is not None)
+        assert(fan_module_sensor_msg.get("alert_type") is not None)
+        assert(fan_module_sensor_msg.get("alert_id") is not None)
+        assert(fan_module_sensor_msg.get("severity") is not None)
+        assert(fan_module_sensor_msg.get("host_id") is not None)
+        assert(fan_module_sensor_msg.get("info") is not None)
 
-def check_sspl_ll_is_running():
-    # Check that the state for sspl service is active
-    found = False
+        fan_module_info = fan_module_sensor_msg.get("info")
+        assert(fan_module_info.get("site_id") is not None)
+        assert(fan_module_info.get("node_id") is not None)
+        assert(fan_module_info.get("cluster_id") is not None)
+        assert(fan_module_info.get("rack_id") is not None)
+        assert(fan_module_info.get("resource_type") is not None)
+        assert(fan_module_info.get("event_time") is not None)
+        assert(fan_module_info.get("resource_id") is not None)
+        assert(fan_module_info.get("description") is not None)
 
-    # Support for python-psutil < 2.1.3
-    for proc in psutil.process_iter():
-        if proc.name == "sspl_ll_d" and \
-           proc.status in (psutil.STATUS_RUNNING, psutil.STATUS_SLEEPING):
-               found = True
+        fru_specific_info = fan_module_sensor_msg.get("specific_info", {})
+        if fru_specific_info:
+            assert(fru_specific_info.get("durable_id") is not None)
+            assert(fru_specific_info.get("status") is not None)
+            assert(fru_specific_info.get("name") is not None)
+            assert(fru_specific_info.get("enclosure_id") is not None)
+            assert(fru_specific_info.get("health") is not None)
+            assert(fru_specific_info.get("health_reason") is not None)
+            assert(fru_specific_info.get("location") is not None)
+            assert(fru_specific_info.get("health_recommendation") is not None)
+            assert(fru_specific_info.get("position") is not None)
 
-    # Support for python-psutil 2.1.3+
-    if found == False:
-        for proc in psutil.process_iter():
-            pinfo = proc.as_dict(attrs=['cmdline', 'status'])
-            if "sspl_ll_d" in str(pinfo['cmdline']) and \
-                pinfo['status'] in (psutil.STATUS_RUNNING, psutil.STATUS_SLEEPING):
-                    found = True
+        fans = fan_module_sensor_msg.get("specific_info").get("fans", [])
+        if fans:
+            for fan in fans:
+                assert(fan.get("durable_id") is not None)
+                assert(fan.get("status") is not None)
+                assert(fan.get("name") is not None)
+                assert(fan.get("speed") is not None)
+                assert(fan.get("locator_led") is not None)
+                assert(fan.get("position") is not None)
+                assert(fan.get("location") is not None)
+                assert(fan.get("part_number") is not None)
+                assert(fan.get("serial_number") is not None)
+                assert(fan.get("fw_revision") is not None)
+                assert(fan.get("hw_revision") is not None)
+                assert(fan.get("health") is not None)
+                assert(fan.get("health_reason") is not None)
+                assert(fan.get("health_recommendation") is not None)
 
-    assert found == True
+    def fan_sensor_message_request(self):
+        egressMsg = {
+            "title": "SSPL Actuator Request",
+            "description": "Seagate Storage Platform Library - Actuator Request",
 
-    # Clear the message queue buffer out
-    while not world.sspl_modules[IngressProcessorTests.name()]._is_my_msgQ_empty():
-        world.sspl_modules[IngressProcessorTests.name()]._read_my_msgQ()
+            "username": "JohnDoe",
+            "signature": "None",
+            "time": "2015-05-29 14:28:30.974749",
+            "expires": 500,
 
-def fan_sensor_message_request(resource_type):
-    egressMsg = {
-        "title": "SSPL Actuator Request",
-        "description": "Seagate Storage Platform Library - Actuator Request",
-
-        "username" : "JohnDoe",
-        "signature" : "None",
-        "time" : "2015-05-29 14:28:30.974749",
-        "expires" : 500,
-
-        "message" : {
-            "sspl_ll_msg_header": {
-                "schema_version": "1.0.0",
-                "sspl_version": "1.0.0",
-                "msg_version": "1.0.0"
-            },
-             "sspl_ll_debug": {
-                "debug_component" : "sensor",
-                "debug_enabled" : True
-            },
-            "sensor_request_type": {
-                "enclosure_alert": {
-                    "info": {
-                        "resource_type": resource_type
+            "message": {
+                "sspl_ll_msg_header": {
+                    "schema_version": "1.0.0",
+                    "sspl_version": "1.0.0",
+                    "msg_version": "1.0.0"
+                },
+                "sspl_ll_debug": {
+                    "debug_component": "sensor",
+                    "debug_enabled": True
+                },
+                "sensor_request_type": {
+                    "enclosure_alert": {
+                        "info": {
+                            "resource_type": self.resource_type
+                        }
                     }
                 }
             }
         }
-    }
-    world.sspl_modules[EgressProcessorTests.name()]._write_internal_msgQ(EgressProcessorTests.name(), egressMsg)
+        return egressMsg
 
-test_list = [test_real_stor_fan_module_sensor]
+
+test_list = [RealStorFanModuleSensorTest]
