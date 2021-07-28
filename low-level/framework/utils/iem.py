@@ -174,3 +174,6 @@ class Iem:
         except EventMessageError as e:
             logger.error("Failed to send IEM alert."
                          f"Error:{e}")
+        except Exception as err:
+            logger.error("Failed to send IEM alert."
+                         f"Error:{err}")
