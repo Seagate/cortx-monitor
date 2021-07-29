@@ -171,9 +171,5 @@ class Iem:
                 os.remove(IEM_INIT_FAILED)
             EventMessage.send(module=module, event_id=event_code,
                               severity=severity, message_blob=description)
-        except EventMessageError as e:
-            logger.error("Failed to send IEM alert."
-                         f"Error:{e}")
-        except Exception as err:
-            logger.error("Failed to send IEM alert."
-                         f"Error:{err}")
+        except (EventMessageError, Exception) as e:
+            logger.error(f"Failed to send IEM alert. Error:{e}")
