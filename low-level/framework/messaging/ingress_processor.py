@@ -199,7 +199,7 @@ class IngressProcessor(ScheduledModuleThread, InternalMsgQ):
                 if target_node_id is None:
                     logger.warning(
                         "Required attribute target_node_id is missing "
-                        "from actuator request, IGNORING!!")
+                        "from actuator request %s, IGNORING!!" % (msgType))
                     return
                 elif target_node_id == self._node_id:
                     self._send_to_msg_handler(msgType, message, uuid)
@@ -223,7 +223,7 @@ class IngressProcessor(ScheduledModuleThread, InternalMsgQ):
         except Exception as ex:
             logger.error(
                 "IngressProcessor, _process_msg failed to recognize "
-                "message: %r with error %s" % (ingressMsg, ex))
+                "message: %r with error %r" % (ingressMsg, ex))
             ack_msg = AckResponseMsg("Error Processing Msg",
                                      "Msg Handler Not Found", uuid).getJson()
             self._write_internal_msgQ(EgressProcessor.name(), ack_msg)

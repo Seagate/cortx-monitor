@@ -125,7 +125,6 @@ def test_systemd_service_invalid_request(args):
 
 
 def service_actuator_request(service_name, action):
-    node_id = get_current_node_id()
     egressMsg = {
                 "title": "SSPL-LL Actuator Request",
                 "description": "Seagate Storage Platform Library - Actuator Request",
@@ -150,7 +149,7 @@ def service_actuator_request(service_name, action):
                         "node_id": "1"
                     },
                     "response_dest": {},
-                    "target_node_id": node_id,
+                    "target_node_id": get_current_node_id(),
                         "actuator_request_type": {
                             "service_controller": {
                                 "service_request": action,

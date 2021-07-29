@@ -234,7 +234,6 @@ def send_node_controller_message_request(uuid, resource_type, instance_id="*"):
         resource_type: Type of resource
         instance_id: Numeric or "*"
     """
-    node_id = get_current_node_id()
     request = {
         "username":"sspl-ll",
         "expires":3600,
@@ -254,7 +253,7 @@ def send_node_controller_message_request(uuid, resource_type, instance_id="*"):
                 "debug_enabled": True
             },
             "response_dest": {},
-            "target_node_id": node_id,
+            "target_node_id": get_current_node_id(),
             "actuator_request_type": {
                 "node_controller": {
                     "node_request": resource_type,
@@ -267,7 +266,6 @@ def send_node_controller_message_request(uuid, resource_type, instance_id="*"):
 
 
 def send_enclosure_request(resource_type, resource_id):
-    node_id = get_current_node_id()
     request = {
         "title": "SSPL Actuator Request",
         "description": "Seagate Storage Platform Library - Actuator Request",
@@ -294,7 +292,7 @@ def send_enclosure_request(resource_type, resource_id):
                 "node_id": "1"
             },
             "response_dest": {},
-            "target_node_id": node_id,
+            "target_node_id": get_current_node_id(),
             "actuator_request_type": {
                 "storage_enclosure": {
                     "enclosure_request": resource_type,
