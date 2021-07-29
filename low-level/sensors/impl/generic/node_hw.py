@@ -280,24 +280,22 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
                 self._bmc_passwd = encryptor.decrypt(
                     decryption_key, _bmc_secret, self.SENSOR_NAME)
             except Exception as err:
-                logger.critical(f"BMC password decryption failed due to {err},"
+                raise Exception(f"BMC password decryption failed due to {err},"
                     "NodeHWSensor monitoring disabled.")
-                self.shutdown()
 
         # Set flag 'request_shutdown' to true if ipmitool/simulator is non-functional
         _, _, retcode = self._run_ipmitool_subcommand("sel info")
         if retcode != 0 and self.channel_err:
             if self._channel_interface == system:
-                log_msg = (
+                err_msg = (
                     "ipmitool commands not able to access BMC through"
                     " configured %s interface." % self._channel_interface)
             else:
-                log_msg = (
+                err_msg = (
                     "ipmitool commands not able to access BMC through"
                     " configured %s interface or even fallback option"
                     " 'KCS' interface." % (self._channel_interface))
-            logger.critical(log_msg)
-            self.request_shutdown = True
+            raise Exception(err_msg)
         else:
             self._initialize_cache()
             self._fetch_channel_info()
@@ -677,17 +675,17 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
                          % (self.ipmi_client.NAME, self.SENSOR_NAME))
             if retcode == 1:
                 if err.find(self.ipmi_client.VM_ERROR) != -1:
-                    logger.error((f"{self.SENSOR_NAME}: {self.ipmi_client.NAME}"
+                    self.request_shutdown = True
+                    raise Exception((f"{self.SENSOR_NAME}: {self.ipmi_client.NAME}"
                         f"error:: {err}\n Dependencies failed,"
                         "shutting down sensor"))
-                    self.request_shutdown = True
                 self.iem.iem_fault("IPMITOOL_ERROR")
                 if self.IPMI not in self.iem.fault_iems:
                     self.iem.fault_iems.append(self.IPMI)
             elif retcode == BASH_ILLEGAL_CMD:
-                logger.error(f"{self.SENSOR_NAME}: Required ipmitool missing \
-                    on Node. Dependencies failed, shutting down sensor")
                 self.request_shutdown = True
+                raise Exception(f"{self.SENSOR_NAME}: Required ipmitool missing \
+                    on Node. Dependencies failed, shutting down sensor")
                 self.iem.iem_fault("IPMITOOL_ERROR")
                 if self.IPMI not in self.iem.fault_iems:
                     self.iem.fault_iems.append(self.IPMI)

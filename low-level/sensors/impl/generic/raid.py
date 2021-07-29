@@ -186,11 +186,8 @@ class RAIDsensor(SensorThread, InternalMsgQ):
         # self._set_debug(True)
         # self._set_debug_persist(True)
 
-        try:
-            # Check for a change in status file and notify the node data msg handler
-            self._notify_NodeDataMsgHandler()
-        except Exception as ae:
-            logger.exception(ae)
+        # Check for a change in status file and notify the node data msg handler
+        self._notify_NodeDataMsgHandler()
 
         # Reset debug mode if persistence is not enabled
         self._disable_debug_if_persist_false()

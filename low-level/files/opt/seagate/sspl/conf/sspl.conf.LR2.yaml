@@ -43,6 +43,8 @@ SSPL_LL_SETTING:
       - Smartctl
       - NodeHWactuator
       - RealStorActuator
+   sensor_recovery_count: 3
+   sensor_recovery_interval: 10
 
 INGRESSPROCESSOR:
    consumer_id: sspl_actuator
@@ -72,16 +74,12 @@ RAIDSENSOR:
    monitor: true
    threaded: true
    RAID_status_file: /proc/mdstat
-   recovery_count: 3
-   recovery_interval: 10
 
 RAIDINTEGRITYSENSOR:
    monitor: true
    threaded: true
    polling_interval: 1209600
    retry_interval: 3600
-   recovery_count: 3
-   recovery_interval: 10
 
 IPMI:
    user: admin
@@ -94,77 +92,55 @@ REALSTORSENSORS:
    monitor: true
    polling_frequency: 30
    polling_frequency_override: 0
-   recovery_count: 3
-   recovery_interval: 10
 
 REALSTORPSUSENSOR:
    threaded: true
    polling_frequency_override: 0
-   recovery_count: 3
-   recovery_interval: 10
 
 REALSTORFANSENSOR:
    threaded: true
    polling_frequency_override: 0
-   recovery_count: 3
-   recovery_interval: 10
 
 REALSTORCONTROLLERSENSOR:
    threaded: true
    polling_frequency_override: 0
-   recovery_count: 3
-   recovery_interval: 10
 
 REALSTORDISKSENSOR:
    threaded: true
    polling_frequency_override: 0
-   recovery_count: 3
-   recovery_interval: 10
 
 REALSTORSIDEPLANEEXPANDERSENSOR:
    threaded: true
    polling_frequency_override: 0
-   recovery_count: 3
-   recovery_interval: 10
 
 NODEHWSENSOR:
    monitor: true
    threaded: true
    polling_interval: 30
    ipmi_client: ipmitool
-   recovery_count: 3
-   recovery_interval: 10
 
 REALSTORLOGICALVOLUMESENSOR:
    threaded: true
    # Polling frequency override here applicable for both Disk Group & Logical Volume monitoring
    polling_frequency_override: 10
-   recovery_count: 3
-   recovery_interval: 10
 
 REALSTORENCLOSURESENSOR:
    threaded: true
    polling_frequency_override: 0
-   recovery_count: 3
-   recovery_interval: 10
 
 IEMSENSOR:
    threaded: true
    log_file_path: /var/log/cortx/iem/iem_messages
    timestamp_file_path: /var/cortx/sspl/data/iem/last_processed_msg_time
-   recovery_count: 3
-   recovery_interval: 10
 
 DISKMONITOR:
-   monitor: false
+   monitor: true
    threaded: true
    smart_test_interval: 999999999
    run_smart_on_start: 'False'
-   recovery_count: 3
-   recovery_interval: 10
 
 SERVICEMONITOR:
-   monitor: false
+   monitor: true
    threaded: true
    thread_sleep: 1
    polling_frequency: 15
@@ -190,8 +166,6 @@ SERVICEMONITOR:
          - glusterd.service
          - scsi-network-relay.service
       hw:
-   recovery_count: 3
-   recovery_interval: 10
 
 NODEHWACTUATOR:
    ipmi_client: ipmitool
@@ -205,22 +179,16 @@ SASPORTSENSOR:
    monitor: true
    threaded: true
    probe: sysfs
-   recovery_count: 3
-   recovery_interval: 10
 
 MEMFAULTSENSOR:
-   monitor: false
+   monitor: true
    threaded: true
    probe: sysfs
-   recovery_count: 3
-   recovery_interval: 10
 
 CPUFAULTSENSOR:
-   monitor: false
+   monitor: true
    threaded: true
    probe: sysfs
-   recovery_count: 3
-   recovery_interval: 10
 
 STORAGE_ENCLOSURE:
    mgmt_interface: cliapi

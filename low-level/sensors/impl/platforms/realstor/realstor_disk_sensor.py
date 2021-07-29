@@ -143,23 +143,19 @@ class RealStorDiskSensor(SensorThread, InternalMsgQ):
         # Check for debug mode being activated
         self._read_my_msgQ_noWait()
 
-        try:
-            # poll all disk status and raise events if
-            # insertion/removal detected
-            self._rss_check_disks_presence()
+        # poll all disk status and raise events if
+        # insertion/removal detected
+        self._rss_check_disks_presence()
 
-            #Do not proceed further if latest disks info can't be validated due to store function error
-            if not self.invalidate_latest_disks_info:
-                # Polling system status
-                self.rssencl.get_system_status()
+        #Do not proceed further if latest disks info can't be validated due to store function error
+        if not self.invalidate_latest_disks_info:
+            # Polling system status
+            self.rssencl.get_system_status()
 
-                # check for disk faults & raise if found
-                self._rss_check_disk_faults()
-            else:
-                logger.warn("Can not validate disk faults or presence due to persistence store error")
-
-        except Exception as ae:
-            logger.exception(ae)
+            # check for disk faults & raise if found
+            self._rss_check_disk_faults()
+        else:
+            logger.warn("Can not validate disk faults or presence due to persistence store error")
 
         # Reset debug mode if persistence is not enabled
         self._disable_debug_if_persist_false()

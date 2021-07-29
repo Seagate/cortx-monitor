@@ -82,9 +82,6 @@ class CPUFaultSensor(SensorThread, InternalMsgQ):
         self.current_cpu_info = None
         self.os_utils = OSUtils()
 
-        # This value will be overridden in SensorThread before initialize
-        self.recovery_enabled = False
-
     def initialize(self, conf_reader, msgQlist, product):
         """initialize configuration reader and internal msg queues"""
 
@@ -106,13 +103,8 @@ class CPUFaultSensor(SensorThread, InternalMsgQ):
             self._utility_instance = self._utility_instance or \
                                 self.tool_factory.get_instance(cpu_fault_utility)
         except Exception as err:
-            err_msg = ("Error while initializing. "
+            raise Exception("Error while initializing. "
                 f"Unable to get the instance of {cpu_fault_utility} Utility, {err}")
-            if self.recovery_enabled:
-                raise Exception(err_msg)
-            else:
-                logger.error(f"CPUFaultSensor: {err_msg}. Hence shutting down.")
-                self.shutdown()
 
         self._node_id = Conf.get(GLOBAL_CONF, NODE_ID_KEY,'SN01')
         cache_dir_path = os.path.join(DATA_PATH, self.CACHE_DIR_NAME)
@@ -128,24 +120,14 @@ class CPUFaultSensor(SensorThread, InternalMsgQ):
             if self.stored_cpu_info is not None and self._node_id in self.stored_cpu_info.keys():
                 self.prev_cpu_info = self.stored_cpu_info[self._node_id]['CPU_LIST']
         except Exception as e:
-            err_msg = f"Error while reading stored cpu info, {e}"
-            if self.recovery_enabled:
-                raise Exception(err_msg)
-            else:
-                logger.error(f"CPUFaultSensor: {err_msg}. Hence shutting down.")
-                self.shutdown()
+            raise Exception(f"Error while reading stored cpu info, {e}")
 
     def read_current_cpu_info(self):
         """Read current cpu info"""
         try:
             self.current_cpu_info = self._utility_instance.get_cpu_info()
         except Exception as e:
-            err_msg = f"Error while reading current cpu info, {e}"
-            if self.recovery_enabled:
-                raise Exception(err_msg)
-            else:
-                logger.error(f"CPUFaultSensor: {err_msg}. Hence shutting down.")
-                self.shutdown()
+            raise Exception(f"Error while reading current cpu info, {e}")
 
     def run(self):
         """Run the sensor on its own thread"""
@@ -197,12 +179,7 @@ class CPUFaultSensor(SensorThread, InternalMsgQ):
                 to_update = True
 
         except Exception as e:
-            err_msg = f"Error while processing cpu info, {e}"
-            if self.recovery_enabled:
-                raise Exception(err_msg)
-            else:
-                logger.error(f"CPUFaultSensor: {err_msg}. Hence shutting down.")
-                self.shutdown()
+            raise Exception(f"Error while processing cpu info, {e}")
 
         # Send alerts
         for cpu, alert_type in self.alerts_for.items():

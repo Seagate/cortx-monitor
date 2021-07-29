@@ -84,8 +84,6 @@ class MemFaultSensor(SensorThread, InternalMsgQ):
         # Flag to indicate suspension of module
         self._suspended = False
         self.os_utils = OSUtils()
-        # This value will be overridden in SensorThread before initialize
-        self.recovery_enabled = False
 
 
     def initialize(self, conf_reader, msgQlist, product):
@@ -114,13 +112,8 @@ class MemFaultSensor(SensorThread, InternalMsgQ):
                                 self.tool_factory.get_instance(mem_fault_utility)
 #            self._utility_instance.initialize()
         except Exception as err:
-            err_msg = (f"Error while initializing MemFaultSensor. "
-                f"Unable to get the instance of {mem_fault_utility} Utility, {err}")
-            if self.recovery_enabled:
-                raise Exception(err_msg)
-            else:
-                logger.error(f"MemFaultSensor: {err_msg}. Hence shutting down.")
-                self.shutdown()
+            raise Exception("Error while initializing MemFaultSensor. "
+                f"Unable to get the instance of {mem_fault_utility} utility, {err}")
 
         cache_dir_path = os.path.join(DATA_PATH, self.CACHE_DIR_NAME)
         self.MEM_FAULT_SENSOR_DATA = os.path.join(cache_dir_path, f'MEM_FAULT_SENSOR_DATA_{self._node_id}')
@@ -174,21 +167,9 @@ class MemFaultSensor(SensorThread, InternalMsgQ):
                 else:
                     self.put_mem_info(self.total_mem)
             else:
-                err_msg = f"Invalid file, {mem_path}."
-                if self.recovery_enabled:
-                    raise Exception(err_msg)
-                else:
-                    logger.error(f"MemFaultSensor: {err_msg}. Hence shutting down.")
-                    self.shutdown()
-                    return True
+                raise Exception(f"Invalid file, {mem_path}.")
         else:
-            err_msg = f"File path {mem_path} does not exist."
-            if self.recovery_enabled:
-                raise Exception(err_msg)
-            else:
-                logger.error(f"MemFaultSensor: {err_msg}. Hence shutting down.")
-                self.shutdown()
-                return True
+            raise Exception(f"File path {mem_path} does not exist.")
 
         # Do not proceed if module is suspended
         # Memory sensor is going to trigger only during SSPL reboot; at reboot time a sensor

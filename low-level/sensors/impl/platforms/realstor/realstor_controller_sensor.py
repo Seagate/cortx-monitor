@@ -146,14 +146,11 @@ class RealStorControllerSensor(SensorThread, InternalMsgQ):
         self._read_my_msgQ_noWait()
 
         controllers = None
-        try:
-            controllers = self._get_controllers()
 
-            if controllers:
-                self._get_msgs_for_faulty_controllers(controllers)
+        controllers = self._get_controllers()
 
-        except Exception as exception:
-            logger.exception(exception)
+        if controllers:
+            self._get_msgs_for_faulty_controllers(controllers)
 
         # Reset debug mode if persistence is not enabled
         self._disable_debug_if_persist_false()

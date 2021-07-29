@@ -105,8 +105,6 @@ class IEMSensor(SensorThread, InternalMsgQ):
         self._timestamp_file_path = None
         self._iem_logs = None
         self._iem_log_file_lock = threading.Lock()
-        # This value will be overridden in SensorThread before initialize
-        self.recovery_enabled = False
 
     def initialize(self, conf_reader, msgQlist, products):
         """initialize configuration reader and internal msg queues"""
@@ -160,20 +158,11 @@ class IEMSensor(SensorThread, InternalMsgQ):
             self._read_iem()
 
         except IOError as io_error:
-            if io_error.errno == errno.ENOENT:
-                logger.debug(f"IEMSensor, self.run, {io_error.args} {io_error.filename}")
-            elif io_error.errno == errno.EACCES:
-                logger.error(f"IEMSensor, self.run, {io_error.args} {io_error.filename}")
-            else:
-                logger.error(f"IEMSensor, self.run, {io_error.args} {io_error.filename}")
-            if self.recovery_enabled:
-                raise
+            raise Exception(f"IEMSensor, self.run, {io_error.args} {io_error.filename}")
         except Exception as exception:
-            logger.error(f"IEMSensor, self.run, {exception.args}")
-            if self.recovery_enabled:
-                raise
-        finally:
-            self._scheduler.enter(10, self._priority, self.run, ())
+            raise Exception(f"IEMSensor, self.run, {exception.args}")
+
+        self._scheduler.enter(10, self._priority, self.run, ())
 
     def _read_iem(self):
         try:
@@ -181,20 +170,12 @@ class IEMSensor(SensorThread, InternalMsgQ):
                 for iem_log in self._iem_logs:
                     self._process_iem(iem_log.rstrip())
         except IOError as io_error:
-            if io_error.errno == errno.ENOENT:
-                logger.error(f"IEMSensor, self._read_iem, {io_error.args} {io_error.filename}")
-            elif io_error.errno == errno.EACCES:
-                logger.error(f"IEMSensor, self._read_iem, {io_error.args} {io_error.filename}")
-            else:
-                logger.error(f"IEMSensor, self._read_iem, {io_error.args} {io_error.filename}")
-            if self.recovery_enabled:
-                raise
+            raise Exception(
+                f"IEMSensor, self._read_iem, {io_error.args} {io_error.filename}")
         except Exception as exception:
-            logger.error(f"IEMSensor, self._read_iem, {exception.args}")
-            if self.recovery_enabled:
-                raise
-        finally:
-            self._scheduler.enter(10, self._priority, self._read_iem, ())
+            raise Exception(f"IEMSensor, self._read_iem, {exception.args}")
+
+        self._scheduler.enter(10, self._priority, self._read_iem, ())
 
     def _process_iem(self, iem_log):
         log_timestamp = iem_log[:iem_log.index(" ")]

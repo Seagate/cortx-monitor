@@ -144,14 +144,11 @@ class RealStorPSUSensor(SensorThread, InternalMsgQ):
         self._read_my_msgQ_noWait()
 
         psus = None
-        try:
-            psus = self._get_psus()
 
-            if psus:
-                self._get_msgs_for_faulty_psus(psus)
+        psus = self._get_psus()
 
-        except Exception as exception:
-            logger.exception(exception)
+        if psus:
+            self._get_msgs_for_faulty_psus(psus)
 
         # Reset debug mode if persistence is not enabled
         self._disable_debug_if_persist_false()

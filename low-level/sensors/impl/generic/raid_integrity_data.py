@@ -143,29 +143,25 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
         # Check for debug mode being activated
         self._read_my_msgQ_noWait()
 
-        try:
-            #cleanup
-            self._cleanup()
+        #cleanup
+        self._cleanup()
 
-            # Log RAIDIntegritySensor execution timestamp
-            self._create_file(self._timestamp_file_path)
-            self._log_timestamp()
+        # Log RAIDIntegritySensor execution timestamp
+        self._create_file(self._timestamp_file_path)
+        self._log_timestamp()
 
-            # Validate the raid data files and notify the node data msg handler
-            self._raid_health_monitor()
+        # Validate the raid data files and notify the node data msg handler
+        self._raid_health_monitor()
 
-
-            with open(self._timestamp_file_path, "r") as timestamp_file:
-                last_processed_log_timestamp = timestamp_file.read().strip()
-                current_time = int(time.time())
-                if current_time > int(last_processed_log_timestamp):
-                    self._next_scheduled_time = self._scan_frequency - \
-                        (current_time - int(last_processed_log_timestamp))
-            logger.info("Scheduling RAID validate again after: %s seconds"
-                        % self._next_scheduled_time)
-            self._scheduler.enter(self._next_scheduled_time, self._priority, self.run, ())
-        except Exception as ae:
-            logger.exception(ae)
+        with open(self._timestamp_file_path, "r") as timestamp_file:
+            last_processed_log_timestamp = timestamp_file.read().strip()
+            current_time = int(time.time())
+            if current_time > int(last_processed_log_timestamp):
+                self._next_scheduled_time = self._scan_frequency - \
+                    (current_time - int(last_processed_log_timestamp))
+        logger.info("Scheduling RAID validate again after: %s seconds"
+                    % self._next_scheduled_time)
+        self._scheduler.enter(self._next_scheduled_time, self._priority, self.run, ())
 
     def _raid_health_monitor(self):
         try:

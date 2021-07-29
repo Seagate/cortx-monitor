@@ -211,19 +211,15 @@ class RealStorLogicalVolumeSensor(SensorThread, InternalMsgQ):
         disk_groups = None
         logical_volumes = None
 
-        try:
-            disk_groups = self._get_disk_groups()
+        disk_groups = self._get_disk_groups()
 
-            if disk_groups:
-                self._get_msgs_for_faulty_disk_groups(disk_groups)
-                for disk_group in disk_groups:
-                    pool_serial_number = disk_group["pool-serial-number"]
-                    logical_volumes = self._get_logical_volumes(pool_serial_number)
-                    if logical_volumes:
-                        self._get_msgs_for_faulty_logical_volumes(logical_volumes, disk_group)
-
-        except Exception as exception:
-            logger.exception(exception)
+        if disk_groups:
+            self._get_msgs_for_faulty_disk_groups(disk_groups)
+            for disk_group in disk_groups:
+                pool_serial_number = disk_group["pool-serial-number"]
+                logical_volumes = self._get_logical_volumes(pool_serial_number)
+                if logical_volumes:
+                    self._get_msgs_for_faulty_logical_volumes(logical_volumes, disk_group)
 
         # Reset debug mode if persistence is not enabled
         self._disable_debug_if_persist_false()
