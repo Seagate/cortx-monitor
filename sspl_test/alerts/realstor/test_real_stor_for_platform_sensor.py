@@ -22,18 +22,11 @@ import sys
 from default import world
 from messaging.ingress_processor_tests import IngressProcessorTests
 from messaging.egress_processor_tests import EgressProcessorTests
-from framework.utils.conf_utils import Conf, GLOBAL_CONF, NODE_ID_KEY
-from framework.base.sspl_constants import DEFAULT_NODE_ID
+from common import get_current_node_id
 
 
 def init(args):
     pass
-
-
-def get_current_node_id():
-    """Get current node id."""
-    node_id = Conf.get(GLOBAL_CONF, NODE_ID_KEY, DEFAULT_NODE_ID)
-    return node_id
 
 
 def test_real_stor_sensor_current(agrs):

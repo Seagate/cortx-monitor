@@ -185,8 +185,6 @@ class IngressProcessor(ScheduledModuleThread, InternalMsgQ):
                     "IngressProcessor, Authentication failed on message: %s" % ingressMsg)
                 return
 
-            # Check for debugging being activated in the message header
-            self._check_debug(message)
             logger.debug("_process_msg, ingressMsg: %s" % ingressMsg)
 
             # Get the incoming message type
@@ -224,7 +222,8 @@ class IngressProcessor(ScheduledModuleThread, InternalMsgQ):
 
         except Exception as ex:
             logger.error(
-                "IngressProcessor, _process_msg unrecognized message: %r" % ingressMsg)
+                "IngressProcessor, _process_msg failed to recognize "
+                "message: %r with error %s" % (ingressMsg, ex))
             ack_msg = AckResponseMsg("Error Processing Msg",
                                      "Msg Handler Not Found", uuid).getJson()
             self._write_internal_msgQ(EgressProcessor.name(), ack_msg)
