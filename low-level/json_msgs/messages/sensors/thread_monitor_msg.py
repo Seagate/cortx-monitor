@@ -13,13 +13,6 @@
 # about this software or licensing, please email opensource@seagate.com or
 # cortx-questions@seagate.com.
 
-"""
- ****************************************************************************
-  Description:  Defines the JSON message transmitted for any module thread
-                failure or recovery.
-  ****************************************************************************
-"""
-
 import json
 import socket
 import time
@@ -29,6 +22,7 @@ from framework.utils.mon_utils import MonUtils
 
 
 class ThreadMonitorMsg(BaseSensorMsg):
+
     """The JSON message transmitted for module failure or recovery."""
 
     MESSAGE_VERSION = "1.0.0"
@@ -71,6 +65,6 @@ class ThreadMonitorMsg(BaseSensorMsg):
         }
 
     def getJson(self):
-        """Return a validated JSON object"""
+        """Return a validated JSON object."""
         self._json = self.validateMsg(self._json)
         return json.dumps(self._json)
