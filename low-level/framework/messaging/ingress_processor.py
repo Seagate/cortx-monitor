@@ -193,7 +193,7 @@ class IngressProcessor(ScheduledModuleThread, InternalMsgQ):
 
                 # Validate against the actuator schema
                 validate(ingressMsg, self._actuator_schema)
-                # Compare hostname from the request to determine
+                # Compare target_node_id from the request to determine
                 # if request is meant for the current node
                 target_node_id = message.get("target_node_id")
                 if target_node_id is None:
