@@ -169,7 +169,7 @@ class ServerHealth():
                 health_data.get("uid"),
                 'is' if good_state else 'is not')
         if recommendation in const.RESOURCE_MAP["undesired_values"]:
-            recommendation = 'NA' if good_state\
+            recommendation = 'NOT AVAILABLE' if good_state\
                 else const.DEFAULT_RECOMMENDATION
         health_data["last_updated"] = int(time.time())
         health_data["health"].update({
