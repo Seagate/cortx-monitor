@@ -50,7 +50,7 @@ class SSPLInit:
         # Check sspl-ll user exists
         sspl_uid = Utility.get_uid(self.user)
         if sspl_uid == -1:
-            msg = "User %s doesn't exit. Please add user." % self.user
+            msg = "User %s doesn't exist. Please add user." % self.user
             logger.error(msg)
             raise SetupError(errno.EINVAL, msg)
         # Check input/provisioner configs

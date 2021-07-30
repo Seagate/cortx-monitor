@@ -34,7 +34,8 @@ from framework.base.debug import Debug
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.base.module_thread import SensorThread
 from framework.base.sspl_constants import (
-    DATA_PATH, BMCInterface, PRODUCT_FAMILY, ServiceTypes, node_key_id)
+    DATA_PATH, BMCInterface, PRODUCT_FAMILY, ServiceTypes, node_key_id,
+    DEFAULT_RECOMMENDATION)
 from framework.utils import encryptor
 from framework.utils.conf_utils import (
     GLOBAL_CONF, IP, SECRET, SSPL_CONF, BMC_INTERFACE, BMC_CHANNEL_IF,
@@ -48,6 +49,7 @@ from framework.utils.iem import Iem
 from message_handlers.node_data_msg_handler import NodeDataMsgHandler
 from sensors.INode_hw import INodeHWsensor
 from framework.utils.ipmi_client import IpmiFactory
+from sensors.impl.generic.node_hw_alerts_info import alert_for_event, Alert
 
 # bash exit codes
 BASH_ILLEGAL_CMD = 127
@@ -1177,33 +1179,26 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
 
         common, specific, specific_dynamic = self._get_sensor_props(sensor_id)
         if common:
-            disk_sensors_list = self._get_sensor_list_by_entity(common['Entity ID'])
-            disk_sensors_list.remove(sensor_id)
-
-            description = f"{event} - {status}"
-
             if not specific:
                 specific = {"States Asserted": "N/A", "Sensor Type (Discrete)": "N/A"}
             specific_info = specific
-            alert_severity_dict = {
-                ("Drive Present", "Asserted"): ("insertion", "informational"),
-                ("Drive Present", "Deasserted"): ("missing", "critical"),
-                }
             resource_type = NodeDataMsgHandler.IPMI_RESOURCE_TYPE_DISK
-            fru = self.ipmi_client.is_fru(self.fru_map[self.TYPE_DISK])
+            try:
+                alert = alert_for_event[self.TYPE_DISK][event][status]
+            except KeyError:
+                alert = Alert("fault", "informational", f"{event} - {status}",
+                              "unknown", DEFAULT_RECOMMENDATION)
+            except Exception as e:
+                logger.exception(e)
             info = {
                 "resource_type": resource_type,
-                "fru": fru,
+                "fru": self.ipmi_client.is_fru(self.fru_map[self.TYPE_DISK]),
                 "resource_id": sensor,
                 "event_time": self._get_epoch_time_from_date_and_time(date, _time),
-                "description": description
+                "description": alert.description.format(sensor_id),
+                "impact": alert.impact.format(sensor_id),
+                "recommendation": alert.recommendation
             }
-            if (event, status) in alert_severity_dict:
-                alert_type = alert_severity_dict[(event, status)][0]
-                severity   = alert_severity_dict[(event, status)][1]
-            else:
-                alert_type = "fault"
-                severity   = "informational"
             specific_info["fru_id"] = sensor
 
             if is_last:
@@ -1217,18 +1212,19 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
                 except KeyError:
                     pass
 
-            if alert_type in ["fault", "missing"]:
+            if alert.type in ["fault", "missing"]:
                 self.faulty_resources[sensor_id] = {
                     'status': status,
                     'event': event,
                     'device_id': sensor,
                     'fru_type': self.TYPE_DISK
                 }
-            elif alert_type in ['fault_resolved', 'miscellaneous', 'insertion'] and \
+            elif alert.type in ['fault_resolved', 'insertion'] and \
                 sensor_id in self.faulty_resources:
                 del self.faulty_resources[sensor_id]
 
-            self._send_json_msg(resource_type, alert_type, severity, info, specific_info)
+            self._send_json_msg(resource_type, alert.type, alert.severity,
+                                info, specific_info)
             store.put(self.faulty_resources, self.faulty_resources_path)
 
     def _parse_temperature_info(self, index, date, _time, sensor, sensor_num, event, status, is_last):
