@@ -48,7 +48,7 @@ class RealStorPSUSensor(SensorThread, InternalMsgQ):
 
 
     SENSOR_NAME = "RealStorPSUSensor"
-    RESOURCE_CATEGORY = "enclosure:fru:psu"
+    RESOURCE_CATEGORY = "enclosure:hw:psu"
 
     PRIORITY = 1
 
@@ -309,11 +309,13 @@ class RealStorPSUSensor(SensorThread, InternalMsgQ):
         epoch_time = str(int(time.time()))
 
         alert_id = self._get_alert_id(epoch_time)
+        fru = self.rssencl.is_storage_fru('POWER_SUPPLY')
         resource_id = psu_detail.get("durable-id")
         host_name = self._get_hostname()
 
         info = {
                 "resource_type": self.RESOURCE_CATEGORY,
+                "fru": fru,
                 "resource_id": resource_id,
                 "event_time": epoch_time
                 }

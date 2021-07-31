@@ -93,16 +93,16 @@ class RealStorActuator(Actuator, Debug):
             ctrl_action = ""
             ctrl_type = ""
             if enclosure_request_data[-1] == "shutdown":
-                # "ENCL: enclosure:fru:controller:shutdown"
+                # "ENCL: enclosure:hw:controller:shutdown"
                 (request_type, _, component, component_type,
                     ctrl_action) = enclosure_request_data
             elif enclosure_request_data[-1] == "restart":
-                # "ENCL: enclosure:fru:controller:sc:restart"
-                # "ENCL: enclosure:fru:controller:mc:restart"
+                # "ENCL: enclosure:hw:controller:sc:restart"
+                # "ENCL: enclosure:hw:controller:mc:restart"
                 (request_type, _, component, component_type,
                     ctrl_type, ctrl_action) = enclosure_request_data
             else:
-                # "ENCL: enclosure:fru:controller"
+                # "ENCL: enclosure:hw:controller"
                 (request_type, _, component, component_type) = \
                     enclosure_request_data
 
@@ -682,7 +682,7 @@ class RealStorActuator(Actuator, Debug):
 
         if invalid_args:
             # Invalid resource 'shutdown abc' for an
-            # 'ENCL: enclosure:fru:controller:shutdown' actuator request
+            # 'ENCL: enclosure:hw:controller:shutdown' actuator request
             err_msg = "Invalid resource '{}' for an '{}' actuator request".format(
                 resource, enclosure_request)
             logger.error(err_msg)
@@ -711,7 +711,7 @@ class RealStorActuator(Actuator, Debug):
                 'command': ctrl_cmd,
                 'alert_type': 'control:shutdown',
                 'severity': severity,
-                'resource_type': 'enclosure:fru:controller'
+                'resource_type': 'enclosure:hw:controller'
                 },
             'restart sc' : {
                 'message': 'Restart / Start Storage Controller %s' % (message),
@@ -725,7 +725,7 @@ class RealStorActuator(Actuator, Debug):
                 'command': ctrl_cmd,
                 'alert_type': 'control:restart',
                 'severity': severity,
-                'resource_type': 'enclosure:fru:controller:sc'
+                'resource_type': 'enclosure:hw:controller:sc'
                 },
             'restart mc' : {
                 'message' : 'Restart / Start Management Controller %s' % (message),
@@ -738,7 +738,7 @@ class RealStorActuator(Actuator, Debug):
                 'command': ctrl_cmd,
                 'alert_type': 'control:restart',
                 'severity': severity,
-                'resource_type': 'enclosure:fru:controller:mc'
+                'resource_type': 'enclosure:hw:controller:mc'
                 }
         }
         return response_str[action_type]

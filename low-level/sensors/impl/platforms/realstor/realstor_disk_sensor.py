@@ -51,7 +51,7 @@ class RealStorDiskSensor(SensorThread, InternalMsgQ):
 
 
     SENSOR_NAME = "RealStorDiskSensor"
-    RESOURCE_TYPE = "enclosure:fru:disk"
+    RESOURCE_TYPE = "enclosure:hw:disk"
 
     PRIORITY = 1
 
@@ -495,11 +495,13 @@ class RealStorDiskSensor(SensorThread, InternalMsgQ):
         epoch_time = str(int(time.time()))
 
         alert_id = self._get_alert_id(epoch_time)
+        fru = self.rssencl.is_storage_fru('disk')
         resource_id = ext.get("durable-id")
         host_name = self.os_utils.get_fqdn()
 
         info = {
                 "resource_type": self.RESOURCE_TYPE,
+                "fru": fru,
                 "resource_id": resource_id,
                 "event_time": epoch_time
                 }
