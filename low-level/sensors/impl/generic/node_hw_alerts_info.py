@@ -14,6 +14,7 @@
 # cortx-questions@seagate.com.
 
 from collections import namedtuple
+from framework.base.sspl_constants import DEFAULT_RECOMMENDATION
 
 Alert = namedtuple('AlertInfo',
                    ['type', 'severity', 'description',
@@ -30,14 +31,14 @@ alert_for_event = {
                     "missing", "critical",
                     "Disk {} is missing/removed.",
                     "Disk {} is not available.",
-                    "Please Contact Seagate Support.")
+                    DEFAULT_RECOMMENDATION)
         },
         "Drive Fault": {
             "Asserted": Alert(
                     "fault", "critial",
                     "Disk {} is in bad health.",
                     "Disk {} is not usable.",
-                    "Please Contact Seagate Support."),
+                    DEFAULT_RECOMMENDATION),
             "Deasserted": Alert(
                     "fault_resolved", "informational",
                     "Disk {} is now in good helath.",

@@ -1195,8 +1195,10 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
                 "fru": self.ipmi_client.is_fru(self.fru_map[self.TYPE_DISK]),
                 "resource_id": sensor,
                 "event_time": self._get_epoch_time_from_date_and_time(date, _time),
-                "description": alert.description.format(sensor_id),
-                "impact": alert.impact.format(sensor_id),
+                "description": alert.description.format(
+                    sensor_id.replace('Status', f'({sensor_num})')),
+                "impact": alert.impact.format(
+                    sensor_id.replace('Status', f'({sensor_num})')),
                 "recommendation": alert.recommendation
             }
             specific_info["fru_id"] = sensor
