@@ -505,7 +505,7 @@ class RealStorEnclosure(StorageEnclosure):
 
         """
         self.fru_list = []
-        # Read FRU data using /shoe/frus cli api.
+        # Read FRU data using /show/frus cli api.
         fru_data = singleton_realstorencl.get_realstor_encl_data("frus")
         for fru_dict in fru_data:
             if "name" in fru_dict.keys():
