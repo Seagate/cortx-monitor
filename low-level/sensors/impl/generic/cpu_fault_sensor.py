@@ -218,7 +218,7 @@ class CPUFaultSensor(SensorThread, InternalMsgQ):
         epoch_time = str(int(time.time()))
 
         alert_id = self._get_alert_id(epoch_time)
-        host_name = socket.gethostname()
+        host_name = socket.getfqdn()
 
         # Populate specific info
         self.fill_specific_info()

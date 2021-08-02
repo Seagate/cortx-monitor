@@ -304,7 +304,7 @@ class RealStorControllerSensor(SensorThread, InternalMsgQ):
 
         alert_id = self._get_alert_id(epoch_time)
         resource_id = controller_detail.get("durable-id", "")
-        host_name = socket.gethostname()
+        host_name = socket.getfqdn()
         info = {
                 "resource_type": self.RESOURCE_TYPE,
                 "resource_id": resource_id,

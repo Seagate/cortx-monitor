@@ -289,7 +289,7 @@ class RealStorFanSensor(SensorThread, InternalMsgQ):
 
         alert_id = self._get_alert_id(epoch_time)
         resource_id = fan_module_info_dict.get("name", "")
-        host_name = socket.gethostname()
+        host_name = socket.getfqdn()
 
         info = {
                 "resource_type": self.RESOURCE_TYPE,

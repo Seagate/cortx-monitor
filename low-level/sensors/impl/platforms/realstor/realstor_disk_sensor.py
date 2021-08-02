@@ -495,7 +495,7 @@ class RealStorDiskSensor(SensorThread, InternalMsgQ):
 
         alert_id = self._get_alert_id(epoch_time)
         resource_id = ext.get("durable-id")
-        host_name = socket.gethostname()
+        host_name = socket.getfqdn()
 
         info = {
                 "resource_type": self.RESOURCE_TYPE,

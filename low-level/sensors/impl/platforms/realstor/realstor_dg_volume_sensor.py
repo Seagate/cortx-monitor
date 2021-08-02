@@ -431,7 +431,7 @@ class RealStorLogicalVolumeSensor(SensorThread, InternalMsgQ):
 
         alert_id = self._get_alert_id(epoch_time)
         resource_id = logical_volume_detail.get("volume-name", "")
-        host_name = socket.gethostname()
+        host_name = socket.getfqdn()
 
         for key, value in logical_volume_detail.items():
             if key in self.volumes_generic:
@@ -481,7 +481,7 @@ class RealStorLogicalVolumeSensor(SensorThread, InternalMsgQ):
 
         alert_id = self._get_alert_id(epoch_time)
         resource_id = disk_group_detail.get("name", "")
-        host_name = socket.gethostname()
+        host_name = socket.getfqdn()
 
         for key, value in disk_group_detail.items():
             if key in self.disk_groups_generic:

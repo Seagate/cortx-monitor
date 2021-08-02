@@ -418,7 +418,7 @@ class SASPortSensor(SensorThread, InternalMsgQ):
         epoch_time = str(int(time.time()))
 
         alert_id = self._get_alert_id(epoch_time)
-        host_name = socket.gethostname()
+        host_name = socket.getfqdn()
 
         specific_info = {}
         specific_info_list = []

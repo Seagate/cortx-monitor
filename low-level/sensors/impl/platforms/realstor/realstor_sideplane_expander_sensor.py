@@ -296,7 +296,7 @@ class RealStorSideplaneExpanderSensor(SensorThread, InternalMsgQ):
         drawer_id = "drawer" + ' ' + str(sideplane_expander_info_dict.get("drawer-id"))
         name = sideplane_expander_info_dict.get("name", "")
         resource_id = drawer_id + ' ' + name
-        host_name = socket.gethostname()
+        host_name = socket.getfqdn()
 
 
         info = {
