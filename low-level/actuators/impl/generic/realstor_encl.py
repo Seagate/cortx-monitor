@@ -113,7 +113,7 @@ class RealStorActuator(Actuator, Debug):
                     resource.strip(), enclosure_request),
                     component, component_type, resource,
                     ctrl_action = ctrl_action)
-            elif component == "fru":
+            elif component == "hw":
                 response = self.make_response(self.request_fru_func[
                     request_type][component_type](resource), component,
                     component_type, resource)
@@ -151,6 +151,7 @@ class RealStorActuator(Actuator, Debug):
         resource_type = "enclosure:{}:{}".format(component, component_type)
         epoch_time = str(int(time.time()))
         alert_id = MonUtils.get_alert_id(epoch_time)
+        fru = self.rssencl.is_storage_fru(component_type)
 
         if ctrl_action in self.CTRL_ACTION_LST:
             resource_type = component_details['resource_type']
@@ -161,7 +162,7 @@ class RealStorActuator(Actuator, Debug):
             del component_details['severity']
             if self.SEVERITY == "warning":
                 del component_details['description']
-        elif component == "fru":
+        elif component == "hw":
             if resource_id == self.RESOURCE_ALL:
                 for comp in component_details:
                     comp['resource_id'] = self.fru_response_manipulators[
@@ -176,6 +177,7 @@ class RealStorActuator(Actuator, Debug):
           "alert_id": alert_id,
           "info": {
             "resource_type": resource_type,
+            "fru": fru,
             "resource_id": resource_id,
             "event_time": epoch_time
           },

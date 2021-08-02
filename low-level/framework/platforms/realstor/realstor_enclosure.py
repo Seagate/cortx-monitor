@@ -96,6 +96,13 @@ class RealStorEnclosure(StorageEnclosure):
     DATA_FORMAT_JSON = "json"
     FAULT_KEY = "unhealthy-component"
 
+    # Realstor FRUs mapping
+    fru_mapping = {
+        "fan": "FAN MODULE",
+        "psu": "POWER_SUPPLY",
+        "sideplane": "SIDEPLANE"
+    }
+
     # Current support for 'cliapi', future scope for 'rest', 'redfish' apis
     # once available
     realstor_supported_interfaces = ['cliapi']
@@ -519,7 +526,12 @@ class RealStorEnclosure(StorageEnclosure):
         logger.info(f"Fetched Enclosure FRU list:{self.fru_list}")
 
     def is_storage_fru(self, fru):
-        is_fru = True if fru in self.fru_list else False
+        try:
+            is_fru = True if fru in self.fru_list or \
+                self.fru_mapping[fru] in self.fru_list else False
+        except KeyError:
+            is_fru = False
+
         fru_str = str(is_fru).lower()
         if is_fru:
             if fru in self.hot_swapped_frus:
