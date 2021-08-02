@@ -26,6 +26,7 @@ import shutil
 import os
 import syslog
 import time
+import pwd
 from urllib.parse import urlparse
 from cortx.utils.conf_store.error import ConfError
 
@@ -38,10 +39,14 @@ from cortx.utils.validator.error import VError
 from files.opt.seagate.sspl.setup.setup_error import SetupError
 from files.opt.seagate.sspl.setup.setup_logger import init_logging, logger
 from framework.base.sspl_constants import (
-    PRVSNR_CONFIG_INDEX, GLOBAL_CONFIG_INDEX, global_config_path,
-    file_store_config_path, SSPL_BASE_DIR, TEST_REQ_SERVICE_RESTART,
-    sspl_config_path)
+    DATA_PATH, PRVSNR_CONFIG_INDEX, GLOBAL_CONFIG_INDEX, SSPL_CONFIG_INDEX,
+    global_config_path, file_store_config_path, global_config_file_path,
+    sspl_config_path, PRODUCT_BASE_DIR, SSPL_BASE_DIR, PRODUCT_FAMILY,
+    TEST_REQ_SERVICE_RESTART, USER, RSYSLOG_IEM_CONF, RSYSLOG_SSPL_CONF,
+    RSYSLOG_MSB_CONF, IEM_LOGROTATE_CONF, SSPL_LOGROTATE_CONF,
+    MSB_LOGROTATE_CONF, RSYSLOG_SB_CONF, SB_LOGROTATE_CONF)
 from framework.base.conf_upgrade import ConfUpgrade
+from framework.utils.utility import Utility
 
 
 class Cmd:
@@ -69,7 +74,7 @@ class Cmd:
             [ manifest_support_bundle [<id>] [<path>] ]
             [ support_bundle [<id>] [<path>] ]
             [ check ]
-            [ cleanup ]
+            [ cleanup [--pre-factory]]
             \n""")
 
     @staticmethod
@@ -487,7 +492,6 @@ class CleanupCmd(Cmd):
 
     def validate(self):
         # Validate config inputs
-        from framework.utils.utility import Utility
         Conf.load(GLOBAL_CONFIG_INDEX, global_config_path)
         self.product = Utility.get_config_value(GLOBAL_CONFIG_INDEX,
             "cortx>release>product")
@@ -501,13 +505,76 @@ class CleanupCmd(Cmd):
 
     def process(self):
         try:
+            args = ' '.join(self._args.args)
+            Conf.load(SSPL_CONFIG_INDEX, sspl_config_path)
+            sspl_log_file_path = Utility.get_config_value(
+                    SSPL_CONFIG_INDEX, "SYSTEM_INFORMATION>sspl_log_file_path")
+            iem_log_file_path = Utility.get_config_value(
+                    SSPL_CONFIG_INDEX, "IEMSENSOR>log_file_path")
             if os.path.exists(file_store_config_path):
                 os.remove(file_store_config_path)
             shutil.copyfile("%s/conf/sspl.conf.%s.yaml" % (
                 SSPL_BASE_DIR, self.product), file_store_config_path)
+
+            # --pre-factory will cleanup config and undo everything whatever
+            # we have done in post-install Mini-Provisioner Interface.
+            if '--pre-factory' in args:
+                # Directories and file which needs to deleted.
+                directories = [
+                    f'/var/{PRODUCT_FAMILY}/sspl',
+                    f'/var/{PRODUCT_FAMILY}/iem/',
+                    f'/var/log/{PRODUCT_FAMILY}/sspl/',
+                    f'/var/log/{PRODUCT_FAMILY}/iem/',
+                    '/etc/sspl-ll/', f'{PRODUCT_BASE_DIR}/iem/iec_mapping']
+                sspl_sudoers_file = '/etc/sudoers.d/sspl'
+                sspl_dbus_policy_rules = '/etc/polkit-1/rules.d'
+                sspl_dbus_policy_conf = '/etc/dbus-1/system.d'
+                sspl_service_file = '/etc/systemd/system/sspl-ll.service'
+                sspl_test_backup = '/etc/sspl_tests.conf.back'
+                sspl_test_file_path = '/etc/sspl_test_gc_url.yaml'
+                sspl_sb_log_file_path = sspl_log_file_path.replace(
+                    "/sspl.log", "/sspl_support_bundle.log")
+                manifest_log_file_path = sspl_log_file_path.replace(
+                    "/sspl.log", "/manifest.log")
+                # symlinks created during post_install
+                sspl_ll_cli = "/usr/bin/sspl_ll_cli"
+                # Remove SSPL config other config files which we have created
+                # during post_install.
+                for file in [
+                    sspl_ll_cli, sspl_test_backup,
+                    sspl_test_file_path, file_store_config_path,
+                    global_config_file_path, sspl_log_file_path,
+                    iem_log_file_path, sspl_sb_log_file_path,
+                    manifest_log_file_path, RSYSLOG_IEM_CONF,
+                    RSYSLOG_SSPL_CONF, RSYSLOG_MSB_CONF,
+                    IEM_LOGROTATE_CONF, SSPL_LOGROTATE_CONF,
+                    MSB_LOGROTATE_CONF, RSYSLOG_SB_CONF,
+                    SB_LOGROTATE_CONF, sspl_dbus_policy_conf,
+                    sspl_dbus_policy_rules, sspl_sudoers_file,
+                        sspl_service_file]:
+                    self.delete_config(file)
+                # Delete directories which we have created during post_install.
+                for dir in directories:
+                    self.delete_config(dir, del_dir=True)
+                # Delete sspl-ll user
+                usernames = [x[0] for x in pwd.getpwall()]
+                if USER in usernames:
+                    os.system("/usr/sbin/userdel -f %s" % USER)
             logger.info("%s - Process done" % self.name)
         except OSError as e:
             logger.error(f"Failed in Cleanup. ERROR: {e}")
+
+    def delete_config(self, path, del_dir=False):
+        """Delete directories/files from dir which starts with 'sspl'."""
+        if not os.path.exists(path):
+            logger.info(f"{path} path doesn't exists.")
+            return
+        if os.path.isfile(path):
+            os.remove(path)
+        elif os.path.islink(path):
+            os.unlink(path)
+        elif os.path.isdir(path) and del_dir:
+            shutil.rmtree(path, ignore_errors=True)
 
 
 class BackupCmd(Cmd):
