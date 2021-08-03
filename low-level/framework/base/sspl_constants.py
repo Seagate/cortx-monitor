@@ -228,7 +228,7 @@ SSPL_CONFIGS = ['log_level', 'cli_type', 'sspl_log_file_path', 'cluster_id', 'st
 RESOURCE_MAP = {
     "server_type_supported": ["hw", "vm"],
     "storage_type_supported": ["rbod", "jbod", "ebod"],
-    "undesired_values": ["NA", "N/A", "", None]
+    "undesired_values": ["NA", "N/A", ""]
 }
 
 
