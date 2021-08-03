@@ -1176,6 +1176,10 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         """Parse out Disk related changes that gets reaflected in the ipmi sel list"""
 
         sensor_id = self.sensor_id_map[self.TYPE_DISK][sensor_num]
+        disk_slot = re.search(r'/d+', sensor_id)
+        if disk_slot:
+            disk_slot = disk_slot.group()
+        disk_name = sensor_id.replace('Status', f'({sensor_num})')
 
         common, specific, specific_dynamic = self._get_sensor_props(sensor_id)
         if common:
@@ -1195,10 +1199,8 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
                 "fru": self.ipmi_client.is_fru(self.fru_map[self.TYPE_DISK]),
                 "resource_id": sensor,
                 "event_time": self._get_epoch_time_from_date_and_time(date, _time),
-                "description": alert.description.format(
-                    sensor_id.replace('Status', f'({sensor_num})')),
-                "impact": alert.impact.format(
-                    sensor_id.replace('Status', f'({sensor_num})')),
+                "description": alert.description.format(disk_slot, disk_name),
+                "impact": alert.impact.format(disk_name),
                 "recommendation": alert.recommendation
             }
             specific_info["fru_id"] = sensor
