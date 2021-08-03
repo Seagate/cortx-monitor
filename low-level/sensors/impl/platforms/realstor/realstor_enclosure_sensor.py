@@ -20,7 +20,6 @@
 """
 import json
 import os
-import socket
 import time
 import uuid
 
@@ -32,6 +31,7 @@ from framework.utils.service_logging import logger
 from framework.utils.severity_reader import SeverityReader
 from framework.platforms.realstor.realstor_enclosure import singleton_realstorencl
 from framework.utils.store_factory import store
+from framework.utils.os_utils import OSUtils
 
 # Modules that receive messages from this module
 from message_handlers.real_stor_encl_msg_handler import RealStorEnclMsgHandler
@@ -90,6 +90,7 @@ class RealStorEnclosureSensor(SensorThread, InternalMsgQ):
 
         # Flag to indicate suspension of module
         self._suspended = False
+        self.os_utils = OSUtils()
 
     def initialize(self, conf_reader, msgQlist, products):
         """initialize configuration reader and internal msg queues"""
@@ -211,7 +212,7 @@ class RealStorEnclosureSensor(SensorThread, InternalMsgQ):
         epoch_time = str(int(time.time()))
         alert_id = self._get_alert_id(epoch_time)
         resource_id = "0"
-        host_name = socket.getfqdn()
+        host_name = self.os_utils.get_fqdn()
 
         info = {
                 "resource_type": self.RESOURCE_TYPE,

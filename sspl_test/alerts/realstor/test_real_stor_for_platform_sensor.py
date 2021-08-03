@@ -22,10 +22,12 @@ import sys
 from default import world
 from messaging.ingress_processor_tests import IngressProcessorTests
 from messaging.egress_processor_tests import EgressProcessorTests
+from common import get_current_node_id
 
 
 def init(args):
     pass
+
 
 def test_real_stor_sensor_current(agrs):
     check_sspl_ll_is_running()
@@ -187,7 +189,6 @@ def check_sspl_ll_is_running():
         world.sspl_modules[IngressProcessorTests.name()]._read_my_msgQ()
 
 def enclosure_sensor_message_request(resource_type, resource_id):
-
     egressMsg = {
         "title": "SSPL Actuator Request",
         "description": "Seagate Storage Platform Library - Actuator Request",
@@ -214,6 +215,7 @@ def enclosure_sensor_message_request(resource_type, resource_id):
                 "node_id": "1"
             },
             "response_dest": {},
+            "target_node_id": get_current_node_id(),
             "actuator_request_type": {
                 "storage_enclosure": {
                     "enclosure_request": resource_type,
