@@ -20,7 +20,6 @@ on the Node server
 
 import json
 import os
-import socket
 import time
 import uuid
 
@@ -34,6 +33,7 @@ from framework.utils.severity_reader import SeverityReader
 from framework.utils.store_factory import file_store
 from framework.utils.sysfs_interface import SysFS
 from framework.utils.tool_factory import ToolFactory
+from framework.utils.os_utils import OSUtils
 from message_handlers.node_data_msg_handler import NodeDataMsgHandler
 
 # Override default store
@@ -80,6 +80,7 @@ class CPUFaultSensor(SensorThread, InternalMsgQ):
         self.stored_cpu_info = None
         self.prev_cpu_info = None
         self.current_cpu_info = None
+        self.os_utils = OSUtils()
 
     def initialize(self, conf_reader, msgQlist, product):
         """initialize configuration reader and internal msg queues"""
@@ -218,7 +219,7 @@ class CPUFaultSensor(SensorThread, InternalMsgQ):
         epoch_time = str(int(time.time()))
 
         alert_id = self._get_alert_id(epoch_time)
-        host_name = socket.getfqdn()
+        host_name = self.os_utils.get_fqdn()
 
         # Populate specific info
         self.fill_specific_info()

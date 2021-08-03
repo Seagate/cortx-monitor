@@ -20,7 +20,6 @@
  ****************************************************************************
 """
 
-import socket
 import time
 from collections import namedtuple
 from queue import Queue
@@ -40,6 +39,7 @@ from framework.utils.mon_utils import get_alert_id
 from framework.utils.service_logging import logger
 from framework.utils.severity_reader import SeverityReader
 from framework.utils.store_factory import store
+from framework.utils.os_utils import OSUtils
 from message_handlers.service_msg_handler import ServiceMsgHandler
 from sensors.ISystem_monitor import ISystemMonitor
 
@@ -499,7 +499,7 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
         return {
             "sensor_request_type": {
                 "service_status_alert": {
-                    "host_id": socket.getfqdn(),
+                    "host_id": OSUtils.get_fqdn(),
                     "severity": SeverityReader().map_severity(
                         alert.alert_type),
                     "alert_id": get_alert_id(str(int(time.time()))),

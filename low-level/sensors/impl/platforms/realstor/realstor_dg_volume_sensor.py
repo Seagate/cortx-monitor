@@ -20,7 +20,6 @@
 """
 import json
 import os
-import socket
 import time
 import uuid
 from threading import Event
@@ -36,6 +35,7 @@ from framework.utils.conf_utils import (POLLING_FREQUENCY_OVERRIDE, SSPL_CONF,
 from framework.utils.service_logging import logger
 from framework.utils.severity_reader import SeverityReader
 from framework.utils.store_factory import store
+from framework.utils.os_utils import OSUtils
 # Modules that receive messages from this module
 from message_handlers.real_stor_encl_msg_handler import RealStorEnclMsgHandler
 from sensors.Ilogicalvolume import ILogicalVolumesensor
@@ -145,6 +145,7 @@ class RealStorLogicalVolumeSensor(SensorThread, InternalMsgQ):
         self._suspended = False
 
         self._event = Event()
+        self.os_utils = OSUtils()
 
     def initialize(self, conf_reader, msgQlist, products):
         """initialize configuration reader and internal msg queues"""
@@ -431,7 +432,7 @@ class RealStorLogicalVolumeSensor(SensorThread, InternalMsgQ):
 
         alert_id = self._get_alert_id(epoch_time)
         resource_id = logical_volume_detail.get("volume-name", "")
-        host_name = socket.getfqdn()
+        host_name = self.os_utils.get_fqdn()
 
         for key, value in logical_volume_detail.items():
             if key in self.volumes_generic:
@@ -481,7 +482,7 @@ class RealStorLogicalVolumeSensor(SensorThread, InternalMsgQ):
 
         alert_id = self._get_alert_id(epoch_time)
         resource_id = disk_group_detail.get("name", "")
-        host_name = socket.getfqdn()
+        host_name = self.os_utils.get_fqdn()
 
         for key, value in disk_group_detail.items():
             if key in self.disk_groups_generic:
