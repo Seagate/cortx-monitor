@@ -208,7 +208,7 @@ This guide provides a step-by-step walkthrough for getting you CORTX-Monitor Ser
     ```
     Finally run the deployment script
     ```
-    $ ./sspl_dev_deploy --deploy -L /root/MYRPMS --variable_file /root/template_values.1-node.txt --storage_type RBOD --server_type HW
+    $ ./sspl_dev_deploy --deploy -L /root/MYRPMS --variable_file ~/template_values.1-node.txt --storage_type RBOD --server_type HW
     ```
 
 4. To start the CORTX-Monitor service, run the commands:
