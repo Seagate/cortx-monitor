@@ -41,18 +41,17 @@ This guide provides a step-by-step walkthrough for getting you CORTX-Monitor Ser
       2. Run the following commands if you are using a Seagate Internal VM:
 
             ```shell
-            
             $ BUILD_URL="http://cortx-storage.colo.seagate.com/releases/cortx/github/dev/rhel-7.7.1908/provisioner_last_successful"`
             $ yum-config-manager --add-repo  $BUILD_URL
             $ rpm --import  $BUILD_URL/RPM-GPG-KEY-Seagate
             ```
 
-        :page_with_curl: **Notes:** 
-        
-      - If the https://raw.githubusercontent.com/Seagate/cortx-re/main/scripts/third-party-rpm/install-cortx-prereq.sh?token=APBA7EBWCTPTEOH5PPWFYYTBCN23Y link is not accessible, generate new one.
-      - Visit https://github.com/Seagate/cortx-re/blob/main/scripts/third-party-rpm/install-cortx-prereq.sh and naviagte to RAW > Copy URL > Use the URL for deployment.
+:page_with_curl:**Notes:** 
+
+  - If the https://raw.githubusercontent.com/Seagate/cortx-re/main/scripts/third-party-rpm/install-cortx-prereq.sh?token=APBA7EBWCTPTEOH5PPWFYYTBCN23Y link is not accessible, generate new one.
+  - Visit https://github.com/Seagate/cortx-re/blob/main/scripts/third-party-rpm/install-cortx-prereq.sh and naviagte to RAW > Copy URL > Use the URL for deployment.
       
-    3. Follow these instructions to [install dependencies](https://github.com/Seagate/cortx/blob/main/doc/InstallingDependencies.md) if you are using an external VM.
+      3. Follow these instructions to [install dependencies](https://github.com/Seagate/cortx/blob/main/doc/InstallingDependencies.md) if you are using an external VM.
 
     </p>
     </details>
