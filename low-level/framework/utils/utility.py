@@ -28,6 +28,7 @@ import shutil
 import time
 from cortx.utils.conf_store import Conf
 from cortx.utils.conf_store.error import ConfError
+from cortx.utils.process import SimpleProcess
 from framework.utils.service_logging import logger
 
 
@@ -168,17 +169,32 @@ class Utility(object):
         return int(time.time())
 
     @staticmethod
-    def delete_file_and_dir(path, del_dir=False):
-        """Delete directories/files from dir."""
+    def reset_log_files(path, fformat=None, del_file=False, del_dir=False):
+        """Clean log files and delete files from dir."""
         if not os.path.exists(path):
             logger.info(f"{path} path doesn't exists.")
             return
-        if os.path.isfile(path):
-            os.remove(path)
-        elif os.path.islink(path):
-            os.unlink(path)
-        elif os.path.isdir(path) and del_dir:
-            shutil.rmtree(path, ignore_errors=True)
+        if fformat:
+            for root, _, files in os.walk(path):
+                for file in files:
+                    if file.endswith(fformat):
+                        if del_file:
+                            os.remove(os.path.join(root, file))
+                            return
+                        cmd = f"truncate -s 0 > {os.path.join(root, file)}"
+                        _, error, returncode = SimpleProcess(cmd).run()
+                        if returncode != 0:
+                            logger.error(
+                                "Failed to clear log file data. "
+                                f"ERROR:{error} CMD:{cmd}")
+        else:
+            if os.path.isfile(path) and del_file:
+                os.remove(path)
+            elif os.path.islink(path):
+                os.unlink(path)
+            elif os.path.isdir(path) and del_dir:
+                shutil.rmtree(path, ignore_errors=True)
+            
 
 def errno_to_str_mapping(err_no):
     """Convert numerical errno to its meaning."""

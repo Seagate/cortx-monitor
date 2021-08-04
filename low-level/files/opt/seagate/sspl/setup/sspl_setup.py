@@ -552,16 +552,16 @@ class CleanupCmd(Cmd):
                     SB_LOGROTATE_CONF, sspl_dbus_policy_conf,
                     sspl_dbus_policy_rules, sspl_sudoers_file,
                         sspl_service_file]:
-                    Utility.delete_file_and_dir(file)
+                    Utility.reset_log_files(file, del_file=True)
                 # Delete directories which we have created during post_install.
                 for dir in directories:
-                    Utility.delete_file_and_dir(dir, del_dir=True)
+                    Utility.reset_log_files(dir, del_dir=True)
                 logger.info("Deleted config/log files and directories.")
                 # Delete sspl-ll user
                 usernames = [x[0] for x in pwd.getpwall()]
                 if USER in usernames:
                     os.system("/usr/sbin/userdel -f %s" % USER)
-                    logger.info("Deleted %s user." %USER)
+                    logger.info("Deleted %s user." % USER)
             logger.info("%s - Process done" % self.name)
         except OSError as e:
             logger.error(f"Failed in Cleanup. ERROR: {e}")

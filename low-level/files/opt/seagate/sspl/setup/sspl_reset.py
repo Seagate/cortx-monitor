@@ -1,3 +1,19 @@
+#!/bin/env python3
+
+# Copyright (c) 2020 Seagate Technology LLC and/or its Affiliates
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU Affero General Public License for more details.
+# You should have received a copy of the GNU Affero General Public License
+# along with this program. If not, see <https://www.gnu.org/licenses/>.
+# For any questions about this software or licensing,
+# please email opensource@seagate.com or cortx-questions@seagate.com.
+
 import os
 import shutil
 
@@ -7,8 +23,8 @@ from framework.base.sspl_constants import (PRODUCT_FAMILY,
                                            sspl_config_path)
 from cortx.utils.service import DbusServiceHandler
 from cortx.utils.conf_store import Conf
-from cortx.utils.process import SimpleProcess
 from files.opt.seagate.sspl.setup.setup_logger import logger
+from framework.utils.utility import Utility
 
 
 class Reset:
@@ -22,19 +38,6 @@ class Reset:
         if os.path.exists(filename):
             os.remove(filename)
 
-    @classmethod
-    def reset_log_files(cls, fformat, dir_path, del_file=False):
-        for root, _, files in os.walk(dir_path):
-            for file in files:
-                if file.endswith(fformat):
-                    if del_file:
-                        os.remove(os.path.join(root, file))
-                        return
-                    cmd= f"truncate -s 0 > {os.path.join(root, file)}"
-                    _, error, returncode = SimpleProcess(cmd).run()
-                    if returncode != 0:
-                        logger.error("Failed to clear log file data"
-                                     f"ERROR:{error} CMD:{cmd}")
 
     def process(self):
         dbus_service = DbusServiceHandler()
@@ -50,11 +53,9 @@ class Reset:
         shutil.rmtree(DATA_PATH, ignore_errors=True)
 
         # Clear log data from log files and delete 'log.gz' files
-        Reset.reset_log_files('.log', f"/var/log/{PRODUCT_FAMILY}/sspl/")
-        Reset.reset_log_files('.log', f"/var/log/{PRODUCT_FAMILY}/iem/")
-        Reset.reset_log_files('.log.gz',
-                              f"/var/log/{PRODUCT_FAMILY}/sspl/",
-                              del_file=True)
-        Reset.reset_log_files('.log.gz',
-                              f"/var/log/{PRODUCT_FAMILY}/iem/",
-                              del_file=True)
+        Utility.reset_log_files(f"/var/log/{PRODUCT_FAMILY}/sspl/", '.log')
+        Utility.reset_log_files(f"/var/log/{PRODUCT_FAMILY}/iem/", '.log')
+        Utility.reset_log_files(
+            f"/var/log/{PRODUCT_FAMILY}/sspl/", '.log.gz', del_file=True)
+        Utility.reset_log_files(
+            f"/var/log/{PRODUCT_FAMILY}/iem/", '.log.gz', del_file=True)
