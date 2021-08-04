@@ -157,11 +157,14 @@ class NodeData(Debug):
         # Calculate the current number of running processes at this moment
         total_running_proc = 0
         for proc in psutil.process_iter():
-            pinfo = proc.as_dict(attrs=['status'])
-            if pinfo['status'] not in (psutil.STATUS_ZOMBIE, psutil.STATUS_DEAD,
-                                       psutil.STATUS_STOPPED, psutil.STATUS_IDLE,
-                                       psutil.STATUS_SLEEPING):
-                total_running_proc += 1
+            try:
+                pinfo = proc.as_dict(attrs=['status'])
+                if pinfo['status'] not in (psutil.STATUS_ZOMBIE, psutil.STATUS_DEAD,
+                                        psutil.STATUS_STOPPED, psutil.STATUS_IDLE,
+                                        psutil.STATUS_SLEEPING):
+                    total_running_proc += 1
+            except psutil.NoSuchProcess:
+                logger.warn(f"(psutil) Process '{proc.name()}' exited unexpectedly.")
         self.running_process_count = total_running_proc
 
     def _get_local_mount_data(self):
