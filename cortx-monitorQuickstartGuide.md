@@ -49,7 +49,7 @@ This guide provides a step-by-step walkthrough for getting you CORTX-Monitor Ser
 :page_with_curl:**Notes:** 
 
   - If the https://raw.githubusercontent.com/Seagate/cortx-re/main/scripts/third-party-rpm/install-cortx-prereq.sh?token=APBA7EBWCTPTEOH5PPWFYYTBCN23Y link is not accessible, generate new one.
-  - Visit https://github.com/Seagate/cortx-re/blob/main/scripts/third-party-rpm/install-cortx-prereq.sh and naviagte to RAW > Copy URL > Use the URL for deployment.
+  - Visit https://github.com/Seagate/cortx-re/blob/main/scripts/third-party-rpm/install-cortx-prereq.sh and navigate to RAW > Copy URL > Use the URL for deployment.
       
       3. Follow these instructions to [install dependencies](https://github.com/Seagate/cortx/blob/main/doc/InstallingDependencies.md) if you are using an external VM.
 
@@ -74,7 +74,7 @@ This guide provides a step-by-step walkthrough for getting you CORTX-Monitor Ser
 
 - cortx-monitor service named as sspl-ll.
 
-1. Before you build the RPM, you'll need to install the dependecies using:
+1. Before you build the RPM, you'll need to install the dependencies using:
 
     ```shell
     
