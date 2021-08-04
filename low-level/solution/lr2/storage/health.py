@@ -22,6 +22,7 @@ from cortx.utils.discovery.error import ResourceMapError
 from framework.utils.conf_utils import (GLOBAL_CONF, Conf, STORAGE_TYPE_KEY)
 from framework.base import sspl_constants as const
 from framework.utils.service_logging import CustomLog, logger
+from framework.utils.mon_utils import MonUtils
 from framework.platforms.realstor.realstor_enclosure import (
     singleton_realstorencl as enclosure)
 from framework.platforms.storage.platform import Platform
@@ -110,6 +111,8 @@ class StorageHealth():
             logger.error(self.log.svc_log(f"{msg}"))
             raise ResourceMapError(errno.EINVAL, msg)
 
+        info = MonUtils.normalize_kv(info, const.HEALTH_UNDESIRED_VALS,
+            "Not Available")
         return info
 
     @staticmethod
@@ -132,13 +135,17 @@ class StorageHealth():
                         recommendation=None, specifics=None):
         """Sets health attributes for a component."""
         good_state = (status == "OK")
-        if not description:
+        if not description or \
+            description in const.HEALTH_UNDESIRED_VALS:
             description = "%s %s in good health." % (
                 health_data.get("uid"),
                 'is' if good_state else 'is not')
-        if not recommendation:
-            recommendation = 'NA' if good_state\
-                else const.DEFAULT_RECOMMENDATION
+        if not good_state:
+            if not recommendation or \
+                recommendation in const.HEALTH_UNDESIRED_VALS:
+                    recommendation = const.DEFAULT_RECOMMENDATION
+        else:
+            recommendation = "None"
         health_data["last_updated"] = int(time.time())
         health_data["health"].update({
             "status": status,

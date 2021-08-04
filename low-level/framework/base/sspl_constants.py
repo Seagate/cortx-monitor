@@ -109,7 +109,7 @@ SSPL_SB_TMP = f"{SB_DATA_PATH}/sspl_support_bundle_tmp"
 SSPL_SB_REQUEST = f"{SB_DATA_PATH}/sspl-sb-req.txt"
 
 # required only for system health
-HEALTH_UNDESIRED_VALS = ["N/A", ""]
+HEALTH_UNDESIRED_VALS = ["NA", "N/A", ""]
 
 # required only for manifest
 MANIFEST_SVC_NAME = 'manifest'

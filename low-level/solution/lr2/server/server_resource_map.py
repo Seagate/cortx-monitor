@@ -44,9 +44,9 @@ class ServerResourceMap(ResourceMap):
 
         rpath: Resource path to fetch its health
                Examples:
-                    node>compute[0]
-                    node>compute[0]>hw
-                    node>compute[0]>hw>disks
+                    node>server[0]
+                    node>server[0]>hw
+                    node>server[0]>hw>disks
         """
         from server.health import ServerHealth
         health = ServerHealth()
@@ -60,7 +60,7 @@ class ServerResourceMap(ResourceMap):
 
         rpath: Resource path to fetch its manifest
                Examples:
-                    node>compute[0]
+                    node>server[0]
         """
         from server.manifest import ServerManifest
         manifest = ServerManifest()
@@ -75,8 +75,8 @@ class ServerResourceMap(ResourceMap):
             "storage"    -> ("storage", "*")
             "storage[0]" -> ("storage", "0")
 
-            "compute"    -> ("compute", "*")
-            "compute[0]" -> ("compute", "0")
+            "server"    -> ("server", "*")
+            "server[0]" -> ("server", "0")
         """
         res = re.search(r"(\w+)\[([\d]+)\]|(\w+)", node)
         inst = res.groups()[1] if res.groups()[1] else "*"
