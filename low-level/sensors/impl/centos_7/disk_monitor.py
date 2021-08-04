@@ -25,7 +25,6 @@ import copy
 import json
 import os
 import re
-import socket
 import subprocess
 import threading
 import time
@@ -53,6 +52,7 @@ from message_handlers.node_data_msg_handler import NodeDataMsgHandler
 from sensors.ISystem_monitor import ISystemMonitor
 from framework.utils.mon_utils import MonUtils
 from framework.utils.iem import Iem
+from framework.utils.os_utils import OSUtils
 store = file_store
 
 @implementer(ISystemMonitor)
@@ -162,6 +162,7 @@ class DiskMonitor(SensorThread, InternalMsgQ):
 
         self._product = product
         self._iem = Iem()
+        self.os_utils = OSUtils()
         self._iem.check_existing_fault_iems()
         self.UDISKS2 = self._iem.EVENT_CODE["UDISKS2_UNAVAILABLE"][1]
         self.HDPARM = self._iem.EVENT_CODE["HDPARM_ERROR"][1]
@@ -917,7 +918,7 @@ class DiskMonitor(SensorThread, InternalMsgQ):
                     "alert_type": alert_type,
                     "severity": severity_reader.map_severity(alert_type),
                     "alert_id": MonUtils.get_alert_id(event_time),
-                    "host_id": socket.getfqdn(),
+                    "host_id": self.os_utils.get_fqdn(),
                     "info": {
                         "resource_type": resource_type,
                         "resource_id": resource_id,
