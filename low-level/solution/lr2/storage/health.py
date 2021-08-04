@@ -136,16 +136,16 @@ class StorageHealth():
         """Sets health attributes for a component."""
         good_state = (status == "OK")
         if not description or \
-            description in const.RESOURCE_MAP["undesired_values"]:
+            description in const.HEALTH_UNDESIRED_VALS:
             description = "%s %s in good health." % (
                 health_data.get("uid"),
                 'is' if good_state else 'is not')
         if not good_state:
             if not recommendation or \
-                recommendation in const.RESOURCE_MAP["undesired_values"]:
+                recommendation in const.HEALTH_UNDESIRED_VALS:
                     recommendation = const.DEFAULT_RECOMMENDATION
         else:
-            recommendation = None
+            recommendation = "None"
         health_data["last_updated"] = int(time.time())
         health_data["health"].update({
             "status": status,
