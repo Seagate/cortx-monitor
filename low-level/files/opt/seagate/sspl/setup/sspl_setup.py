@@ -39,14 +39,9 @@ from cortx.utils.validator.error import VError
 from files.opt.seagate.sspl.setup.setup_error import SetupError
 from files.opt.seagate.sspl.setup.setup_logger import init_logging, logger
 from framework.base.sspl_constants import (
-    DATA_PATH, PRVSNR_CONFIG_INDEX, GLOBAL_CONFIG_INDEX, SSPL_CONFIG_INDEX,
-    global_config_path, file_store_config_path, global_config_file_path,
-    sspl_config_path, PRODUCT_BASE_DIR, SSPL_BASE_DIR, PRODUCT_FAMILY,
-    TEST_REQ_SERVICE_RESTART, USER, RSYSLOG_IEM_CONF, RSYSLOG_SSPL_CONF,
-    RSYSLOG_MSB_CONF, IEM_LOGROTATE_CONF, SSPL_LOGROTATE_CONF,
-    MSB_LOGROTATE_CONF, RSYSLOG_SB_CONF, SB_LOGROTATE_CONF)
+    PRVSNR_CONFIG_INDEX, GLOBAL_CONFIG_INDEX,
+    global_config_path, sspl_config_path, TEST_REQ_SERVICE_RESTART)
 from framework.base.conf_upgrade import ConfUpgrade
-from framework.utils.utility import Utility
 
 
 class Cmd:
@@ -492,6 +487,7 @@ class CleanupCmd(Cmd):
 
     def validate(self):
         # Validate config inputs
+        from framework.utils.utility import Utility
         Conf.load(GLOBAL_CONFIG_INDEX, global_config_path)
         self.product = Utility.get_config_value(GLOBAL_CONFIG_INDEX,
             "cortx>release>product")
@@ -504,67 +500,10 @@ class CleanupCmd(Cmd):
         logger.info("%s - Validation done" % self.name)
 
     def process(self):
-        try:
-            args = ' '.join(self._args.args)
-            Conf.load(SSPL_CONFIG_INDEX, sspl_config_path)
-            sspl_log_file_path = Utility.get_config_value(
-                    SSPL_CONFIG_INDEX, "SYSTEM_INFORMATION>sspl_log_file_path")
-            iem_log_file_path = Utility.get_config_value(
-                    SSPL_CONFIG_INDEX, "IEMSENSOR>log_file_path")
-            if os.path.exists(file_store_config_path):
-                os.remove(file_store_config_path)
-            shutil.copyfile("%s/conf/sspl.conf.%s.yaml" % (
-                SSPL_BASE_DIR, self.product), file_store_config_path)
-
-            # --pre-factory will cleanup config and undo everything whatever
-            # we have done in post-install Mini-Provisioner Interface.
-            if '--pre-factory' in args:
-                # Directories and file which needs to deleted.
-                directories = [
-                    f'/var/{PRODUCT_FAMILY}/sspl',
-                    f'/var/{PRODUCT_FAMILY}/iem/',
-                    f'/var/log/{PRODUCT_FAMILY}/sspl/',
-                    f'/var/log/{PRODUCT_FAMILY}/iem/',
-                    '/etc/sspl-ll/', f'{PRODUCT_BASE_DIR}/iem/iec_mapping']
-                sspl_sudoers_file = '/etc/sudoers.d/sspl'
-                sspl_dbus_policy_rules = '/etc/polkit-1/rules.d'
-                sspl_dbus_policy_conf = '/etc/dbus-1/system.d'
-                sspl_service_file = '/etc/systemd/system/sspl-ll.service'
-                sspl_test_backup = '/etc/sspl_tests.conf.back'
-                sspl_test_file_path = '/etc/sspl_test_gc_url.yaml'
-                sspl_sb_log_file_path = sspl_log_file_path.replace(
-                    "/sspl.log", "/sspl_support_bundle.log")
-                manifest_log_file_path = sspl_log_file_path.replace(
-                    "/sspl.log", "/manifest.log")
-                # symlinks created during post_install
-                sspl_ll_cli = "/usr/bin/sspl_ll_cli"
-                # Remove SSPL config other config/log files which we have
-                # created during post_install.
-                for filepath in [
-                    sspl_ll_cli, sspl_test_backup,
-                    sspl_test_file_path, file_store_config_path,
-                    global_config_file_path, sspl_log_file_path,
-                    iem_log_file_path, sspl_sb_log_file_path,
-                    manifest_log_file_path, RSYSLOG_IEM_CONF,
-                    RSYSLOG_SSPL_CONF, RSYSLOG_MSB_CONF,
-                    IEM_LOGROTATE_CONF, SSPL_LOGROTATE_CONF,
-                    MSB_LOGROTATE_CONF, RSYSLOG_SB_CONF,
-                    SB_LOGROTATE_CONF, sspl_dbus_policy_conf,
-                    sspl_dbus_policy_rules, sspl_sudoers_file,
-                        sspl_service_file]:
-                    Utility.reset_log_files(filepath, del_file=True)
-                # Delete directories which we have created during post_install.
-                for directory in directories:
-                    Utility.reset_log_files(directory, del_dir=True)
-                logger.info("Deleted config/log files and directories.")
-                # Delete sspl-ll user
-                usernames = [x[0] for x in pwd.getpwall()]
-                if USER in usernames:
-                    os.system("/usr/sbin/userdel -f %s" % USER)
-                    logger.info("Deleted %s user." % USER)
-            logger.info("%s - Process done" % self.name)
-        except OSError as e:
-            logger.error(f"Failed in Cleanup. ERROR: {e}")
+        from files.opt.seagate.sspl.setup.sspl_cleanup import SSPLCleanup
+        sspl_cleanup = SSPLCleanup(self.args.args)
+        sspl_cleanup.process(self.product)
+        logger.info("%s - Process done" % self.name)
 
 
 class BackupCmd(Cmd):
