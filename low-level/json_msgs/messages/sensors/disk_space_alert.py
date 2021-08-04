@@ -30,7 +30,7 @@ import calendar
 import time
 
 from json_msgs.messages.sensors.base_sensors_msg import BaseSensorMsg
-from framework.utils import mon_utils
+from framework.utils.mon_utils import MonUtils
 
 class DiskSpaceAlertMsg(BaseSensorMsg):
     """The JSON message transmitted by the node message handler"""
@@ -75,7 +75,7 @@ class DiskSpaceAlertMsg(BaseSensorMsg):
             self.SEVERITY = "informational"
 
         epoch_time = str(calendar.timegm(time.gmtime()))
-        alert_id = mon_utils.get_alert_id(epoch_time)
+        alert_id = MonUtils.get_alert_id(epoch_time)
 
         self._json = {
                       "username" : self._username,

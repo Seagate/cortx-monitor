@@ -7,6 +7,7 @@ from framework.base.sspl_constants import (PRODUCT_FAMILY,
                                            sspl_config_path)
 from cortx.utils.service import DbusServiceHandler
 from cortx.utils.conf_store import Conf
+from cortx.utils.process import SimpleProcess
 from files.opt.seagate.sspl.setup.setup_logger import logger
 
 
@@ -22,11 +23,18 @@ class Reset:
             os.remove(filename)
 
     @classmethod
-    def del_files_from_dir(cls, fformat, dir_path):
+    def reset_log_files(cls, fformat, dir_path, del_file=False):
         for root, _, files in os.walk(dir_path):
             for file in files:
                 if file.endswith(fformat):
-                    os.remove(os.path.join(root, file))
+                    if del_file:
+                        os.remove(os.path.join(root, file))
+                        return
+                    cmd= f"truncate -s 0 > {os.path.join(root, file)}"
+                    _, error, returncode = SimpleProcess(cmd).run()
+                    if returncode != 0:
+                        logger.error("Failed to clear log file data"
+                                     f"ERROR:{error} CMD:{cmd}")
 
     def process(self):
         dbus_service = DbusServiceHandler()
@@ -41,11 +49,12 @@ class Reset:
         # Remove sspl data
         shutil.rmtree(DATA_PATH, ignore_errors=True)
 
-        # Remove log files
-        Reset.del_files_from_dir('.log', f"/var/log/{PRODUCT_FAMILY}/sspl/")
-        Reset.del_files_from_dir('.log.gz',
-                                 f"/var/log/{PRODUCT_FAMILY}/sspl/")
-        Reset.del_files_from_dir('.log', f"/var/log/{PRODUCT_FAMILY}/iem/")
-        Reset.del_files_from_dir('.log.gz',
-                                 f"/var/log/{PRODUCT_FAMILY}/iem/")
-
+        # Clear log data from log files and delete 'log.gz' files
+        Reset.reset_log_files('.log', f"/var/log/{PRODUCT_FAMILY}/sspl/")
+        Reset.reset_log_files('.log', f"/var/log/{PRODUCT_FAMILY}/iem/")
+        Reset.reset_log_files('.log.gz',
+                              f"/var/log/{PRODUCT_FAMILY}/sspl/",
+                              del_file=True)
+        Reset.reset_log_files('.log.gz',
+                              f"/var/log/{PRODUCT_FAMILY}/iem/",
+                              del_file=True)
