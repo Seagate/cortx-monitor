@@ -1200,7 +1200,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
                 "resource_id": sensor,
                 "event_time": self._get_epoch_time_from_date_and_time(date, _time),
                 "description": alert.description.format(disk_slot, disk_name),
-                "impact": alert.impact.format(disk_name),
+                "impact": alert.impact,
                 "recommendation": alert.recommendation
             }
             specific_info["fru_id"] = sensor

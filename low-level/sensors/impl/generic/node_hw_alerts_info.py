@@ -25,25 +25,26 @@ alert_for_event = {
         "Drive Present": {
             "Asserted": Alert(
                     "insertion", "informational",
-                    "Disk in slot '{}' [{}] is inserted/added.",
-                    # Disk in slot '0' [HDD 0 (0xF1)] is inserted/added.
+                    "Disk is inserted in slot '0'. [{}]",
+                    # Disk is inserted in slot '0'. [HDD 0 (0xF1)].
                     "None", "None"),
             "Deasserted": Alert(
                     "missing", "critical",
-                    "Disk in slot '{}' [{}] is missing/removed.",
-                    "Disk '{}' is not available.",
+                    "Disk is missing/removed from slot '{}'. [{}]",
+                    "Server availability may get impacted if redundant " +
+                    "drive goes bad or missing.",
                     DEFAULT_RECOMMENDATION)
         },
         "Drive Fault": {
             "Asserted": Alert(
                     "fault", "critial",
-                    "Disk in slot '{}' [{}] is faulty.",
-                    "Disk '{}' is not usable.",
+                    "Disk in slot '{}' is faulty. [{}]",
+                    "Disk functioning may get impacted if left unaddressed.",
                     DEFAULT_RECOMMENDATION),
             "Deasserted": Alert(
                     "fault_resolved", "informational",
-                    "Disk in slot '{}' [{}] is recovered.",
-                    "Disk '{}' is usable now.", "None")
+                    "Disk in slot '{}' has recovered. [{}]",
+                    "Disk is in good health now.", "None")
         }
     }
 }
