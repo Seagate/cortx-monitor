@@ -194,7 +194,7 @@ class Utility(object):
                 os.unlink(path)
             elif os.path.isdir(path) and del_dir:
                 shutil.rmtree(path, ignore_errors=True)
-            
+
 
 def errno_to_str_mapping(err_no):
     """Convert numerical errno to its meaning."""

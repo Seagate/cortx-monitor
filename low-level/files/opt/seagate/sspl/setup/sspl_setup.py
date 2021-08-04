@@ -540,7 +540,7 @@ class CleanupCmd(Cmd):
                 sspl_ll_cli = "/usr/bin/sspl_ll_cli"
                 # Remove SSPL config other config/log files which we have
                 # created during post_install.
-                for file in [
+                for filepath in [
                     sspl_ll_cli, sspl_test_backup,
                     sspl_test_file_path, file_store_config_path,
                     global_config_file_path, sspl_log_file_path,
@@ -552,10 +552,10 @@ class CleanupCmd(Cmd):
                     SB_LOGROTATE_CONF, sspl_dbus_policy_conf,
                     sspl_dbus_policy_rules, sspl_sudoers_file,
                         sspl_service_file]:
-                    Utility.reset_log_files(file, del_file=True)
+                    Utility.reset_log_files(filepath, del_file=True)
                 # Delete directories which we have created during post_install.
-                for dir in directories:
-                    Utility.reset_log_files(dir, del_dir=True)
+                for directory in directories:
+                    Utility.reset_log_files(directory, del_dir=True)
                 logger.info("Deleted config/log files and directories.")
                 # Delete sspl-ll user
                 usernames = [x[0] for x in pwd.getpwall()]
