@@ -152,6 +152,7 @@ This guide provides a step-by-step walkthrough for getting you CORTX-Monitor Ser
     **sspl_dev_deploy is only meant for dev purpose and to install SSPL independently along with its dependencies.**
     ```
     $ ./sspl_dev_deploy --cleanup
+    # Note: --cleanup includes removing cortx-py-utils RPM. Any other component RPMS installed on the setup will also get removed while removing cortx-py-utils.
     $ ./sspl_dev_deploy --prereq -L /root/MYRPMS
     ```
    
