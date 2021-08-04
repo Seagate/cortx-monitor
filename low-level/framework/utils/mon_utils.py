@@ -21,10 +21,31 @@
 
 import uuid
 
-def get_alert_id(epoch_time):
-    """Returns alert id which is a combination of
-           epoch_time and salt value
-    """
-    salt = str(uuid.uuid4().hex)
-    alert_id = epoch_time + salt
-    return alert_id
+
+class MonUtils():
+    """Base class for all the monitor utilities."""
+    def __init__(self):
+        """Init method."""
+        super(MonUtils, self).__init__()
+
+    @staticmethod
+    def get_alert_id(epoch_time):
+        """Returns alert id which is a combination of
+            epoch_time and salt value
+        """
+        salt = str(uuid.uuid4().hex)
+        alert_id = epoch_time + salt
+        return alert_id
+
+    @staticmethod
+    def normalize_kv(item, input_v, replace_v):
+        """Normalize all values coming from input as per requirement."""
+        if isinstance(item, dict):
+            return {key: MonUtils.normalize_kv(value, input_v, replace_v)
+                for key, value in item.items()}
+        elif isinstance(item, list):
+            return [MonUtils.normalize_kv(_, input_v, replace_v) for _ in item]
+        elif item in input_v if isinstance(input_v, list) else item == input_v:
+            return replace_v
+        else:
+            return item

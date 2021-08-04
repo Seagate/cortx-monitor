@@ -51,7 +51,7 @@ from json_msgs.messages.actuators.ack_response import AckResponseMsg
 from message_handlers.disk_msg_handler import DiskMsgHandler
 from message_handlers.node_data_msg_handler import NodeDataMsgHandler
 from sensors.ISystem_monitor import ISystemMonitor
-from framework.utils.mon_utils import get_alert_id
+from framework.utils.mon_utils import MonUtils
 from framework.utils.iem import Iem
 store = file_store
 
@@ -916,7 +916,7 @@ class DiskMonitor(SensorThread, InternalMsgQ):
                "response" : {
                     "alert_type": alert_type,
                     "severity": severity_reader.map_severity(alert_type),
-                    "alert_id": get_alert_id(event_time),
+                    "alert_id": MonUtils.get_alert_id(event_time),
                     "host_id": socket.getfqdn(),
                     "info": {
                         "resource_type": resource_type,

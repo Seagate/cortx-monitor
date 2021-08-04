@@ -32,6 +32,7 @@ from framework.platforms.server.platform import Platform
 from framework.platforms.server.raid import RAIDs
 from framework.platforms.server.sas import SAS
 from framework.platforms.server.software import BuildInfo, Service
+from framework.utils.mon_utils import MonUtils
 from framework.utils.conf_utils import (GLOBAL_CONF, NODE_TYPE_KEY, SSPL_CONF,
                                         Conf)
 from framework.utils.ipmi_client import IpmiFactory
@@ -92,7 +93,7 @@ class ServerHealth():
         leaf_node, _ = ServerResourceMap.get_node_info(nodes[-1])
 
         # Fetch health information for all sub nodes
-        if leaf_node == "compute":
+        if leaf_node == "server":
             info = self.get_server_health_info()
             resource_found = True
         elif leaf_node in self.server_resources:
@@ -129,6 +130,8 @@ class ServerHealth():
             logger.error(self.log.svc_log(f"{msg}"))
             raise ResourceMapError(errno.EINVAL, msg)
 
+        info = MonUtils.normalize_kv(info, const.HEALTH_UNDESIRED_VALS,
+            "Not Available")
         return info
 
     @staticmethod

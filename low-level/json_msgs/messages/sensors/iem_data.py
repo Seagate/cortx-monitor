@@ -25,7 +25,7 @@ import socket
 import time
 
 from json_msgs.messages.sensors.base_sensors_msg import BaseSensorMsg
-from framework.utils import mon_utils
+from framework.utils.mon_utils import MonUtils
 
 class IEMDataMsg(BaseSensorMsg):
     '''
@@ -77,7 +77,7 @@ class IEMDataMsg(BaseSensorMsg):
                         "event": info.get("event_id"),
                         "IEC": info.get("IEC")
                     },
-                    "alert_id": mon_utils.get_alert_id(self._epoch_time),
+                    "alert_id": MonUtils.get_alert_id(self._epoch_time),
                     "host_id": socket.getfqdn()
                 }
             }

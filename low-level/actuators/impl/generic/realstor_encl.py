@@ -26,7 +26,7 @@ from actuators.impl.actuator import Actuator
 
 from framework.base.debug import Debug
 from framework.utils.service_logging import logger
-from framework.utils import mon_utils
+from framework.utils.mon_utils import MonUtils
 from framework.platforms.realstor.realstor_enclosure import singleton_realstorencl
 from framework.base.sspl_constants import AlertTypes, SeverityTypes, ResourceTypes
 
@@ -150,7 +150,7 @@ class RealStorActuator(Actuator, Debug):
 
         resource_type = "enclosure:{}:{}".format(component, component_type)
         epoch_time = str(int(time.time()))
-        alert_id = mon_utils.get_alert_id(epoch_time)
+        alert_id = MonUtils.get_alert_id(epoch_time)
 
         if ctrl_action in self.CTRL_ACTION_LST:
             resource_type = component_details['resource_type']
@@ -520,7 +520,7 @@ class RealStorActuator(Actuator, Debug):
         response['instance_id'] = self._resource_id
         response['alert_type'] = AlertTypes.GET.value
         response['severity'] = SeverityTypes.INFORMATIONAL.value
-        response['alert_id'] = mon_utils.get_alert_id(epoch_time)
+        response['alert_id'] = MonUtils.get_alert_id(epoch_time)
         response['info'] = {
             "resource_type": f"enclosure:{self._enclosure_type.lower()}:{self._enclosure_resource_type.lower()}",
             "resource_id": self._resource_id,
