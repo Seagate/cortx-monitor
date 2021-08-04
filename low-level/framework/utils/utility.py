@@ -24,7 +24,6 @@ import pwd
 import grp
 import errno
 import socket
-import shutil
 import time
 from cortx.utils.conf_store import Conf
 from cortx.utils.conf_store.error import ConfError
@@ -166,7 +165,6 @@ class Utility(object):
     def get_current_time():
         """Returns the time as integer number in seconds since the epoch in UTC."""
         return int(time.time())
-
 
 def errno_to_str_mapping(err_no):
     """Convert numerical errno to its meaning."""

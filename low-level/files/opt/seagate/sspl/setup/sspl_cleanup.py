@@ -32,9 +32,11 @@ from framework.base.sspl_constants import (
 
 
 class SSPLCleanup:
+
     """Reset config and optionally factory operation."""
 
     def __init__(self, args):
+        """Check '--pre-factory' in args."""
         self.pre_factory = False
         if "--pre-factory" in args:
             self.pre_factory = True
@@ -54,11 +56,11 @@ class SSPLCleanup:
         except OSError as e:
             logger.error(f"Failed in Cleanup. ERROR: {e}")
 
-    def cleanup_log_and_config(self):
+    @staticmethod
+    def cleanup_log_and_config():
         """--pre-factory cleanup : Cleanup logs, config files and
         undo everything whatever was done in post-install Mini-Provisioner
         Interface."""
-
         Conf.load(SSPL_CONFIG_INDEX, sspl_config_path)
         sspl_log_file_path = Utility.get_config_value(
             SSPL_CONFIG_INDEX, "SYSTEM_INFORMATION>sspl_log_file_path")
