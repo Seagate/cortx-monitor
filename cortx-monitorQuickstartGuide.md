@@ -143,7 +143,7 @@ This guide provides a step-by-step walkthrough for getting you CORTX-Monitor Ser
    You'll need to create a repository and copy all the required RPMs to it. Run the commands:
 
     ```shell
-    $ mkdir MYRPMS
+    $ mkdir -p /root/MYRPMS
     $ cp -R /root/rpmbuild/RPMS/x86_64/cortx-libsspl_sec-* /root/rpmbuild/RPMS/noarch/cortx-sspl-* MYRPMS
     $ CORTX_MONITOR_BASE_URL="https://raw.githubusercontent.com/Seagate/cortx-monitor/main"
     $ curl $CORTX_MONITOR_BASE_URL/low-level/files/opt/seagate/sspl/setup/sspl_dev_deploy -o sspl_dev_deploy
