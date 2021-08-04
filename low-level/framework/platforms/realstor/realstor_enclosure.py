@@ -514,7 +514,7 @@ class RealStorEnclosure(StorageEnclosure):
         try:
             self.hot_swapped_frus = Conf.get(GLOBAL_CONF,
                 "storage_enclosure>storage_fru_list>hot_swappable",
-                ['disk', 'enclosure', 'controller'])
+                ['disk', 'controller'])
             self.cold_swapped_frus = Conf.get(GLOBAL_CONF,
                 "storage_enclosure>storage_fru_list",
                 [])
