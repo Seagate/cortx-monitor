@@ -9,3 +9,6 @@ Pwr Unit Redund  | 02h | ok  | 21.1 | Redundancy Lost
 NVMe 1 Crit Warn | 94h | ok  | 15.1 |
 HDD 0 Status     | F0h | cr  |  4.1 | Drive Present
 HDD 1 Status     | F1h | ok  |  4.2 | Drive Present
+12V              | 30h | ok  |  7.32 | 12.37 Volts
+CPU1 Temp        | 01h | ok  |  3.1 | 40 degrees C
+PS1 Curr Out     | 58h | ok  | 10.1 | 15 percent

@@ -28,11 +28,12 @@ def init(args):
     pass
 
 def test_raid_integrity_sensor(args):
+    resource_type = "server:sw:raid_integrity"
     platform = check_os_platform()
     if platform == "vm":
         return
     check_sspl_ll_is_running()
-    node_data_sensor_message_request("node:os:raid_integrity")
+    node_data_sensor_message_request(resource_type)
     raid_data_msg = None
     sleep(10)
     while not world.sspl_modules[IngressProcessorTests.name()]._is_my_msgQ_empty():
@@ -42,7 +43,7 @@ def test_raid_integrity_sensor(args):
         try:
             # Make sure we get back the message type that matches the request
             msg_type = ingressMsg.get("sensor_response_type")
-            if msg_type.get("info").get("resource_type") == "node:os:raid_integrity":
+            if msg_type.get("info").get("resource_type") == resource_type:
                 raid_data_msg = msg_type
                 break
         except Exception as exception:

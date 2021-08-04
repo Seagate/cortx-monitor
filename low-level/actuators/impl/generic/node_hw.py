@@ -131,11 +131,11 @@ class NodeHWactuator(Actuator, Debug):
         """
         response = ""
         node_request = json_msg.get("node_controller")
-        node_request_instance = node_request.get("node_request").split(":")[:3]
+        node_request_instance = node_request.get("node_request").split(":")[:-1]
 
-        if node_request_instance == ['NDHW', 'node', 'hw']:
+        if node_request_instance == ['NDHW', 'server', 'hw']:
             response = self._process_fru_request(node_request)
-        elif node_request_instance == ['NDHW', 'node', 'sensor']:
+        elif node_request_instance == ['NDHW', 'server', 'hw', 'platform_sensor']:
             response = self._process_sensor_request(node_request)
         return response
 
@@ -144,7 +144,7 @@ class NodeHWactuator(Actuator, Debug):
         @return: The response string from performing the request
         """
         response = ""
-        self.fru_node_request = node_request.get("node_request").split(":")[3]
+        self.fru_node_request = node_request.get("node_request").split(":")[-1]
         fru = self.NODE_REQUEST_MAP.get(self.fru_node_request)
         fru_instance = node_request.get("resource")
         if fru_instance.isdigit() and isinstance(int(fru_instance), int):
@@ -165,7 +165,7 @@ class NodeHWactuator(Actuator, Debug):
     def _create_node_fru_json_message(self, specifics, resource_id):
         """Creates JSON response to be sent out to Node Controller Message
            Handler for further validation"""
-        resource_type = "node:hw:{0}".format(self.fru_node_request)
+        resource_type = "server:hw:{0}".format(self.fru_node_request)
         fru = self.ipmi_client.is_fru(self.fru_node_request)
         epoch_time = str(calendar.timegm(time.gmtime()))
         response = {
@@ -188,10 +188,11 @@ class NodeHWactuator(Actuator, Debug):
         response = dict()
         # todo : validate on which node request commands are executing.
 
-        # "node_request": "NDHW:node:sensor:Temperature"
+        # "node_request": "NDHW:server:hw:platform_sensor:temperature"
         # "resource": "* or PS1 Temperature"
-        self._sensor_type = node_request.get('node_request').split(":")[3]
+        self._sensor_type = node_request.get('node_request').split(":")[-1]
         self._resource_id = node_request.get('resource')
+        self._resource_type = node_request.get('node_request').split(":", 1)[-1]
         if self._sensor_type.lower() in list(map(lambda sensor_item: sensor_item.value.lower(), SensorTypes)):
             # fetch generic node info
             self._build_generic_info(response)
@@ -265,7 +266,7 @@ class NodeHWactuator(Actuator, Debug):
         response['alert_type'] = AlertTypes.GET.value
         response['severity'] = SeverityTypes.INFORMATIONAL.value
         response['info'] = {
-            "resource_type": "node:sensor:" + self._sensor_type.lower(),
+            "resource_type": self._resource_type,
             "fru": "false",
             "resource_id": self._resource_id,
             "event_time": str(calendar.timegm(time.gmtime())),

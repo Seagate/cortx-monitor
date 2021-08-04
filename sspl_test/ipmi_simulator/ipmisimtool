@@ -60,37 +60,46 @@ else
                 echo "Invalid command: $@. IPMISIMTOOL can't process it."
                 exit 1
         fi
-        printf "$(cat $filename)"
+        printf "$(cat $filename)\n"
     fi
 
     # handle 'sdr type' commands
     if [ "$1 $2" == "sdr type" ]; then
         command=${@:3}
         case $command in
-                "Fan")
+                "Fan"|"fan")
                         filename="$BASE_PATH/sspl_test/ipmi_simulator/ipmi_mock_data/fan.txt"
                         ;;
-                "Power Supply")
+                "Power Supply"|"power supply")
                         filename="$BASE_PATH/sspl_test/ipmi_simulator/ipmi_mock_data/power_supply.txt"
                         ;;
-                "Power Unit")
+                "Power Unit"|"power unit")
                         filename="$BASE_PATH/sspl_test/ipmi_simulator/ipmi_mock_data/power_unit.txt"
                         ;;
-                "Drive Slot / Bay")
+                "Drive Slot / Bay"|"drive slot | bay")
                         filename="$BASE_PATH/sspl_test/ipmi_simulator/ipmi_mock_data/disk.txt"
+                        ;;
+                "Temperature"|"temperature")
+                        filename="$BASE_PATH/sspl_test/ipmi_simulator/ipmi_mock_data/temperature.txt"
+                        ;;
+                "Voltage"|"voltage")
+                        filename="$BASE_PATH/sspl_test/ipmi_simulator/ipmi_mock_data/voltage.txt"
+                        ;;
+                "Current"|"current")
+                        filename="$BASE_PATH/sspl_test/ipmi_simulator/ipmi_mock_data/current.txt"
                         ;;
                 *)
                         echo "No records found for given sdr or Invalid command - $@. IPMISIMTOOL can't process it."
                         exit 1
         esac
-        printf "$(cat $filename)"
+        printf "$(cat $filename)\n"
     fi
 
 
     # handle 'sensor list' commands
     if [ "$1 $2" == "sensor list" ]; then
         filename="$BASE_PATH/sspl_test/ipmi_simulator/ipmi_mock_data/sensor_list.txt"
-        printf "$(cat $filename)"
+        printf "$(cat $filename)\n"
     fi
 
 
@@ -98,23 +107,32 @@ else
     if [ "$1 $2" == "sensor get" ]; then
         command=${@:3}
         case $command in
-                "Fan Redundancy")
+                "Fan Redundancy"|"fan redundancy")
                         filename="$BASE_PATH/sspl_test/ipmi_simulator/ipmi_mock_data/sensor_fan_redund.txt"
                         ;;
-                "PS2 Status")
+                "PS2 Status"|"ps2 status")
                         filename="$BASE_PATH/sspl_test/ipmi_simulator/ipmi_mock_data/sensor_ps2.txt"
                         ;;
-                "HDD 0 Status")
+                "HDD 0 Status"|"hdd 0 status")
                         filename="$BASE_PATH/sspl_test/ipmi_simulator/ipmi_mock_data/sensor_hdd0.txt"
                         ;;
-                "Pwr Unit Redund")
+                "Pwr Unit Redund"|"pwr unit redund")
                         filename="$BASE_PATH/sspl_test/ipmi_simulator/ipmi_mock_data/sensor_pw_unit.txt"
+                        ;;
+                "CPU1 Temp"|"cpu1 temp")
+                        filename="$BASE_PATH/sspl_test/ipmi_simulator/ipmi_mock_data/sensor_cpu_temp.txt"
+                        ;;
+                "12V"|"12v")
+                        filename="$BASE_PATH/sspl_test/ipmi_simulator/ipmi_mock_data/sensor_12v.txt"
+                        ;;
+                "PS1 Curr Out"|"ps1 curr out")
+                        filename="$BASE_PATH/sspl_test/ipmi_simulator/ipmi_mock_data/sensor_ps1_curr.txt"
                         ;;
                 *)
                         echo "No records found for the sensor or Invalid command - $@. IPMISIMTOOL can't process it."
                         exit 1
         esac
-        printf "$(cat $filename)"
+        printf "$(cat $filename)\n"
     fi
 
 
@@ -141,22 +159,31 @@ else
     if [ "$1 $2" == "sdr get" ]; then
         command=${@:3}
         case $command in
-                "Fan Redundancy")
+                "Fan Redundancy"|"fan redundancy")
                         filename="$BASE_PATH/sspl_test/ipmi_simulator/ipmi_mock_data/sdr_fan_redund.txt"
                         ;;
-                "PS2 Status")
+                "PS2 Status"|"ps2 status")
                         filename="$BASE_PATH/sspl_test/ipmi_simulator/ipmi_mock_data/sdr_ps2.txt"
                         ;;
-                "HDD 0 Status")
+                "HDD 0 Status"|"hdd 0 status")
                         filename="$BASE_PATH/sspl_test/ipmi_simulator/ipmi_mock_data/sdr_hdd0.txt"
                         ;;
-                "Pwr Unit Redund")
+                "Pwr Unit Redund"|"pwr unit redund")
                         filename="$BASE_PATH/sspl_test/ipmi_simulator/ipmi_mock_data/sdr_pw_unit.txt"
+                        ;;
+                "CPU1 Temp"|"cpu1 temp")
+                        filename="$BASE_PATH/sspl_test/ipmi_simulator/ipmi_mock_data/sdr_cpu1_temp.txt"
+                        ;;
+                "12V"|"12v")
+                        filename="$BASE_PATH/sspl_test/ipmi_simulator/ipmi_mock_data/sdr_12v.txt"
+                        ;;
+                "PS1 Curr Out"|"ps1 curr out")
+                        filename="$BASE_PATH/sspl_test/ipmi_simulator/ipmi_mock_data/sdr_ps1_curr.txt"
                         ;;
                 *)
                         echo "No records found for the sensor or Invalid command - $@. IPMISIMTOOL can't process it."
                         exit 1
         esac
-        printf "$(cat $filename)"
+        printf "$(cat $filename)\n"
     fi
 fi

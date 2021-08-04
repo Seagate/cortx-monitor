@@ -46,7 +46,7 @@ class ServiceMsgHandler(ScheduledModuleThread, InternalMsgQ):
     MODULE_NAME = "ServiceMsgHandler"
     PRIORITY = 2
 
-    RESOURCE_TYPE = "node:sw:os:service"
+    RESOURCE_TYPE = "server:sw:external_sw_services"
     ALERT_TYPE = "UPDATE"
     # Dependency list
     DEPENDENCIES = {

@@ -1,0 +1,1 @@
+PS1 Curr Out     | 58h | ok  | 10.1 | 15 percent

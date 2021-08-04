@@ -1,0 +1,17 @@
+Locating sensor record...
+Sensor ID              : PS1 Curr Out (0x58)
+ Entity ID             : 10.1
+ Sensor Type (Threshold)  : Current
+ Sensor Reading        : 14 (+/- 0) percent
+ Status                : ok
+ Lower Non-Recoverable : na
+ Lower Critical        : na
+ Lower Non-Critical    : na
+ Upper Non-Critical    : 100.000
+ Upper Critical        : 125.000
+ Upper Non-Recoverable : na
+ Positive Hysteresis   : Unspecified
+ Negative Hysteresis   : Unspecified
+ Assertion Events      :
+ Assertions Enabled    : unc+ ucr+
+ Deassertions Enabled  : unc+ ucr+

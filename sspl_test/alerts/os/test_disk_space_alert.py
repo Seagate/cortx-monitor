@@ -25,7 +25,7 @@ from messaging.ingress_processor_tests import IngressProcessorTests
 from messaging.egress_processor_tests import EgressProcessorTests
 
 
-resource_type = "node:os:disk_space"
+resource_type = "server:hw:disk_space"
 
 def init(args):
     pass

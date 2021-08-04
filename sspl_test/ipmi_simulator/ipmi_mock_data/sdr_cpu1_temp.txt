@@ -1,0 +1,23 @@
+Sensor ID              : CPU1 Temp (0x1)
+ Entity ID             : 3.1 (Processor)
+ Sensor Type (Threshold)  : Temperature (0x01)
+ Sensor Reading        : 40 (+/- 0) degrees C
+ Status                : ok
+ Nominal Reading       : 20.000
+ Normal Minimum        : 11.000
+ Normal Maximum        : 80.000
+ Upper non-recoverable : 88.000
+ Upper critical        : 88.000
+ Upper non-critical    : 83.000
+ Lower non-recoverable : 5.000
+ Lower critical        : 5.000
+ Lower non-critical    : 10.000
+ Positive Hysteresis   : 2.000
+ Negative Hysteresis   : 2.000
+ Minimum sensor range  : Unspecified
+ Maximum sensor range  : Unspecified
+ Event Message Control : Per-threshold
+ Readable Thresholds   : lnr lcr lnc unc ucr unr
+ Settable Thresholds   : lnr lcr lnc unc ucr unr
+ Assertion Events      :
+ Assertions Enabled    :

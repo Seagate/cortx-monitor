@@ -7,3 +7,6 @@ PS2 Input Power  | 0.000      | Watts      | ok    | na        | na        | na 
 Fan Redundancy   | 0x0        | discrete   | 0x0180| na        | na        | na        | na        | na        | na
 HDD 0 Status     | 0x0        | discrete   | 0x0180| na        | na        | na        | na        | na        | na
 HDD 1 Status     | 0x0        | discrete   | 0x0180| na        | na        | na        | na        | na        | na
+CPU1 Temp        | 41.000     | degrees C  | ok    | 5.000     | 5.000     | 10.000    | 83.000    | 88.000    | 88.000
+12V              | 12.366     | Volts      | ok    | 10.170    | 10.536    | 10.780    | 12.915    | 13.281    | 13.403
+PS1 Curr Out %   | 15.000     | percent    | ok    | na        | na        | na        | 100.000   | 125.000   | na

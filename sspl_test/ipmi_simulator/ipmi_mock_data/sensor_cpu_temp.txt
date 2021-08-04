@@ -1,0 +1,16 @@
+Locating sensor record...
+Sensor ID              : CPU1 Temp (0x1)
+ Entity ID             : 3.1
+ Sensor Type (Threshold)  : Temperature
+ Sensor Reading        : 40 (+/- 0) degrees C
+ Status                : ok
+ Lower Non-Recoverable : 5.000
+ Lower Critical        : 5.000
+ Lower Non-Critical    : 10.000
+ Upper Non-Critical    : 83.000
+ Upper Critical        : 88.000
+ Upper Non-Recoverable : 88.000
+ Positive Hysteresis   : 2.000
+ Negative Hysteresis   : 2.000
+ Assertion Events      :
+ Assertions Enabled    :

@@ -300,7 +300,7 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
     # Dependency list
     DEPENDENCIES = {"plugins": ["SeviceMsgHandler"]}
 
-    RESOURCE_TYPE = "node:sw:os:service"
+    RESOURCE_TYPE = "server:sw:external_sw_services"
 
     @staticmethod
     def name():

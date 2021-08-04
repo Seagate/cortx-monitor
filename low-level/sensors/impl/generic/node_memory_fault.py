@@ -46,7 +46,7 @@ class MemFaultSensor(SensorThread, InternalMsgQ):
 
     SENSOR_NAME = "MemFaultSensor"
     PRIORITY = 1
-    RESOURCE_TYPE = "node:os:memory"
+    RESOURCE_TYPE = "server:hw:memory"
 
     # section in the configuration store
     SYSTEM_INFORMATION_KEY = "SYSTEM_INFORMATION"

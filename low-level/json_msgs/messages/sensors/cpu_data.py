@@ -39,7 +39,7 @@ class CPUdataMsg(BaseSensorMsg):
     MESSAGE_VERSION  = "1.0.0"
 
     SEVERITY = "warning"
-    RESOURCE_TYPE = "node:os:cpu_usage"
+    RESOURCE_TYPE = "server:hw:cpu_usage"
     RESOURCE_ID = "0"
 
     def __init__(self, host_id,

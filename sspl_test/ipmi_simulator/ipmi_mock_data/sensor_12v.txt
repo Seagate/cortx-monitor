@@ -1,0 +1,17 @@
+Locating sensor record...
+Sensor ID              : 12V (0x30)
+ Entity ID             : 7.32
+ Sensor Type (Threshold)  : Voltage
+ Sensor Reading        : 12.366 (+/- 0) Volts
+ Status                : ok
+ Lower Non-Recoverable : 10.170
+ Lower Critical        : 10.536
+ Lower Non-Critical    : 10.780
+ Upper Non-Critical    : 12.915
+ Upper Critical        : 13.281
+ Upper Non-Recoverable : 13.403
+ Positive Hysteresis   : 0.061
+ Negative Hysteresis   : 0.061
+ Assertion Events      :
+ Assertions Enabled    : lcr- lnr- ucr+ unr+
+ Deassertions Enabled  : lcr- lnr- ucr+ unr+

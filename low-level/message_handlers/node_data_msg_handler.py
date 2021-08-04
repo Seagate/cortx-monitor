@@ -67,14 +67,14 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
     SYSTEM_INFORMATION = "SYSTEM_INFORMATION"
 
-    IPMI_RESOURCE_TYPE_PSU = "node:hw:psu"
-    IPMI_RESOURCE_TYPE_FAN = "node:hw:fan"
-    IPMI_RESOURCE_TYPE_DISK = "node:hw:disk"
-    IPMI_RESOURCE_TYPE_TEMPERATURE = "node:sensor:temperature"
-    IPMI_RESOURCE_TYPE_VOLTAGE = "node:sensor:voltage"
-    IPMI_RESOURCE_TYPE_CURRENT = "node:sensor:current"
-    NW_RESOURCE_TYPE = "node:interface:nw"
-    NW_CABLE_RESOURCE_TYPE = "node:interface:nw:cable"
+    IPMI_RESOURCE_TYPE_PSU = "server:hw:psu"
+    IPMI_RESOURCE_TYPE_FAN = "server:hw:fan"
+    IPMI_RESOURCE_TYPE_DISK = "server:hw:disk"
+    IPMI_RESOURCE_TYPE_TEMPERATURE = "server:hw:platform_sensor:temperature"
+    IPMI_RESOURCE_TYPE_VOLTAGE = "server:hw:platform_sensor:voltage"
+    IPMI_RESOURCE_TYPE_CURRENT = "server:hw:platform_sensor:current"
+    NW_RESOURCE_TYPE = "server:hw:nw_port"
+    NW_CABLE_RESOURCE_TYPE = "server:hw:nw_cable"
     high_usage = {
         'cpu' : False,
         'disk' : False,
@@ -169,7 +169,8 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         self.os_sensor_type = {
             "disk_space" : self.disk_sensor_data,
             "memory_usage" : self.host_sensor_data,
-            "nw"   : self.if_sensor_data,
+            "nw_port"   : self.if_sensor_data,
+            "nw_cable"   : self.if_sensor_data,
             "cpu_usage"  : self.cpu_sensor_data,
             "raid_data" : self.raid_sensor_data
         }
@@ -355,7 +356,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     self._log_debug(f"NodeDataMsgHandler, _process_msg, \
                         No past data found for {self.sensor_type} sensor type")
 
-            elif self.sensor_type == "nw":
+            elif self.sensor_type in ["nw_port", "nw_cable"]:
                 self._generate_if_data()
                 sensor_message_type = self.os_sensor_type.get(self.sensor_type, "")
                 if sensor_message_type:

@@ -28,7 +28,7 @@ def init(args):
     pass
 
 def test_host_update_data_sensor(args):
-    resource_type = "node:os:memory_usage"
+    resource_type = "server:hw:memory_usage"
     instance_id = "*"
     ingress_msg_type="sensor_response_type"
     check_sspl_ll_is_running()

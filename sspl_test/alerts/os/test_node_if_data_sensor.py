@@ -25,7 +25,7 @@ from messaging.egress_processor_tests import EgressProcessorTests
 from common import check_sspl_ll_is_running
 
 
-resource_type = "node:interface:nw"
+resource_type = "server:hw:nw_port"
 
 def init(args):
     pass
@@ -36,7 +36,7 @@ def test_if_data_sensor(args):
     if_data_msg = None
     #create dummy interface to get network alerts
     mock_eth_interface.shuffle_nw_interface()
-    # Wait untill expected resource type found in RMQ ingress processor msgQ.
+    # Wait until expected resource type found in RMQ ingress processor msgQ.
     start_time = time.time()
     max_wait_time = 60
     while not if_data_msg:

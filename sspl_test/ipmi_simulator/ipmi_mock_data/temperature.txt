@@ -1,0 +1,1 @@
+CPU1 Temp        | 01h | ok  |  3.1 | 40 degrees C
