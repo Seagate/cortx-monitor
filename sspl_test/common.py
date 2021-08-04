@@ -36,7 +36,9 @@ from framework.utils.service_logging import init_logging
 from framework.utils.service_logging import logger
 from messaging.ingress_processor_tests import IngressProcessorTests
 from messaging.egress_processor_tests import EgressProcessorTests
-from framework.utils.conf_utils import Conf, SSPL_TEST_CONF, GLOBAL_CONF, PRODUCT_KEY
+from framework.base.sspl_constants import DEFAULT_NODE_ID
+from framework.utils.conf_utils import (
+    Conf, SSPL_TEST_CONF, GLOBAL_CONF, PRODUCT_KEY, NODE_ID_KEY)
 
 
 PY2 = sys.version_info[0] == 2
@@ -57,6 +59,13 @@ class TestFailed(Exception):
     def __init__(self, desc):
         desc = '[%s] %s' %(inspect.stack()[1][3], desc)
         super(TestFailed, self).__init__(desc)
+
+
+def get_current_node_id():
+    """Get current node id."""
+    node_id = Conf.get(GLOBAL_CONF, NODE_ID_KEY, DEFAULT_NODE_ID)
+    return node_id
+
 
 def init_messaging_msg_processors():
     """The main bootstrap for sspl automated tests"""
@@ -189,7 +198,9 @@ def check_os_platform():
     if error:
         print("Failed to get the os platform: error:{}".format(error.decode().rstrip('\n')))
 
-def get_fru_response(resource_type, instance_id):
+
+def get_fru_response(resource_type, instance_id, ingress_msg_type="actuator_response_type"):
+    """Returns message when resource type match with ingress message."""
     sensor_msg = None
     for _ in range(30):
         if world.sspl_modules[IngressProcessorTests.name()]._is_my_msgQ_empty():
@@ -200,7 +211,7 @@ def get_fru_response(resource_type, instance_id):
             print("Received: %s " % ingressMsg)
             try:
                 # Make sure we get back the message type that matches the request
-                msg_type = ingressMsg.get("actuator_response_type")
+                msg_type = ingressMsg.get(ingress_msg_type)
                 if msg_type["info"]["resource_type"] == resource_type:
                     # Break if condition is satisfied.
                     sensor_msg = msg_type
@@ -213,6 +224,7 @@ def get_fru_response(resource_type, instance_id):
         raise Exception("Failed to get expected response message for '%s'" %(
             resource_type))
     return ingressMsg
+
 
 def send_node_controller_message_request(uuid, resource_type, instance_id="*"):
     """
@@ -243,6 +255,7 @@ def send_node_controller_message_request(uuid, resource_type, instance_id="*"):
                 "debug_enabled": True
             },
             "response_dest": {},
+            "target_node_id": get_current_node_id(),
             "actuator_request_type": {
                 "node_controller": {
                     "node_request": resource_type,
@@ -252,6 +265,7 @@ def send_node_controller_message_request(uuid, resource_type, instance_id="*"):
         }
     }
     write_to_egress_msgQ(request)
+
 
 def send_enclosure_request(resource_type, resource_id):
     request = {
@@ -280,6 +294,7 @@ def send_enclosure_request(resource_type, resource_id):
                 "node_id": "1"
             },
             "response_dest": {},
+            "target_node_id": get_current_node_id(),
             "actuator_request_type": {
                 "storage_enclosure": {
                     "enclosure_request": resource_type,

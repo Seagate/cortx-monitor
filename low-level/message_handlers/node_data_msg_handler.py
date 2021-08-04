@@ -244,14 +244,12 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
     def read_persistent_data(self, data_path):
         """Read resource data from persistent cache."""
+        persistent_data = {}
         PER_DATA_PATH = os.path.join(self.cache_dir_path,
                             f'{data_path}_{self.node_id}')
-
         if os.path.isfile(PER_DATA_PATH):
             persistent_data = store.get(PER_DATA_PATH)
-            return persistent_data
-
-        return None
+        return persistent_data
 
     def _import_products(self, product):
         """Import classes based on which product is being used"""

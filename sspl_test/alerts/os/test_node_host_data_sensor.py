@@ -21,31 +21,22 @@ import sys
 from default import world
 from messaging.ingress_processor_tests import IngressProcessorTests
 from messaging.egress_processor_tests import EgressProcessorTests
-from common import check_sspl_ll_is_running
+from common import check_sspl_ll_is_running, get_fru_response
 
 
 def init(args):
     pass
 
 def test_host_update_data_sensor(args):
+    resource_type = "node:os:memory_usage"
+    instance_id = "*"
+    ingress_msg_type="sensor_response_type"
     check_sspl_ll_is_running()
-    node_data_sensor_message_request("node:os:memory_usage")
-    host_update_msg = None
-    sleep(10)
-    while not world.sspl_modules[IngressProcessorTests.name()]._is_my_msgQ_empty():
-        ingressMsg = world.sspl_modules[IngressProcessorTests.name()]._read_my_msgQ()
-        sleep(0.1)
-        print("Received for host_data: {0}".format(ingressMsg))
-        try:
-            # Make sure we get back the message type that matches the request
-            msg_type = ingressMsg.get("sensor_response_type")
-            if msg_type.get("info").get("resource_type") == "node:os:memory_usage":
-                host_update_msg = msg_type
-                break
-        except Exception as exception:
-            sleep(0.1)
-            print(exception)
+    node_data_sensor_message_request(resource_type)
+    ingress_msg = get_fru_response(
+        resource_type, instance_id, ingress_msg_type)
 
+    host_update_msg = ingress_msg.get(ingress_msg_type)
     assert(host_update_msg is not None)
     assert(host_update_msg.get("alert_type") is not None)
     assert(host_update_msg.get("alert_id") is not None)

@@ -32,9 +32,9 @@ from cortx.utils.message_bus import MessageConsumer
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.utils.service_logging import logger
-from framework.base.sspl_constants import RESOURCE_PATH
-
-from framework.utils.conf_utils import Conf, SSPL_TEST_CONF, NODE_ID_KEY
+from framework.base.sspl_constants import RESOURCE_PATH, DEFAULT_NODE_ID
+from framework.utils.conf_utils import (
+    Conf, SSPL_TEST_CONF, NODE_ID_KEY, GLOBAL_CONF)
 
 import ctypes
 from . import producer_initialized
@@ -51,7 +51,7 @@ class IngressProcessorTests(ScheduledModuleThread, InternalMsgQ):
     # Section and keys in configuration file
     PROCESSOR = MODULE_NAME.upper()
     CONSUMER_ID = "consumer_id"
-    CONSUMER_GROUP = "consumer_group"
+    CONSUMER_GROUP_PREFIX = "consumer_group_prefix"
     MESSAGE_TYPE = "message_type"
     OFFSET = "offset"
     SYSTEM_INFORMATION_KEY = 'SYSTEM_INFORMATION'
@@ -102,7 +102,7 @@ class IngressProcessorTests(ScheduledModuleThread, InternalMsgQ):
         # Initialize internal message queues for this module
         super(IngressProcessorTests, self).initialize_msgQ(msgQlist)
 
-        self._read_config()
+        self._init_config()
 
         producer_initialized.wait()
         self.create_MsgConsumer_obj()
@@ -219,16 +219,18 @@ class IngressProcessorTests(ScheduledModuleThread, InternalMsgQ):
             logger.exception(
                 "_process_msg unrecognized message: %r" % ingressMsg)
 
-    def _read_config(self):
+    def _init_config(self):
         """Configure the messaging exchange with defaults available."""
         # Make methods locally available
-        self._node_id = Conf.get(SSPL_TEST_CONF, NODE_ID_KEY, 'SN01')
+        self._node_id = Conf.get(GLOBAL_CONF, NODE_ID_KEY, DEFAULT_NODE_ID)
         self._consumer_id = Conf.get(SSPL_TEST_CONF,
                                      f"{self.PROCESSOR}>{self.CONSUMER_ID}",
                                      'sspl_actuator')
-        self._consumer_group = Conf.get(SSPL_TEST_CONF,
-                                        f"{self.PROCESSOR}>{self.CONSUMER_GROUP}",
-                                        'cortx_monitor')
+        self._consumer_group_prefix = Conf.get(
+            SSPL_TEST_CONF, f"{self.PROCESSOR}>{self.CONSUMER_GROUP_PREFIX}",
+            'cortx_monitor')
+        self._consumer_group = self._consumer_group_prefix + \
+            "_" + str(self._node_id)
         self._message_type = Conf.get(SSPL_TEST_CONF,
                                       f"{self.PROCESSOR}>{self.MESSAGE_TYPE}",
                                       'Requests')
