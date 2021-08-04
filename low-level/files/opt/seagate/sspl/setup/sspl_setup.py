@@ -538,8 +538,8 @@ class CleanupCmd(Cmd):
                     "/sspl.log", "/manifest.log")
                 # symlinks created during post_install
                 sspl_ll_cli = "/usr/bin/sspl_ll_cli"
-                # Remove SSPL config other config files which we have created
-                # during post_install.
+                # Remove SSPL config other config/log files which we have
+                # created during post_install.
                 for file in [
                     sspl_ll_cli, sspl_test_backup,
                     sspl_test_file_path, file_store_config_path,
@@ -552,29 +552,19 @@ class CleanupCmd(Cmd):
                     SB_LOGROTATE_CONF, sspl_dbus_policy_conf,
                     sspl_dbus_policy_rules, sspl_sudoers_file,
                         sspl_service_file]:
-                    self.delete_config(file)
+                    Utility.delete_file_and_dir(file)
                 # Delete directories which we have created during post_install.
                 for dir in directories:
-                    self.delete_config(dir, del_dir=True)
+                    Utility.delete_file_and_dir(dir, del_dir=True)
+                logger.info("Deleted config/log files and directories.")
                 # Delete sspl-ll user
                 usernames = [x[0] for x in pwd.getpwall()]
                 if USER in usernames:
                     os.system("/usr/sbin/userdel -f %s" % USER)
+                    logger.info("Deleted %s user." %USER)
             logger.info("%s - Process done" % self.name)
         except OSError as e:
             logger.error(f"Failed in Cleanup. ERROR: {e}")
-
-    def delete_config(self, path, del_dir=False):
-        """Delete directories/files from dir which starts with 'sspl'."""
-        if not os.path.exists(path):
-            logger.info(f"{path} path doesn't exists.")
-            return
-        if os.path.isfile(path):
-            os.remove(path)
-        elif os.path.islink(path):
-            os.unlink(path)
-        elif os.path.isdir(path) and del_dir:
-            shutil.rmtree(path, ignore_errors=True)
 
 
 class BackupCmd(Cmd):

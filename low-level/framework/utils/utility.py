@@ -24,6 +24,7 @@ import pwd
 import grp
 import errno
 import socket
+import shutil
 import time
 from cortx.utils.conf_store import Conf
 from cortx.utils.conf_store.error import ConfError
@@ -165,6 +166,19 @@ class Utility(object):
     def get_current_time():
         """Returns the time as integer number in seconds since the epoch in UTC."""
         return int(time.time())
+
+    @staticmethod
+    def delete_file_and_dir(path, del_dir=False):
+        """Delete directories/files from dir."""
+        if not os.path.exists(path):
+            logger.info(f"{path} path doesn't exists.")
+            return
+        if os.path.isfile(path):
+            os.remove(path)
+        elif os.path.islink(path):
+            os.unlink(path)
+        elif os.path.isdir(path) and del_dir:
+            shutil.rmtree(path, ignore_errors=True)
 
 def errno_to_str_mapping(err_no):
     """Convert numerical errno to its meaning."""
