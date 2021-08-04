@@ -148,11 +148,14 @@ This guide provides a step-by-step walkthrough for getting you CORTX-Monitor Ser
     $ CORTX_MONITOR_BASE_URL="https://raw.githubusercontent.com/Seagate/cortx-monitor/main"
     $ curl $CORTX_MONITOR_BASE_URL/low-level/files/opt/seagate/sspl/setup/sspl_dev_deploy -o sspl_dev_deploy
     $ chmod a+x sspl_dev_deploy
+    ```
+    **sspl_dev_deploy is only meant for dev purpose and to install SSPL independently along with its dependencies.**
+    ```
     $ ./sspl_dev_deploy --cleanup
     $ ./sspl_dev_deploy --prereq -L /root/MYRPMS
     ```
    
-   Create template file with the name `/root/template_values.1-node.txt`
+   Create a template file with the name `~/template_values.1-node.txt`
     ```
     # 1-node config variable
     TMPL_CLUSTER_ID=CC01
@@ -190,8 +193,8 @@ This guide provides a step-by-step walkthrough for getting you CORTX-Monitor Ser
     ```
     machine_id="xyz"
     enclosure_id="enc_xyz"
-    bmc_pass='Secret'
-    encl_pass='Secret'
+    bmc_pass='samplexxxx'
+    encl_pass='samplexxxx'
 
     bmc_key=$(python3 -c 'from cortx.utils.security.cipher import Cipher; print(Cipher.generate_key('"'$machine_id'"', "server_node"))')
     encl_key=$(python3 -c 'from cortx.utils.security.cipher import Cipher; print(Cipher.generate_key('"'$enclosure_id'"', "storage_enclosure"))')
