@@ -82,6 +82,8 @@ class ServerHealth():
         self._ipmi = IpmiFactory().get_implementor("ipmitool")
         self.platform_sensor_list = ['Temperature', 'Voltage', 'Current']
         self.service = Service()
+        self.resource_indexing_map = ServerResourceMap.resource_indexing_map\
+            ["health"]
 
     def get_data(self, rpath):
         """Fetch health information for given rpath."""
@@ -295,6 +297,8 @@ class ServerHealth():
         if not add_overall_usage:
             cpu_data = per_cpu_data
 
+        sort_key_path = self.resource_indexing_map["hw"]["cpu"]
+        cpu_data = MonUtils.sort_by_specific_kv(cpu_data, sort_key_path, self.log)
         logger.debug(self.log.svc_log(
             f"CPU Health Data:{cpu_data}"))
         return cpu_data
@@ -566,6 +570,7 @@ class ServerHealth():
     def get_nw_ports_info(self):
         """Return the Network ports information."""
         network_cable_data = []
+        sort_key_path = None
         io_counters = psutil.net_io_counters(pernic=True)
 
         nw_instance = Network()
@@ -591,6 +596,7 @@ class ServerHealth():
                 self.get_nw_status(nw_instance, interface)
             specifics["nwStatus"] = nw_status
             specifics["nwCableConnStatus"] = nw_cable_conn_status
+            specifics["logical_name"] = interface
             # Map and set the interface health status and description.
             map_status = {"CONNECTED": "OK", "DISCONNECTED": "Disabled/Failed",
                           "UNKNOWN": "NA"}
@@ -601,6 +607,9 @@ class ServerHealth():
             self.set_health_data(nic_info, health_status, description=desc,
                                  specifics=[specifics])
             network_cable_data.append(nic_info)
+        sort_key_path = self.resource_indexing_map["hw"]["nw_port"]
+        network_cable_data = MonUtils.sort_by_specific_kv(
+            network_cable_data, sort_key_path, self.log)
         return network_cable_data
 
     def get_nw_status(self, nw_interface, interface):
@@ -627,12 +636,18 @@ class ServerHealth():
         """Get cortx service info in required format."""
         cortx_services = self.service.get_cortx_service_list()
         cortx_service_info = self.get_service_info(cortx_services)
+        sort_key_path = self.resource_indexing_map["sw"]["cortx_sw_services"]
+        cortx_service_info = MonUtils.sort_by_specific_kv(
+            cortx_service_info, sort_key_path, self.log)
         return cortx_service_info
 
     def get_external_service_info(self):
         """Get external service info in required format."""
         external_services = self.service.get_external_service_list()
         external_service_info = self.get_service_info(external_services)
+        sort_key_path = self.resource_indexing_map["sw"]["external_sw_services"]
+        external_service_info = MonUtils.sort_by_specific_kv(
+            external_service_info, sort_key_path, self.log)
         return external_service_info
 
     def get_service_info(self, services):
@@ -675,28 +690,42 @@ class ServerHealth():
     def get_disks_info(self):
         """Update and return server drive information in specific format."""
         disks = []
+        sort_key_path = None
         for disk in Disk.get_disks():
             uid = disk.path if disk.path else disk.id
             disk_health = self.get_health_template(uid, True)
             health_data = disk.get_health()
             health = "OK" if (health_data['SMART_health'] == "PASSED") else "Fault"
-            self.set_health_data(disk_health, health, specifics=[{"SMART": health_data}])
+            serial_number = disk.id.split("-")[-1] if disk.id else "NA"
+            health_data.update({"serial_number": serial_number})
+            self.set_health_data(disk_health, health, specifics=[{
+                "SMART": health_data}])
             disks.append(disk_health)
+        # Sort disk list by serial_number
+        sort_key_path = self.resource_indexing_map["hw"]["disk"]
+        disks = MonUtils.sort_by_specific_kv(disks, sort_key_path,
+            self.log)
         logger.debug(self.log.svc_log(
             f"Disk Health Data:{disks}"))
         return disks
 
     def get_psu_info(self):
         """Update and return PSU information in specific format."""
-        psus_health_data = []
+        psus_data = []
+        sort_key_path = None
         for psu in self.get_psus():
-            data = self.get_health_template(f'{psu["Location"]}', True)
-            health = "OK" if (psu["Status"] == "Present, OK") else "Fault"
+            psu = {k.lower().replace(" ", "_"): v for k,v in psu.items()}
+            data = self.get_health_template(f'{psu["location"]}', True)
+            health = "OK" if (psu["status"] == "Present, OK") else "Fault"
             self.set_health_data(data, health, specifics=psu)
-            psus_health_data.append(data)
+            psus_data.append(data)
+        # Sort disk list by serial_number
+        sort_key_path = self.resource_indexing_map["hw"]["psu"]
+        psus_data = MonUtils.sort_by_specific_kv(psus_data,
+            sort_key_path, self.log)
         logger.debug(self.log.svc_log(
-            f"PSU Health Data:{psus_health_data}"))
-        return psus_health_data
+            f"PSU Health Data:{psus_data}"))
+        return psus_data
 
     @staticmethod
     def get_psus():
