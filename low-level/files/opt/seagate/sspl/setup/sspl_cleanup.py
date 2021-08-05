@@ -50,7 +50,7 @@ class SSPLCleanup:
     def process(self, product):
         """Reset and cleanup config.
 
-        if '--pre-factory' in args:
+        if self.pre_factory:
             Cleanup sspl log and config files and rollback all steps executed
             in post_install stage.
 
