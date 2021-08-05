@@ -1171,15 +1171,24 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
 
         self._send_json_msg(resource_type, alert_type, severity, info, specific_info)
         store.put(self.faulty_resources, self.faulty_resources_path)
+    
+    def _get_sensor_num_by_id(self, hw_type, sensor_num):
+        return sorted(list(
+            self.sensor_id_map[hw_type].keys())).index(sensor_num)
 
     def _parse_disk_info(self, index, date, _time, sensor, sensor_num, event, status, is_last):
         """Parse out Disk related changes that gets reaflected in the ipmi sel list"""
 
         sensor_id = self.sensor_id_map[self.TYPE_DISK][sensor_num]
-        disk_slot = re.search(r'/d+', sensor_id)
+        disk_slot = re.search(r'\d+', sensor_id)
         if disk_slot:
             disk_slot = disk_slot.group()
-        disk_name = sensor_id.replace('Status', f'({sensor_num})')
+        else:
+            disk_slot = self._get_sensor_num_by_id(self.TYPE_DISK, sensor_num)
+        if 'Status' in sensor_id:
+            disk_name = sensor_id.replace('Status', f'(0x{sensor_num})')
+        else:
+            disk_name = sensor_id +  f' (0x{sensor_num})'
 
         common, specific, specific_dynamic = self._get_sensor_props(sensor_id)
         if common:
@@ -1197,13 +1206,13 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
             info = {
                 "resource_type": resource_type,
                 "fru": self.ipmi_client.is_fru(self.fru_map[self.TYPE_DISK]),
-                "resource_id": sensor,
+                "resource_id": disk_name,
                 "event_time": self._get_epoch_time_from_date_and_time(date, _time),
                 "description": alert.description.format(disk_slot, disk_name),
                 "impact": alert.impact,
                 "recommendation": alert.recommendation
             }
-            specific_info["fru_id"] = sensor
+            specific_info["fru_id"] = disk_name
 
             if is_last:
                 specific_info.update(specific_dynamic)

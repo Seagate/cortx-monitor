@@ -22,7 +22,7 @@ Alert = namedtuple('AlertInfo',
 
 alert_for_event = {
     "Drive Slot / Bay": {
-        "Drive Present": {
+        **dict.fromkeys(["Drive Present", "Drive Present ()"], {
             "Asserted": Alert(
                     "insertion", "informational",
                     "Disk is inserted in slot '0'. [{}]",
@@ -34,8 +34,8 @@ alert_for_event = {
                     "Server availability may get impacted if redundant " +
                     "drive goes bad or missing.",
                     DEFAULT_RECOMMENDATION)
-        },
-        "Drive Fault": {
+        }),
+        **dict.fromkeys(["Drive Fault", "Drive Fault ()"], {
             "Asserted": Alert(
                     "fault", "critial",
                     "Disk in slot '{}' is faulty. [{}]",
@@ -45,6 +45,6 @@ alert_for_event = {
                     "fault_resolved", "informational",
                     "Disk in slot '{}' has recovered. [{}]",
                     "Disk is in good health now.", "None")
-        }
+        })
     }
 }
