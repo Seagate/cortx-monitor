@@ -1030,6 +1030,10 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         else:
             port_num = self._get_sensor_num_by_id(self.TYPE_PSU_SUPPLY,
                                                   sensor_num)
+        if 'Status' in sensor_id:
+            port_name = sensor_id.replace('Status', f'(0x{sensor_num})')
+        else:
+            port_name = sensor_id + f'({sensor_num})'
         resource_type = NodeDataMsgHandler.IPMI_RESOURCE_TYPE_PSU
         try:
             alert = alert_for_event[self.TYPE_PSU_SUPPLY][event][status]
@@ -1045,7 +1049,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
             "fru": self.ipmi_client.is_fru(self.fru_map[self.TYPE_PSU_SUPPLY]),
             "resource_id": sensor,
             "event_time": self._get_epoch_time_from_date_and_time(date, _time),
-            "description": alert.description.format(sensor_num, port_num),
+            "description": alert.description.format(port_num, port_name),
             "impact": alert.impact,
             "recommendation": alert.recommendation
         }

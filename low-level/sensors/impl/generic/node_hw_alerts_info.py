@@ -52,83 +52,64 @@ alert_for_event = {
         **dict.fromkeys(["Presence detected", "Presence detected ()"], {
             "Asserted": Alert(
                 "insertion", "informational",
-                # "Power Supply Sensor (0xc1) has reported the presence
-                #  of Power Supply via 'Port 1'"
-                "Power Supply Sensor (0x{}) has reported the presence " +
-                "of Power Supply via 'Port {}'.",
+                "'Power Supply {}' is present. [{}]",
+                # 'Power Supply 1' is present. [PS1 (0xc1)]
                 "Power Supply Port is being monitored.", "None"),
             "Deasserted": Alert(
                 "missing", "critical",
-                "Power Supply Sensor (0x{}) failed to detect the presence " +
-                "of Power Supply via 'Port {}'.",
-                # Power Supply Sensor (0xc1) failed to detect the presence
-                # of Power Supply via 'Port 1'.
+                "'Power Supply {}', is missing. [{}]",
                 "Power Supply Port monitoring has stopped.",
                 DEFAULT_RECOMMENDATION)
         }),
         **dict.fromkeys(["Predictive failure", "Predictive failure ()"], {
             "Asserted": Alert(
                 "fault", "warning",
-                "Power Supply Sensor (0x{}) has predicted the failure " +
-                "of Power Supply via 'Port {}'.",
-                # Power Supply Sensor (0xc1) has predicted the failure
-                # of Power Supply via 'Port 1'
+                "Failure is predicted for 'Power Supply {}'. [{}]",
                 "Power Supply might stop if no action taken.",
                 DEFAULT_RECOMMENDATION
             ),
             "Deasserted": Alert(
                 "fault_resolved", "informational",
-                # Power Supply Sensor (0xc1) does not find a threat
-                # of failure anymore for Power Supply via 'Port 1'.
-                "Power Supply Sensor (0x{}) does not find a threat " +
-                "of failure anymore for Power Supply via 'Port {}'.",
+                "No Failure threat anymore for 'Power Supply {}'. [{}]",
                 "None", "None"
             )
         }),
         **dict.fromkeys(["Failure detected", "Failure detected ()"], {
             "Asserted": Alert(
                 "fault", "error",
-                "Power Supply Sensor (0x{}) reports a failure " +
-                "of Supply via 'Port {}'.",
-                # Power Supply Sensor (0xc1) reports a failure of
-                # Supply via 'Port 1'
+                "Failure detected for 'Power Supply {}'. [{}]",
                 "Power Supply is interrupted.,",
                 DEFAULT_RECOMMENDATION
             ),
             "Deasserted": Alert(
                 "fault_resolved", "informational",
-                "Power Supply Sensor (0x{}) reports, Supply via " +
-                "'Port {}' has recovered from the failure.",
+                "'Power Supply {}' recovered from the failure. [{}]",
                 "None", "None"
             )
         }),
         **dict.fromkeys(["Config Error", "Config Error ()"], {
             "Asserted": Alert(
                 "fault", "error",
-                "Power Supply Sensor (0x{}) reports, 'Port {}' has a " +
-                "Configuration Error.",
+                "'Power Supply {}' has configuration error. [{}]",
                 "Power Supply port might produce issues.",
                 DEFAULT_RECOMMENDATION
             ),
             "Deasserted": Alert(
                 "fault_resolved", "informational",
-                "Power Supply Sensor (0x{}) reports, 'Port {}' " +
-                "does not have Configuration Error anymore.",
+                "Configuration error resolved for 'Power Supply {}'. [{}]",
                 "None", "None"
             )
         }),
         **dict.fromkeys(["Power Supply AC lost", "Power Supply AC lost ()"], {
             "Asserted": Alert(
                 "fault", "critical",
-                "Power Supply Sensor (0x{}) reports, 'Port {}' has lost " +
-                "the AC supply.",
-                "AC supply is unvailable throught Port {}",
+                "'Power Supply {}' lost the AC supply. [{}]",
+                "AC supply is unavailable.",
                 DEFAULT_RECOMMENDATION
             ),
             "Deasserted": Alert(
                 "fault_resolved", "informational",
-                "Power Supply Sensor (0x{}) reports, 'Port {}' has regained " +
-                "the AC supply.",
+                "'Power Supply {}' regained the AC Supply. [{}]",
                 "None", "None"
             )
         }),
@@ -136,13 +117,13 @@ alert_for_event = {
                          "Power Supply Inactive ()"], {
             "Asserted": Alert(
                 "fault", "critical",
-                "Power Supply Sensor (0x{}) reports, 'Port {}' is inactive.",
-                "No Power Supply via Port {}",
+                "'Power Supply {}' is inactive. [{}]",
+                "Power Supply is unavailable.",
                 DEFAULT_RECOMMENDATION
             ),
             "Deasserted": Alert(
                 "fault_resolved", "informational",
-                "Power Supply Sensor {} reports, 'Port {}' is active now.",
+                "'Power Supply {}' is active now. [{}]",
                 "None", "None"
             )
         })
