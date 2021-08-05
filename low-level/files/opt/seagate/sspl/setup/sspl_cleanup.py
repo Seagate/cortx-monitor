@@ -34,7 +34,6 @@ from framework.base.sspl_constants import (
 
 
 class SSPLCleanup:
-
     """Reset config and optionally factory operation."""
 
     def __init__(self, args):
@@ -44,7 +43,7 @@ class SSPLCleanup:
             self.pre_factory = True
 
     def validate(self):
-        """validate inputs required for cleanup."""
+        """Validate inputs required for cleanup."""
         pass
 
     def process(self, product):
@@ -53,7 +52,6 @@ class SSPLCleanup:
         if self.pre_factory:
             Cleanup sspl log and config files and rollback all steps executed
             in post_install stage.
-
         else:
             Reset sspl config.
         """

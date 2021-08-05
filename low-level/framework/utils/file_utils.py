@@ -24,7 +24,7 @@ class FileUtils:
     @staticmethod
     def delete_or_truncate_files(path, fformat=None, del_file=False, del_dir=False):
         """Clean log files and delete files from dir.
-        
+
         Parameters:
         path (str): path of file or directory which is to be deleted.
         e.g. '/var/cortx/sspl/sspl.log'
