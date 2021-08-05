@@ -77,6 +77,8 @@ def tmain(argp, argv):
 
     skipped_prefixes = list(conf_skipped_prefixes())
     for ts in ts_list:
+        if not ts.strip():
+            continue
         print('\n####### Test Suite: %s ######' %ts)
         ts_count += 1
         if any( (ts.startswith(p) for p in skipped_prefixes if p is not None) ):
