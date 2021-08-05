@@ -500,6 +500,7 @@ class CleanupCmd(Cmd):
         logger.info("%s - Validation done" % self.name)
 
     def process(self):
+        """Cleanup sspl config and log files."""
         from files.opt.seagate.sspl.setup.sspl_cleanup import SSPLCleanup
         sspl_cleanup = SSPLCleanup(self.args.args)
         sspl_cleanup.process(self.product)

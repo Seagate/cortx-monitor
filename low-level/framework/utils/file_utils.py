@@ -12,7 +12,6 @@
 # For any questions about this software or licensing,
 # please email opensource@seagate.com or cortx-questions@seagate.com.
 
-
 import os
 import shutil
 from cortx.utils.process import SimpleProcess
@@ -24,7 +23,19 @@ class FileUtils:
 
     @staticmethod
     def delete_or_truncate_files(path, fformat=None, del_file=False, del_dir=False):
-        """Clean log files and delete files from dir."""
+        """Clean log files and delete files from dir.
+        
+        Parameters:
+        path (str): path of file or directory which is to be deleted.
+        e.g. '/var/cortx/sspl/sspl.log'
+
+        fformat (str): file format which needs to be search inside directory.
+        e.g. '.log'
+
+        del_file (boolean): True if file needs to be deleted.
+
+        del_dir (boolean): True if directory needs to be deleted.
+        """
         if not os.path.exists(path):
             logger.info(f"{path} path doesn't exists.")
             return
@@ -56,6 +67,7 @@ class FileUtils:
 
 
 class FileUtilsError(Exception):
+    """Error handling class for FileUtils operation."""
 
     def __init__(self, rc, message, *args):
         """Initialize the error information."""

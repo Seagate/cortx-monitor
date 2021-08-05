@@ -38,16 +38,25 @@ class SSPLCleanup:
     """Reset config and optionally factory operation."""
 
     def __init__(self, args):
-        """Check '--pre-factory' in args."""
+        """Initialize cleanup instance."""
         self.pre_factory = False
         if "--pre-factory" in args:
             self.pre_factory = True
 
     def validate(self):
+        """validate inputs required for cleanup."""
         pass
 
     def process(self, product):
-        """Reset and cleanup config."""
+        """Reset and cleanup config.
+
+        if '--pre-factory' in args:
+            Cleanup sspl log and config files and rollback all steps executed
+            in post_install stage.
+
+        else:
+            Reset sspl config.
+        """
         try:
             if os.path.exists(file_store_config_path):
                 FileUtils.delete_or_truncate_files(
@@ -89,9 +98,11 @@ class SSPLCleanup:
             "/sspl.log", "/sspl_support_bundle.log")
         manifest_log_file_path = sspl_log_file_path.replace(
             "/sspl.log", "/manifest.log")
+
         # symlinks created during post_install
         sspl_ll_cli = "/usr/bin/sspl_ll_cli"
-        # Remove SSPL config other config/log files which we have
+
+        # Remove SSPL config other config/log files which were
         # created during post_install.
         for filepath in [
             sspl_ll_cli, sspl_test_backup, sspl_test_file_path,
@@ -102,10 +113,12 @@ class SSPLCleanup:
             RSYSLOG_SB_CONF, SB_LOGROTATE_CONF, sspl_dbus_policy_conf,
                 sspl_dbus_policy_rules, sspl_sudoers_file, sspl_service_file]:
             FileUtils.delete_or_truncate_files(filepath, del_file=True)
-        # Delete directories which we have created during post_install.
+
+        # Delete directories which were created during post_install.
         for directory in directories:
             FileUtils.delete_or_truncate_files(directory, del_dir=True)
         logger.info("Deleted config/log files and directories.")
+
         # Delete sspl-ll user
         usernames = [x[0] for x in pwd.getpwall()]
         if USER in usernames:
@@ -115,9 +128,11 @@ class SSPLCleanup:
                     %(USER, err))
             else:
                 logger.info("Deleted %s user." % USER)
+
         # Delete topic
         mbadmin = MessageBusAdmin(admin_id="admin")
         try:
             mbadmin.deregister_message_type(message_types)
+            logger.info("Delete kafka %s topics." % message_types)
         except MessageBusError as e:
             logger.error(f"MessageBusError occurred while deleting topic:{e}")
