@@ -33,7 +33,8 @@ from framework.base.debug import Debug
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.base.module_thread import SensorThread
 from framework.base.sspl_constants import (
-    DATA_PATH, BMCInterface, PRODUCT_FAMILY, ServiceTypes, node_key_id)
+    DATA_PATH, BMCInterface, PRODUCT_FAMILY, ServiceTypes, node_key_id,
+    DEFAULT_RECOMMENDATION)
 from framework.utils import encryptor
 from framework.utils.conf_utils import (
     GLOBAL_CONF, IP, SECRET, SSPL_CONF, BMC_INTERFACE, BMC_CHANNEL_IF,
@@ -1016,47 +1017,38 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         self._send_json_msg(resource_type, alert_type, severity, fru_info, fan_info)
         store.put(self.faulty_resources, self.faulty_resources_path)
 
+    def _get_sensor_num_by_id(self, hw_type, sensor_num):
+        return sorted(list(
+            self.sensor_id_map[hw_type].keys())).index(sensor_num)
+
     def _parse_psu_supply_info(self, index, date, _time, sensor, sensor_num, event, status, is_last):
         """Parse out PSU related changes that gets reflected in the ipmi sel list"""
-
-        alerts = {
-            ("Config Error", "Asserted"): ("fault","error"),
-            ("Config Error", "Deasserted"): ("fault_resolved","informational"),
-            ("Failure detected ()", "Asserted"): ("fault","error"),
-            ("Failure detected ()", "Deasserted"): ("fault_resolved","informational"),
-            ("Failure detected", "Asserted"): ("fault","error"),
-            ("Failure detected", "Deasserted"): ("fault_resolved","informational"),
-            ("Power Supply AC lost", "Asserted"): ("fault","critical"),
-            ("Power Supply AC lost", "Deasserted"): ("fault_resolved","informational"),
-            ("Power Supply Inactive", "Asserted"): ("fault","critical"),
-            ("Power Supply Inactive", "Deasserted"): ("fault_resolved","informational"),
-            ("Predictive failure", "Asserted"): ("fault","warning"),
-            ("Predictive failure", "Deasserted"): ("fault_resolved","informational"),
-            ("Predictive failure ()", "Asserted"): ("fault","warning"),
-            ("Predictive failure ()", "Deasserted"): ("fault_resolved","informational"),
-            ("Presence detected", "Asserted"): ("insertion","informational"),
-            ("Presence detected", "Deasserted"): ("missing","critical"),
-            ("Presence detected ()", "Asserted"): ("insertion","informational"),
-            ("Presence detected ()", "Deasserted"): ("missing","critical"),
-        }
-
         sensor_id = self.sensor_id_map[self.TYPE_PSU_SUPPLY][sensor_num]
+        port_num = re.search(r'\d+', sensor_id)
+        if port_num:
+            port_num = port_num.group()
+        else:
+            port_num = self._get_sensor_num_by_id(self.TYPE_PSU_SUPPLY,
+                                                  sensor_num)
         resource_type = NodeDataMsgHandler.IPMI_RESOURCE_TYPE_PSU
-        fru = self.ipmi_client.is_fru(self.fru_map[self.TYPE_PSU_SUPPLY])
+        try:
+            alert = alert_for_event[self.TYPE_PSU_SUPPLY][event][status]
+        except KeyError:
+            logger.error(f"{self.TYPE_PSU_SUPPLY} : " +
+                         f"Unknown event: {event}, status: {status}")
+            return
+        except Exception as e:
+            logger.exception(e)
+            return
         info = {
             "resource_type": resource_type,
-            "fru": fru,
+            "fru": self.ipmi_client.is_fru(self.fru_map[self.TYPE_PSU_SUPPLY]),
             "resource_id": sensor,
             "event_time": self._get_epoch_time_from_date_and_time(date, _time),
-            "description": event
+            "description": alert.description.format(sensor_num, port_num),
+            "impact": alert.impact,
+            "recommendation": alert.recommendation
         }
-
-        try:
-            (alert_type, severity) = alerts[(event, status)]
-        except KeyError:
-            logger.error(f"Unknown event: {event}, status: {status}")
-            return
-
         dynamic, static = self._get_sensor_sdr_props(sensor_id)
         specific_info = {}
         specific_info["fru_id"] = sensor
@@ -1075,18 +1067,19 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         if is_last:
             specific_info.update(dynamic)
 
-        if alert_type in ["fault", "missing"]:
+        if alert.type in ["fault", "missing"]:
             self.faulty_resources[sensor_id] = {
                 'status': status,
                 'event': event,
                 'device_id': sensor,
                 'fru_type': self.TYPE_PSU_SUPPLY
             }
-        elif alert_type in ['fault_resolved', 'miscellaneous', 'insertion'] and \
+        elif alert.type in ['fault_resolved', 'insertion'] and \
             sensor_id in self.faulty_resources:
             del self.faulty_resources[sensor_id]
 
-        self._send_json_msg(resource_type, alert_type, severity, info, specific_info)
+        self._send_json_msg(resource_type, alert.type, alert.severity,
+                            info, specific_info)
         store.put(self.faulty_resources, self.faulty_resources_path)
 
     def _parse_psu_unit_info(self, index, date, _time, sensor, sensor_num, event, status, is_last):
