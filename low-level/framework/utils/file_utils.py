@@ -23,7 +23,7 @@ class FileUtils:
     """Handle file operations."""
 
     @staticmethod
-    def reset_log_files(path, fformat=None, del_file=False, del_dir=False):
+    def delete_or_truncate_files(path, fformat=None, del_file=False, del_dir=False):
         """Clean log files and delete files from dir."""
         if not os.path.exists(path):
             logger.info(f"{path} path doesn't exists.")

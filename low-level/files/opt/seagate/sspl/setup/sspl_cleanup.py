@@ -20,8 +20,10 @@ import pwd
 
 from cortx.utils.conf_store import Conf
 from cortx.utils.process import SimpleProcess
+from cortx.utils.message_bus import MessageBus, MessageBusAdmin
+from cortx.utils.message_bus.error import MessageBusError
 from framework.utils.file_utils import FileUtils
-from framework.utils.service_logging import logger
+from files.opt.seagate.sspl.setup.setup_logger import logger
 from framework.utils.utility import Utility
 from framework.base.sspl_constants import (
     SSPL_CONFIG_INDEX, file_store_config_path, global_config_file_path,
@@ -48,7 +50,8 @@ class SSPLCleanup:
         """Reset and cleanup config."""
         try:
             if os.path.exists(file_store_config_path):
-                FileUtils.reset_log_files(file_store_config_path, del_file=True)
+                FileUtils.delete_or_truncate_files(
+                    file_store_config_path, del_file=True)
             shutil.copyfile("%s/conf/sspl.conf.%s.yaml" % (
                 SSPL_BASE_DIR, product), file_store_config_path)
             if self.pre_factory:
@@ -66,6 +69,9 @@ class SSPLCleanup:
             SSPL_CONFIG_INDEX, "SYSTEM_INFORMATION>sspl_log_file_path")
         iem_log_file_path = Utility.get_config_value(
             SSPL_CONFIG_INDEX, "IEMSENSOR>log_file_path")
+        message_types = [
+            Utility.get_config_value(SSPL_CONFIG_INDEX, "INGRESSPROCESSOR>message_type"),
+            Utility.get_config_value(SSPL_CONFIG_INDEX, "EGRESSPROCESSOR>message_type")]
 
         # Directories and file which needs to deleted.
         directories = [
@@ -95,10 +101,10 @@ class SSPLCleanup:
             IEM_LOGROTATE_CONF, SSPL_LOGROTATE_CONF, MSB_LOGROTATE_CONF,
             RSYSLOG_SB_CONF, SB_LOGROTATE_CONF, sspl_dbus_policy_conf,
                 sspl_dbus_policy_rules, sspl_sudoers_file, sspl_service_file]:
-            FileUtils.reset_log_files(filepath, del_file=True)
+            FileUtils.delete_or_truncate_files(filepath, del_file=True)
         # Delete directories which we have created during post_install.
         for directory in directories:
-            FileUtils.reset_log_files(directory, del_dir=True)
+            FileUtils.delete_or_truncate_files(directory, del_dir=True)
         logger.info("Deleted config/log files and directories.")
         # Delete sspl-ll user
         usernames = [x[0] for x in pwd.getpwall()]
@@ -109,3 +115,9 @@ class SSPLCleanup:
                     %(USER, err))
             else:
                 logger.info("Deleted %s user." % USER)
+        # Delete topic
+        mbadmin = MessageBusAdmin(admin_id="admin")
+        try:
+            mbadmin.deregister_message_type(message_types)
+        except MessageBusError as e:
+            logger.error(f"MessageBusError occurred while deleting topic:{e}")

@@ -53,9 +53,9 @@ class Reset:
         shutil.rmtree(DATA_PATH, ignore_errors=True)
 
         # Clear log data from log files and delete 'log.gz' files
-        FileUtils.reset_log_files(f"/var/log/{PRODUCT_FAMILY}/sspl/", '.log')
-        FileUtils.reset_log_files(f"/var/log/{PRODUCT_FAMILY}/iem/", '.log')
-        FileUtils.reset_log_files(
+        FileUtils.delete_or_truncate_files(f"/var/log/{PRODUCT_FAMILY}/sspl/", '.log')
+        FileUtils.delete_or_truncate_files(f"/var/log/{PRODUCT_FAMILY}/iem/", '.log')
+        FileUtils.delete_or_truncate_files(
             f"/var/log/{PRODUCT_FAMILY}/sspl/", '.log.gz', del_file=True)
-        FileUtils.reset_log_files(
+        FileUtils.delete_or_truncate_files(
             f"/var/log/{PRODUCT_FAMILY}/iem/", '.log.gz', del_file=True)
