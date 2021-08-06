@@ -1171,8 +1171,24 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
 
         self._send_json_msg(resource_type, alert_type, severity, info, specific_info)
         store.put(self.faulty_resources, self.faulty_resources_path)
-    
+
     def _get_sensor_num_by_id(self, hw_type, sensor_num):
+        """Assign and return sensor index to sensors of given hw_type.
+
+           Usecase:
+            sensor_id_map = {
+                "Power Supply": {
+                    'f1': 'PS Redundancy',
+                    'f2': 'Status',
+                    'f3': 'Status'
+                    }
+                }
+            In such case where sensor_id's are not unique or does not
+            have a numerical identifier, assign numerical sensor id
+            starting with 0.
+            indices are assigned according to sorted hexadecimal
+            sensor number.
+        """
         return sorted(list(
             self.sensor_id_map[hw_type].keys())).index(sensor_num)
 
