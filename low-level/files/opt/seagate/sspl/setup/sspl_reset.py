@@ -24,7 +24,7 @@ from framework.base.sspl_constants import (PRODUCT_FAMILY,
 from cortx.utils.service import DbusServiceHandler
 from cortx.utils.conf_store import Conf
 from files.opt.seagate.sspl.setup.setup_logger import logger
-from framework.utils.file_utils import FileUtils
+from framework.utils.filestore import FileStore
 
 
 class Reset:
@@ -53,9 +53,9 @@ class Reset:
         shutil.rmtree(DATA_PATH, ignore_errors=True)
 
         # Clear log data from log files and delete 'log.gz' files
-        FileUtils.delete_or_truncate_files(f"/var/log/{PRODUCT_FAMILY}/sspl/", '.log')
-        FileUtils.delete_or_truncate_files(f"/var/log/{PRODUCT_FAMILY}/iem/", '.log')
-        FileUtils.delete_or_truncate_files(
-            f"/var/log/{PRODUCT_FAMILY}/sspl/", '.log.gz', del_file=True)
-        FileUtils.delete_or_truncate_files(
-            f"/var/log/{PRODUCT_FAMILY}/iem/", '.log.gz', del_file=True)
+        FileStore().truncate(f"/var/log/{PRODUCT_FAMILY}/sspl/", '.log')
+        FileStore().truncate(f"/var/log/{PRODUCT_FAMILY}/iem/", '.log')
+        FileStore().delete(
+            f"/var/log/{PRODUCT_FAMILY}/sspl/", '.log.gz')
+        FileStore().delete(
+            f"/var/log/{PRODUCT_FAMILY}/iem/", '.log.gz')

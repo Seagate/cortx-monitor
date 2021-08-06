@@ -22,7 +22,7 @@ from cortx.utils.conf_store import Conf
 from cortx.utils.process import SimpleProcess
 from cortx.utils.message_bus import MessageBus, MessageBusAdmin
 from cortx.utils.message_bus.error import MessageBusError
-from framework.utils.file_utils import FileUtils
+from framework.utils.filestore import FileStore
 from files.opt.seagate.sspl.setup.setup_logger import logger
 from framework.utils.utility import Utility
 from framework.base.sspl_constants import (
@@ -57,8 +57,8 @@ class SSPLCleanup:
         """
         try:
             if os.path.exists(file_store_config_path):
-                FileUtils.delete_or_truncate_files(
-                    file_store_config_path, del_file=True)
+                FileStore().delete(
+                    file_store_config_path)
             shutil.copyfile("%s/conf/sspl.conf.%s.yaml" % (
                 SSPL_BASE_DIR, product), file_store_config_path)
             if self.pre_factory:
@@ -87,8 +87,8 @@ class SSPLCleanup:
             '/etc/sspl-ll/', f'{PRODUCT_BASE_DIR}/iem/iec_mapping']
 
         sspl_sudoers_file = '/etc/sudoers.d/sspl'
-        sspl_dbus_policy_rules = '/etc/polkit-1/rules.d'
-        sspl_dbus_policy_conf = '/etc/dbus-1/system.d'
+        sspl_dbus_policy_rules = '/etc/polkit-1/rules.d/sspl-ll_dbus_policy.rules'
+        sspl_dbus_policy_conf = '/etc/dbus-1/system.d/sspl-ll_dbus_policy.conf'
         sspl_service_file = '/etc/systemd/system/sspl-ll.service'
         sspl_test_backup = '/etc/sspl_tests.conf.back'
         sspl_test_file_path = '/etc/sspl_test_gc_url.yaml'
@@ -110,11 +110,11 @@ class SSPLCleanup:
             IEM_LOGROTATE_CONF, SSPL_LOGROTATE_CONF, MSB_LOGROTATE_CONF,
             RSYSLOG_SB_CONF, SB_LOGROTATE_CONF, sspl_dbus_policy_conf,
                 sspl_dbus_policy_rules, sspl_sudoers_file, sspl_service_file]:
-            FileUtils.delete_or_truncate_files(filepath, del_file=True)
+            FileStore().delete(filepath)
 
         # Delete directories which were created during post_install.
         for directory in directories:
-            FileUtils.delete_or_truncate_files(directory, del_dir=True)
+            FileStore().delete(directory)
         logger.info("Deleted config/log files and directories.")
 
         # Delete sspl-ll user

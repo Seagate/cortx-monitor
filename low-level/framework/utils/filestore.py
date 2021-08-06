@@ -23,9 +23,11 @@ import os
 import errno
 import json
 import pickle
+import shutil
 from configparser import ConfigParser
 from framework.utils.store import Store
 from framework.utils.service_logging import logger
+from cortx.utils.process import SimpleProcess
 
 class FileStore(Store):
 
@@ -143,11 +145,29 @@ class FileStore(Store):
 
         return key_present, status
 
-    def delete(self, key):
-        """ delete a file
+    def delete(self, path, fformat=""):
+        """Delete a file or directory.
+
+        Parameters:
+        path (str): filepath/directory path which needs to be deleted.
+        fformat (str): file format which needs to be search inside directory.
         """
-        if os.path.exists(key):
-            os.remove(key)
+        if not os.path.exists(path):
+            logger.info(f"{path} path doesn't exists.")
+            return
+        # search specific format of file inside directory for deletion.
+        if fformat:
+            for root, _, files in os.walk(path):
+                for file in files:
+                    if file.endswith(fformat):
+                        os.remove(os.path.join(root, file))
+        else:
+            if os.path.isfile(path):
+                os.remove(path)
+            elif os.path.islink(path):
+                os.unlink(path)
+            elif os.path.isdir(path):
+                shutil.rmtree(path, ignore_errors=True)
 
     def get_keys_with_prefix(self, prefix):
         """ get keys with given prefix
@@ -156,6 +176,28 @@ class FileStore(Store):
             return []
         else:
             return os.listdir(prefix)
+
+    def truncate(self, path, fformat=""):
+        """Truncate a file.
+
+        Paramerters:
+        path (str): filepath which needs to be truncate.
+        fformat (str): file format which needs to be search inside directory.
+        e.g. '.log'
+        """
+        if not os.path.exists(path):
+            logger.info(f"{path} path doesn't exists.")
+            return
+        if fformat:
+            for root, _, files in os.walk(path):
+                for file in files:
+                    if file.endswith(fformat):
+                        cmd = f"truncate -s 0 > {os.path.join(root, file)}"
+                        _, error, returncode = SimpleProcess(cmd).run()
+                        if returncode != 0:
+                            logger.error(
+                                "Failed to clear file data. "
+                                f"ERROR:{error} CMD:{cmd}")
 
 if __name__ == '__main__':
     store = FileStore()
