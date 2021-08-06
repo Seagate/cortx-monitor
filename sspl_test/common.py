@@ -199,10 +199,11 @@ def check_os_platform():
         print("Failed to get the os platform: error:{}".format(error.decode().rstrip('\n')))
 
 
-def get_fru_response(resource_type, instance_id, ingress_msg_type="actuator_response_type"):
+def get_fru_response(resource_type, instance_id, ingress_msg_type="actuator_response_type",
+                     timeout=30, alert_type=None):
     """Returns message when resource type match with ingress message."""
     sensor_msg = None
-    for _ in range(30):
+    for _ in range(timeout):
         if world.sspl_modules[IngressProcessorTests.name()]._is_my_msgQ_empty():
             time.sleep(2)
         while not world.sspl_modules[IngressProcessorTests.name()]._is_my_msgQ_empty():
@@ -214,7 +215,10 @@ def get_fru_response(resource_type, instance_id, ingress_msg_type="actuator_resp
                 msg_type = ingressMsg.get(ingress_msg_type)
                 if msg_type["info"]["resource_type"] == resource_type:
                     # Break if condition is satisfied.
-                    sensor_msg = msg_type
+                    if not alert_type:
+                        sensor_msg = msg_type
+                    elif alert_type and msg_type.get("alert_type") == alert_type:
+                        sensor_msg = msg_type
                     break
             except Exception as exception:
                 print(exception)

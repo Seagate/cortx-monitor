@@ -26,7 +26,7 @@ class ThreadMonitorMsg(BaseSensorMsg):
     """The JSON message transmitted for module failure or recovery."""
 
     MESSAGE_VERSION = "1.0.0"
-    RESOURCE_TYPE = "node:sspl:module"
+    RESOURCE_TYPE = "node:sw:cortx_sw_services:sspl"
 
     def __init__(self, info, username="SSPL-LL", signature="N/A", expires=-1):
         """Initialize thread monitoring message."""

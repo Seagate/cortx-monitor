@@ -65,6 +65,11 @@ class RealStorSideplaneExpanderSensor(SensorThread, InternalMsgQ):
         """@return: name of the monitoring module."""
         return RealStorSideplaneExpanderSensor.SENSOR_NAME
 
+    @staticmethod
+    def impact():
+        """Returns impact of the module."""
+        return "Sideplane expander in storage enclosure can not be monitored."
+
     def __init__(self):
         super(RealStorSideplaneExpanderSensor, self).__init__(self.SENSOR_NAME,
                                                               self.PRIORITY)

@@ -81,6 +81,11 @@ class RAIDsensor(SensorThread, InternalMsgQ):
         """@return: name of the monitoring module."""
         return RAIDsensor.SENSOR_NAME
 
+    @staticmethod
+    def impact():
+        """Returns impact of the module."""
+        return "RAID disk insertion and removal can not be monitored in server."
+
     def __init__(self):
         super(RAIDsensor, self).__init__(self.SENSOR_NAME,
                                          self.PRIORITY)

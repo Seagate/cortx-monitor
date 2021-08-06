@@ -52,6 +52,12 @@ class HPIMonitor(SensorThread, InternalMsgQ):
         """@return: name of the monitoring module."""
         return HPIMonitor.SENSOR_NAME
 
+    @staticmethod
+    def impact():
+        """Returns impact of the module."""
+        return ("Disk installed, powered and data presence events can "
+                "not be monitored on storage enclosure and server.")
+
     def __init__(self):
         super(HPIMonitor, self).__init__(self.SENSOR_NAME,
                                                   self.PRIORITY)

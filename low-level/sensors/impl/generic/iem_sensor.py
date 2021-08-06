@@ -92,6 +92,11 @@ class IEMSensor(SensorThread, InternalMsgQ):
         return IEMSensor.SENSOR_NAME
 
     @staticmethod
+    def impact():
+        """Returns impact of the module."""
+        return "Interesting events can not be monitored."
+
+    @staticmethod
     def dependencies():
         """Returns a list of plugins and RPMs this module requires
            to function.
@@ -135,45 +140,34 @@ class IEMSensor(SensorThread, InternalMsgQ):
 
         # Check for debug mode being activated
         self._read_my_msgQ_noWait()
-        try:
-            with self._iem_log_file_lock:
-                self._iem_logs = open(self._log_file_path)
-            self._create_file(self._timestamp_file_path)
 
-            with open(self._timestamp_file_path, "r") as timestamp_file:
-                last_processed_log_timestamp = timestamp_file.read().strip()
+        with self._iem_log_file_lock:
+            self._iem_logs = open(self._log_file_path)
+        self._create_file(self._timestamp_file_path)
 
-            # Read and send unprocessed messages
-            with self._iem_log_file_lock:
-                for iem_log in self._iem_logs:
-                    log = iem_log.rstrip()
-                    log_timestamp = log[:log.index(" ")]
-                    if not last_processed_log_timestamp or log_timestamp > last_processed_log_timestamp:
-                        self._process_iem(log)
+        with open(self._timestamp_file_path, "r") as timestamp_file:
+            last_processed_log_timestamp = timestamp_file.read().strip()
 
-            # Reset debug mode if persistence is not enabled
-            self._disable_debug_if_persist_false()
+        # Read and send unprocessed messages
+        with self._iem_log_file_lock:
+            for iem_log in self._iem_logs:
+                log = iem_log.rstrip()
+                log_timestamp = log[:log.index(" ")]
+                if not last_processed_log_timestamp or log_timestamp > last_processed_log_timestamp:
+                    self._process_iem(log)
 
-            # Read new messages
-            self._read_iem()
+        # Reset debug mode if persistence is not enabled
+        self._disable_debug_if_persist_false()
 
-        except IOError as io_error:
-            raise Exception(f"IEMSensor, self.run, {io_error.args} {io_error.filename}")
-        except Exception as exception:
-            raise Exception(f"IEMSensor, self.run, {exception.args}")
+        # Read new messages
+        self._read_iem()
 
         self._scheduler.enter(10, self._priority, self.run, ())
 
     def _read_iem(self):
-        try:
-            with self._iem_log_file_lock:
-                for iem_log in self._iem_logs:
-                    self._process_iem(iem_log.rstrip())
-        except IOError as io_error:
-            raise Exception(
-                f"IEMSensor, self._read_iem, {io_error.args} {io_error.filename}")
-        except Exception as exception:
-            raise Exception(f"IEMSensor, self._read_iem, {exception.args}")
+        with self._iem_log_file_lock:
+            for iem_log in self._iem_logs:
+                self._process_iem(iem_log.rstrip())
 
         self._scheduler.enter(10, self._priority, self._read_iem, ())
 

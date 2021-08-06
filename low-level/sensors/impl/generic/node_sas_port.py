@@ -100,6 +100,11 @@ class SASPortSensor(SensorThread, InternalMsgQ):
         """@return: name of the module."""
         return SASPortSensor.SENSOR_NAME
 
+    @staticmethod
+    def impact():
+        """Returns impact of the module."""
+        return "SAS ports can not be monitored in server."
+
     def __init__(self, utility_instance=None):
         """init method"""
         super(SASPortSensor, self).__init__(self.SENSOR_NAME,

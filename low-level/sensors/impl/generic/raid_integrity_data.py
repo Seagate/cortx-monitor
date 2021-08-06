@@ -81,6 +81,11 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
         """@return: name of the monitoring module."""
         return RAIDIntegritySensor.SENSOR_NAME
 
+    @staticmethod
+    def impact():
+        """Returns impact of the module."""
+        return "RAID integrity can not be monitored in server."
+
     def __init__(self):
         super(RAIDIntegritySensor, self).__init__(self.SENSOR_NAME,
                                          self.PRIORITY)

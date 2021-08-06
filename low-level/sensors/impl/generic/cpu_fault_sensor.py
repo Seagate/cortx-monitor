@@ -68,6 +68,11 @@ class CPUFaultSensor(SensorThread, InternalMsgQ):
         """@return: name of the module."""
         return CPUFaultSensor.SENSOR_NAME
 
+    @staticmethod
+    def impact():
+        """Returns impact of the module."""
+        return "Server CPU list and its online offline status can not be monitored."
+
     def __init__(self, utility_instance=None):
         """init method"""
         super(CPUFaultSensor, self).__init__(self.SENSOR_NAME,
@@ -91,8 +96,7 @@ class CPUFaultSensor(SensorThread, InternalMsgQ):
         super(CPUFaultSensor, self).initialize_msgQ(msgQlist)
 
         # get the cpu fault implementor from configuration
-        cpu_fault_utility = Conf.get(SSPL_CONF,
-                                     f"{self.name().upper()}>{self.PROBE}",
+        cpu_fault_utility = Conf.get(SSPL_CONF, f"{self.name().upper()}>{self.PROBE}",
                                     'sysfs')
 
         # Creating the instance of ToolFactory class

@@ -84,6 +84,11 @@ class RealStorDiskSensor(SensorThread, InternalMsgQ):
         return RealStorDiskSensor.SENSOR_NAME
 
     @staticmethod
+    def impact():
+        """Returns impact of the module."""
+        return "Disks in storage enclosure can not be monitored."
+
+    @staticmethod
     def dependencies():
         """Returns a list of plugins and RPMs this module requires
            to function.

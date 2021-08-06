@@ -58,6 +58,12 @@ class NodeData(Debug):
         """@return: name of the module."""
         return NodeData.SENSOR_NAME
 
+    @staticmethod
+    def impact():
+        """Returns impact of the module."""
+        return ("CPU, network, disk space, process and local mount "
+                "data can not be monitored in server.")
+
     def __init__(self):
         super(NodeData, self).__init__()
 

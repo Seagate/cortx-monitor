@@ -229,7 +229,7 @@ class SensorThread(ScheduledModuleThread):
             for d in self.waiting_dependers:
                 d.event(self, self.status == SensorThreadState.RUNNING)
 
-        logger.debug("End {}.conclude_initializatio() with state {}".format(
+        logger.debug("End {}.conclude_initialization() with state {}".format(
             self.__class__.__name__, self.status))
 
 

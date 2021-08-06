@@ -58,6 +58,11 @@ class SNMPtraps(SensorThread, InternalMsgQ):
         """@return: name of the monitoring module."""
         return SNMPtraps.SENSOR_NAME
 
+    @staticmethod
+    def impact():
+        """Returns impact of the module."""
+        return "SNMP traps can not be monitored in server."
+
     def __init__(self):
         super(SNMPtraps, self).__init__(self.SENSOR_NAME,
                                          self.PRIORITY)

@@ -51,7 +51,7 @@ from framework.messaging.egress_processor import \
     EgressProcessor
 from framework.messaging.ingress_processor import \
     IngressProcessor
-from framework.messaging.thread_controller import ThreadController
+from framework.messaging.thread_controller import ThreadController, execute_thread
 from framework.utils.conf_utils import (GLOBAL_CONF, HOST, MONITOR,
     OPERATING_SYSTEM, PORT, PRODUCT, RELEASE, RSYSLOG, SETUP, SRVNODE,
     SSPL_CONF, SYSTEM_INFORMATION, THREADED, Conf, LOG_LEVEL,
@@ -65,7 +65,6 @@ from framework.platforms.realstor.realstor_enclosure import singleton_realstoren
 from cortx.utils.iem_framework.error import EventMessageError
 # Message to send to HAlon upon critical thread errors
 from json_msgs.messages.actuators.thread_controller import ThreadControllerMsg
-from json_msgs.messages.sensors.thread_monitor_msg import ThreadMonitorMsg
 from message_handlers.disk_msg_handler import DiskMsgHandler
 from message_handlers.node_controller_msg_handler import \
     NodeControllerMsgHandler
@@ -74,7 +73,6 @@ from message_handlers.real_stor_actuator_msg_handler import \
     RealStorActuatorMsgHandler
 from message_handlers.real_stor_encl_msg_handler import RealStorEnclMsgHandler
 from message_handlers.service_msg_handler import ServiceMsgHandler
-from framework.base.module_thread import ThreadException
 
 from cortx.utils.iem_framework import EventMessage
 
@@ -255,25 +253,6 @@ def get_sensor_thread_deps(name, sspl_threaded_modules):
             deps.append(n)
     return deps
 
-def get_recovery_config(module_name):
-    """
-    Read sspl config for corresponding module recovery configs.
-
-    Common sensor recovery config will be overriden by individual
-    module recovery config.
-    """
-    recovery_count = Conf.get(
-        SSPL_CONF, f"{CONF_SSPL_SETTING}>sensor_recovery_count", 0)
-    recovery_interval = Conf.get(
-        SSPL_CONF, f"{CONF_SSPL_SETTING}>sensor_recovery_interval", 0)
-    # Override common recovery config if individual module has it
-    recovery_count = Conf.get(
-        SSPL_CONF,
-        f"{module_name.upper()}>sensor_recovery_count", recovery_count)
-    recovery_interval = Conf.get(
-        SSPL_CONF,
-        f"{module_name.upper()}>sensor_recovery_interval", recovery_interval)
-    return recovery_count, recovery_interval
 
 def main(conf_reader, systemd_support):
     """The main bootstrap for sspl"""
@@ -392,7 +371,7 @@ def main(conf_reader, systemd_support):
                     "SSPL Bootstrap: Unable to load plugin {0} due to "
                     "failed dependency resolution".format(name))
                 continue
-            logger.info("Starting: %s" % curr_module.name())
+            logger.info("Starting: %s" % name)
 
             # SSPL will be started in degrade mode by default.
             # Run module only if it is allowed to run in degraded mode
@@ -402,18 +381,17 @@ def main(conf_reader, systemd_support):
                 or product.upper() == "LR2":
                 resume = True
 
-            thread = Thread(target=_run_thread_capture_errors,
+            thread = Thread(target=execute_thread,
                             args=(curr_module, msgQlist, conf_reader, product, resume))
-
             thread.start()
-            logger.info(f"Started: {curr_module}")
+            logger.info(f"Started: {name}")
 
         # Start the ThreadController module with the list of threads
         logger.info("Starting: %s" % ThreadController.name())
 
         # Initialize the thread controller with the list of references to all modules
-        controller_thread = Thread(target=_run_thread_capture_errors,
-                            args=(threadController, msgQlist, conf_reader, product, True))
+        controller_thread = Thread(target=execute_thread,
+                                   args=(threadController, msgQlist, conf_reader, product, True))
         threadController.initialize_thread_list(sspl_threaded_modules, OPERATING_SYSTEM, product, systemd_support)
         controller_thread.start()
 
@@ -564,65 +542,6 @@ def _sensors_actuators_factory(sspl_threaded_modules, msgQlist, operating_system
                 gsm.registerUtility(klass, interface_impl)
     return (sspl_threaded_modules, msgQlist)
 
-
-def _run_thread_capture_errors(module, msgQlist, conf_reader, product, resume):
-    """
-    Capture exception and shutdown the module thread.
-
-    If recovery count>0, then module will be recovered from
-    failure until the maximum recovery attempt. If not recoverable,
-    corresponding module will be shutdown and failure alert will
-    be raised with its monitoring impact.
-    If recovery count=0, no recovery attempt will be made.
-    """
-    module_name = module.name()
-    is_sensor_thread = False
-    recovery_count = recovery_interval = 0
-    if isinstance(module, SensorThread):
-        recovery_count, recovery_interval = get_recovery_config(module_name)
-        is_sensor_thread = True
-
-    attempt = 0
-
-    while attempt <= recovery_count:
-        attempt += 1
-        try:
-            # Suspend module threads
-            if resume == False:
-                module.suspend()
-            # Each module is passed a reference list to message queues so it
-            # can transmit internal messages to other modules as desired
-            module.start_thread(conf_reader, msgQlist, product)
-        except Exception as err:
-            err_msg = f"{module_name} has encountered an error: {err}. "
-            logger.error(err_msg)
-
-            if attempt <= recovery_count:
-                logger.debug(f"Recovering {module_name} from failure, "
-                             f"attempt: {attempt}")
-                time.sleep(recovery_interval)
-                continue
-            else:
-                error_msg = f"Unrecoverable error occurred, {err_msg}"
-                logger.exception(error_msg)
-                # Send sensor module failure alert
-                if is_sensor_thread:
-                    info = {
-                        "module_name": module_name,
-                        "alert_type": "fault",
-                        "description": error_msg,
-                        "impact": f"{module_name} is shutdown.",
-                        "recommendation": (
-                            "Restart sspl service to recover. In case issue "
-                            "persists even after restarting sspl service, "
-                            "please reach support team further."),
-                        "severity": "critical",
-                        "specific_info": Conf.get(SSPL_CONF, f"{module_name.upper()}")
-                    }
-                    jsonMsg = ThreadMonitorMsg(info).getJson()
-                    module._write_internal_msgQ(EgressProcessor.name(), jsonMsg)
-                # Shutdown if no recovery attempt
-                module.shutdown()
 
 def shutdown_handler(signum=None, frame=None):
     """Handler called when shutting down"""
