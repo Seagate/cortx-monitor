@@ -546,6 +546,7 @@ class PreUpgradeCmd(Cmd):
 
     def __init__(self, args):
         super().__init__(args)
+        self.level = args.args[0]
 
     def validate(self):
         # Common validator classes to check Cortx/system wide validator
@@ -553,6 +554,12 @@ class PreUpgradeCmd(Cmd):
 
     def process(self):
         logger.info(f"Nothing to be done for {self.name}.")
+        if self.level == 'node':
+            # No action needed
+            pass
+        elif self.level == 'cluster':
+            # No action needed
+            pass
 
 
 class PostUpgradeCmd(Cmd):
@@ -562,29 +569,36 @@ class PostUpgradeCmd(Cmd):
 
     def __init__(self, args):
         super().__init__(args)
+        self.level = args.args[0]
 
     def validate(self):
         # Common validator classes to check Cortx/system wide validator
         pass
 
     def process(self):
-        new_conf_url = 'yaml:///opt/seagate/cortx/sspl/conf/sspl.conf.LR2.yaml'
-        merged_conf_url = 'yaml:///opt/seagate/cortx/sspl/tmp/merged.conf'
-        # Only proceed if both existing and new config path are present
-        for filepath in [sspl_config_path, new_conf_url]:
-            if not os.path.exists(filepath.split(":/")[1]):
-                logger.debug("Config not upgraded as existing or new config file is not present.")
-                return
-        conf_upgrade = ConfUpgrade(sspl_config_path, new_conf_url,
-                                   merged_conf_url)
-        try:
-            conf_upgrade.create_merged_config()
-        except ConfError as e:
-            logger.error("%s error seen while upgrading config, existing config retained" % e)
-        else:
-            conf_upgrade.upgrade_existing_config()
-        finally:
-            conf_upgrade.remove_merged_config()
+
+        if self.level == 'node':
+            new_conf_url = 'yaml:///opt/seagate/cortx/sspl/conf/sspl.conf.LR2.yaml'
+            merged_conf_url = 'yaml:///opt/seagate/cortx/sspl/tmp/merged.conf'
+            # Only proceed if both existing and new config path are present
+            for filepath in [sspl_config_path, new_conf_url]:
+                if not os.path.exists(filepath.split(":/")[1]):
+                    logger.debug("Config not upgraded as existing or new config file is not present.")
+                    return
+            conf_upgrade = ConfUpgrade(sspl_config_path, new_conf_url,
+                                       merged_conf_url)
+            try:
+                conf_upgrade.create_merged_config()
+            except ConfError as e:
+                logger.error("%s error seen while upgrading config, existing config retained" % e)
+            else:
+                conf_upgrade.upgrade_existing_config()
+            finally:
+                conf_upgrade.remove_merged_config()
+
+        elif self.level == 'cluster':
+            # No action needed
+            pass
 
 
 def main(argv: dict):
