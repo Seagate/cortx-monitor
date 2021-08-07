@@ -178,8 +178,8 @@ class RealStorPSUSensor(SensorThread, InternalMsgQ):
 
         if response.status_code != self.rssencl.ws.HTTP_OK:
             if url.find(self.rssencl.ws.LOOPBACK) == -1:
-                logger.error(f"{self.rssencl.LDR_R1_ENCL}:: http request {url} to get power-supplies failed   \
-                                       with err {response.status_code}")
+                raise Exception(f"{self.rssencl.LDR_R1_ENCL}:: http request {url} "
+                                f"to get power-supplies failed with err {response.status_code}")
             return
 
         response_data = json.loads(response.text)

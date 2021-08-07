@@ -200,8 +200,8 @@ class RealStorEnclosureSensor(SensorThread, InternalMsgQ):
 
         if response.status_code != self.rssencl.ws.HTTP_OK:
             if url.find(self.rssencl.ws.LOOPBACK) == -1:
-                logger.error(f"{self.rssencl.LDR_R1_ENCL}:: http request {url} \
-                                failed with http err {response.status_code}")
+                raise Exception(f"{self.rssencl.LDR_R1_ENCL}:: http request {url} "
+                                f"failed with http err {response.status_code}")
             return
 
         response_data = json.loads(response.text)

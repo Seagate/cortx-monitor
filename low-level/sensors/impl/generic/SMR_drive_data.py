@@ -113,7 +113,7 @@ class SMRdriveData(SensorThread, InternalMsgQ):
                 self._send_ATA_command(dir)
 
         except Exception as ae:
-            logger.exception(ae)
+            raise Exception(ae)
 
         # Reset debug mode if persistence is not enabled
         self._disable_debug_if_persist_false()

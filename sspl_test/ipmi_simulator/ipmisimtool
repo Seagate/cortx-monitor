@@ -24,6 +24,7 @@
 #                sensor list
 #                sel list
 #                sel info
+#                channel info
 #
 #
 #        Note: Have some entries in SEL.
@@ -54,6 +55,21 @@ else
                         ;;
                 "info")
                         filename="$BASE_PATH/sspl_test/ipmi_simulator/ipmi_mock_data/sel_info.txt"
+                        ;;
+        esac
+        if [ "$filename" == "" ]; then
+                echo "Invalid command: $@. IPMISIMTOOL can't process it."
+                exit 1
+        fi
+        printf "$(cat $filename)"
+    fi
+
+    # handle 'sel' commands
+    if [ "$1" == "channel" ]; then
+        command=$2
+        case $command in
+                "info")
+                        filename="$BASE_PATH/sspl_test/ipmi_simulator/ipmi_mock_data/channel_info.txt"
                         ;;
         esac
         if [ "$filename" == "" ]; then

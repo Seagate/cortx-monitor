@@ -314,8 +314,8 @@ class RealStorDiskSensor(SensorThread, InternalMsgQ):
 
         if response.status_code != self.rssencl.ws.HTTP_OK:
             if url.find(self.rssencl.ws.LOOPBACK) == -1:
-                logger.error(f"{self.rssencl.LDR_R1_ENCL}:: http request {url} to poll disks failed with \
-                       err {response.status_code}")
+                raise Exception(f"{self.rssencl.LDR_R1_ENCL}:: http request {url} "
+                                f"to poll disks failed with err {response.status_code}")
             return
 
         try:

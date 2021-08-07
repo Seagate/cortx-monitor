@@ -22,6 +22,7 @@
  ****************************************************************************
 """
 
+import uuid
 import inspect
 import traceback
 import json
@@ -214,12 +215,13 @@ def get_fru_response(resource_type, instance_id, ingress_msg_type="actuator_resp
                 # Make sure we get back the message type that matches the request
                 msg_type = ingressMsg.get(ingress_msg_type)
                 if msg_type["info"]["resource_type"] == resource_type:
-                    # Break if condition is satisfied.
-                    if not alert_type:
-                        sensor_msg = msg_type
-                    elif alert_type and msg_type.get("alert_type") == alert_type:
-                        sensor_msg = msg_type
-                    break
+                    if (instance_id and msg_type["info"]["resource_id"] == instance_id) or \
+                        not instance_id:
+                        if not alert_type:
+                            sensor_msg = msg_type
+                        elif alert_type and msg_type.get("alert_type") == alert_type:
+                            sensor_msg = msg_type
+                        break
             except Exception as exception:
                 print(exception)
         if sensor_msg:
@@ -308,6 +310,39 @@ def send_enclosure_request(resource_type, resource_id):
         }
     }
     write_to_egress_msgQ(request)
+
+
+def send_thread_controller_actuator_request(module_name, state):
+    request = {
+        "username":"sspl-ll",
+        "expires":3600,
+        "description":"Seagate Storage Platform Library - Actuator Request",
+        "title":"SSPL-LL Actuator Request",
+        "signature":"None",
+        "time":"2021-08-20 12:23.10.071170",
+        "message":{
+            "sspl_ll_msg_header":{
+                "msg_version":"1.0.0",
+                "uuid": str(uuid.uuid4()),
+                "schema_version":"1.0.0",
+                "sspl_version":"1.0.0"
+            },
+            "sspl_ll_debug":{
+                "debug_component":"sensor",
+                "debug_enabled": True
+            },
+            "response_dest": {},
+            "target_node_id": get_current_node_id(),
+            "actuator_request_type": {
+                "thread_controller": {
+                    "module_name": module_name,
+                    "thread_request": state
+                }
+            }
+        }
+    }
+    write_to_egress_msgQ(request)
+
 
 def write_to_egress_msgQ(request):
     world.sspl_modules[

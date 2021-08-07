@@ -142,8 +142,7 @@ class NodeData(Debug):
                 self._get_disk_space_alert_data()
 
         except Exception as e:
-            logger.exception(e)
-            return False
+            raise Exception(f"Failed to read data, {e}")
 
         return True
 

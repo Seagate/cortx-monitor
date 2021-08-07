@@ -20,7 +20,7 @@ import uuid
 from default import world
 from common import (
     check_sspl_ll_is_running, get_fru_response, send_node_controller_message_request,
-    get_current_node_id)
+    get_current_node_id, send_thread_controller_actuator_request)
 from framework.utils.conf_utils import Conf, SSPL_CONF, SSPL_LL_SETTING
 from messaging.ingress_processor_tests import IngressProcessorTests
 from messaging.egress_processor_tests import EgressProcessorTests
@@ -54,39 +54,6 @@ def get_maximum_recovery_time(module_name):
         SSPL_CONF,
         f"{module_name.upper()}>sensor_recovery_interval", recovery_interval)
     return recovery_count * recovery_interval
-
-
-def send_thread_controller_actuator_request(module_name, state):
-    request = {
-        "username":"sspl-ll",
-        "expires":3600,
-        "description":"Seagate Storage Platform Library - Actuator Request",
-        "title":"SSPL-LL Actuator Request",
-        "signature":"None",
-        "time":"2021-08-20 12:23.10.071170",
-        "message":{
-            "sspl_ll_msg_header":{
-                "msg_version":"1.0.0",
-                "uuid": str(uuid.uuid4()),
-                "schema_version":"1.0.0",
-                "sspl_version":"1.0.0"
-            },
-            "sspl_ll_debug":{
-                "debug_component":"sensor",
-                "debug_enabled": True
-            },
-            "response_dest": {},
-            "target_node_id": get_current_node_id(),
-            "actuator_request_type": {
-                "thread_controller": {
-                    "module_name": module_name,
-                    "thread_request": state
-                }
-            }
-        }
-    }
-    world.sspl_modules[EgressProcessorTests.name()]._write_internal_msgQ(
-        EgressProcessorTests.name(), request)
 
 
 def execute_module_thread_operation(action, thread_response, wait_time=None, resp_timeout=60):
@@ -136,7 +103,13 @@ def simulate_IEM_sensor_recovery():
 
 
 def test_sensor_unrecoverable_failure_alert(args):
-    """Check for fault alert on unrecoverable sensor module failure."""
+    """
+    Check for fault alert on unrecoverable sensor module failure.
+
+    Simulate sensor failure
+    Verify fault alert on unrecoverable sensor module
+    Verify sensor module is not running
+    """
     check_sspl_ll_is_running()
     simulate_IEM_sensor_failure()
     # Wait until know its unrecoverable error
@@ -161,31 +134,16 @@ def test_sensor_unrecoverable_failure_alert(args):
     assert info.get("description") is not None
     assert info.get("resource_type") == resource_type
     assert info.get("resource_id") == resource_id
-
-
-def test_sensor_unrecoverable_failure_no_repeat_alert(args):
-    """
-    Ensure the persistent cache check works on current and previous
-    state of the module and doesn't repeat alert if already raised.
-    """
-    simulate_IEM_sensor_failure()
-    execute_module_thread_operation(action="restart",
-                                    thread_response="Restart Successful")
-    try:
-        ingressMsg = get_fru_response(resource_type, resource_id,
-                                      ingress_msg_type="sensor_response_type",
-                                      timeout=get_maximum_recovery_time(resource_id),
-                                      alert_type="fault")
-    except Exception as err:
-        assert "Failed to get expected response message" in str(err)
-    else:
-        raise Exception(f"Response received unexpectedly: {ingressMsg}")
-
+    execute_module_thread_operation(action="status",
+                                    thread_response="Status: Halted")
 
 def test_sensor_recovery_success(args):
     """
-    Check for fault resolved type alert on successful recovery
-    of sensor module.
+    Check successful recovery of sensor module.
+
+    Simulate sensor recovery
+    Restart sensor module
+    Verify sensor module is recovered and running
     """
     simulate_IEM_sensor_recovery()
     execute_module_thread_operation(action="restart",
@@ -197,6 +155,5 @@ def test_sensor_recovery_success(args):
 
 test_list = [
     test_sensor_unrecoverable_failure_alert,
-    test_sensor_unrecoverable_failure_no_repeat_alert,
     test_sensor_recovery_success
     ]

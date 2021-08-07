@@ -223,8 +223,7 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
                             .format(device))
 
         except Exception as ae:
-            logger.error("Failed in monitoring RAID health. ERROR:{}"
-                         .format(str(ae)))
+            raise Exception(f"Failed in monitoring RAID health, {ae}")
 
     def _get_devices(self):
         try:
@@ -240,9 +239,7 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
                 logger.error("No RAID device found in mdstat file.")
             return device_array
         except Exception as ae:
-            logger.error("Failed to get the device array. ERROR:{}"
-                        .format(str(ae)))
-            raise
+            raise Exception(f"Failed to get the device array, {ae}")
 
     def _check_mismatch_count(self, device):
         try:

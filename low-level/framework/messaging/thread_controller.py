@@ -120,12 +120,15 @@ def execute_thread(module, msgQlist, conf_reader, product, resume=True):
             module.start_thread(conf_reader, msgQlist, product)
         except Exception as err:
             curr_state = "fault"
-            err_msg = f"{module_name} has encountered an error: {err}. "
+            err_msg = f"{module_name}, {err}"
             logger.error(err_msg)
             if attempt > recovery_count:
-                error_msg = f"Unrecoverable. {err_msg}"
-                logger.critical(error_msg)
                 logger.debug(traceback.format_exc())
+                description = f"{module_name} is stopped and unrecoverable due to {err_msg}"
+                impact = module.impact()
+                recommendation = "Restart SSPL service"
+                logger.critical(
+                    f"{description}. Impact: {impact} Recommendation: {recommendation}")
                 # Check previous state of the module and send fault alert
                 if os.path.isfile(per_data_path):
                     module_persistent_data[module_name] = store.get(per_data_path)
@@ -137,9 +140,9 @@ def execute_thread(module, msgQlist, conf_reader, product, resume=True):
                     info = {
                         "module_name": module_name,
                         "alert_type": curr_state,
-                        "description": f"{module_name} is stopped due to error, {error_msg}",
-                        "impact": module.impact(),
-                        "recommendation": "Restart SSPL service",
+                        "description": description,
+                        "impact": impact,
+                        "recommendation": recommendation,
                         "severity": "critical",
                         "specific_info": specific_info
                     }
@@ -164,24 +167,25 @@ def execute_thread(module, msgQlist, conf_reader, product, resume=True):
 
 def _check_module_recovered(module):
     """
-    Once SSPL is restarted, check current status of the module with
-    previous status after maximum recovery interval time. If module
-    is running, raise fault_resolved alert and update cache.
+    Once SSPL is restarted, check current status of the module after
+    certain recovery cycle time. If module is running and its previous
+    state is fault, raise fault_resolved alert and update cache.
     """
     module_name = module.name()
     # Before raising module recovery fault_resolved alert, wait till
-    # sensor module to process its own msg queue at least one processing cycle.
-    recovery_count, recovery_interval = _get_recovery_config(module.name())
-    time.sleep(recovery_count * recovery_interval)
+    # no fault seen with sensor module after some recovery cycle time.
+    recovery_cycle = 2
+    recovery_count, recovery_interval = _get_recovery_config(module_name)
+    time.sleep(recovery_count * recovery_interval * recovery_cycle)
     if not module.is_running():
         return
 
     curr_state = "fault_resolved"
     per_data_path = os.path.join(
-        module_cache_dir, f'{module.name().upper()}_{node_id}')
+        module_cache_dir, f'{module_name.upper()}_{node_id}')
     if not os.path.isfile(per_data_path):
-        module_persistent_data[module.name()] = {}
-        store.put(module_persistent_data[module.name()], per_data_path)
+        module_persistent_data[module_name] = {}
+        store.put(module_persistent_data[module_name], per_data_path)
     # Check previous state before sending fault resolved alert
     module_persistent_data[module_name] = store.get(per_data_path)
     prev_state = module_persistent_data[module_name].get('prev_state')

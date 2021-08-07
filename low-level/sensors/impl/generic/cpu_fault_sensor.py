@@ -183,7 +183,7 @@ class CPUFaultSensor(SensorThread, InternalMsgQ):
                 to_update = True
 
         except Exception as e:
-            raise Exception(f"Error while processing cpu info, {e}")
+            raise Exception(f"Failed while processing cpu info, {e}")
 
         # Send alerts
         for cpu, alert_type in self.alerts_for.items():

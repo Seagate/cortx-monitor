@@ -185,7 +185,7 @@ class IPMITool(IPMI):
             _, _, retcode = SimpleProcess(cmd).run()
             if retcode in [0, 2]:
                 self.ACTIVE_IPMI_TOOL = self.IPMISIMTOOL
-                logger.info("IPMI simulator is activated.")
+                logger.debug("IPMI simulator is activated.")
 
         # Fetch channel info from config file and cache.
         _channel_interface = Conf.get(SSPL_CONF, "%s>%s" %

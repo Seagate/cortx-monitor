@@ -328,11 +328,7 @@ class DiskMonitor(SensorThread, InternalMsgQ):
         except Exception as ae:
             # Check for debug mode being activated when it breaks out of blocking loop
             self._read_my_msgQ_noWait()
-            if self.is_running() is True:
-                self._log_debug(f"Ungracefully breaking out of dbus loop with error: {ae}")
-                # Let the top level sspl_ll_d know that we have a fatal error
-                #  and shutdown so that systemd can restart it
-                raise Exception(ae)
+            raise Exception(f"Failed in monitoring disks, {ae}")
 
         # Reset debug mode if persistence is not enabled
         self._disable_debug_if_persist_false()
