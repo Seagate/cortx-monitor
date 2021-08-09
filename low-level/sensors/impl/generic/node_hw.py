@@ -33,8 +33,7 @@ from framework.base.debug import Debug
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.base.module_thread import SensorThread
 from framework.base.sspl_constants import (
-    DATA_PATH, BMCInterface, PRODUCT_FAMILY, ServiceTypes, node_key_id,
-    DEFAULT_RECOMMENDATION)
+    DATA_PATH, BMCInterface, PRODUCT_FAMILY, ServiceTypes, node_key_id)
 from framework.utils import encryptor
 from framework.utils.conf_utils import (
     GLOBAL_CONF, IP, SECRET, SSPL_CONF, BMC_INTERFACE, BMC_CHANNEL_IF,
