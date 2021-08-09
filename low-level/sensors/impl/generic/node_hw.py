@@ -1172,7 +1172,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         self._send_json_msg(resource_type, alert_type, severity, info, specific_info)
         store.put(self.faulty_resources, self.faulty_resources_path)
 
-    def _get_sensor_num_by_id(self, hw_type, sensor_num):
+    def get_index_from_sensor_id_map(self, hw_type, sensor_num):
         """Assign and return sensor index to sensors of given hw_type.
 
            Usecase:
@@ -1200,7 +1200,8 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         if disk_slot:
             disk_slot = disk_slot.group()
         else:
-            disk_slot = self._get_sensor_num_by_id(self.TYPE_DISK, sensor_num)
+            disk_slot = self.get_index_from_sensor_id_map(self.TYPE_DISK,
+                                                          sensor_num)
         if 'Status' in sensor_id:
             disk_name = sensor_id.replace('Status', f'(0x{sensor_num})')
         else:
