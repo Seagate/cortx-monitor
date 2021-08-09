@@ -28,6 +28,27 @@ class StorageResourceMap(ResourceMap):
     """
 
     name = "storage"
+    # Resources and their common key path.
+    resource_indexing_map = {
+        "health": {
+            "hw": {
+                "controller": "['uid']",
+                "psu": "['uid']",
+                "fan": "['uid']",
+                "disk": "['uid']",
+                "sideplane_expander": "['uid']"
+            }
+        },
+        "manifest":{
+            "hw": {
+                "controller": "['uid']",
+                "psu": "['uid']",
+                "fan": "['uid']",
+                "disk": "['uid']",
+                "sideplane_expander": "['uid']"
+            }
+        }
+    }
 
     def __init__(self):
         """Initialize storage."""

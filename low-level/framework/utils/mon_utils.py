@@ -20,6 +20,7 @@
 """
 
 import uuid
+from framework.utils.service_logging import logger
 
 
 class MonUtils():
@@ -49,3 +50,28 @@ class MonUtils():
             return replace_v
         else:
             return item
+
+    @staticmethod
+    def sort_by_specific_kv(data, key_path, log):
+        """
+        Accept list of dictionary and sort by key value.
+        data: list of dictionary
+               Examples:
+                    [{},{}]
+        key_path: Sort list on the basis of the key path.
+               Examples:
+                    '["health"]["specifics"][0]["serial-number"]'
+        log: log object.
+        """
+        sorted_data = []
+        try:
+            if key_path and data:
+                sorted_data = sorted(data, key=lambda k: eval(f'{k}{key_path}'))
+            else:
+                sorted_data = data
+        except Exception as err:
+            sorted_data = data
+            msg = 'Key: %s not found in data: %s for sorting: %s"' % (
+                key_path, data, err)
+            logger.error(log.svc_log(f"{msg}"))
+        return sorted_data
