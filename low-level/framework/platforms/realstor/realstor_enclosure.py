@@ -536,10 +536,8 @@ class RealStorEnclosure(StorageEnclosure):
         if is_fru:
             if fru in self.hot_swapped_frus:
                 fru_str = str(is_fru).lower() + ":" + "hot_swappable"
-            elif fru in self.cold_swapped_frus:
-                fru_str = str(is_fru).lower() + ":" + "cold_swappable"
             else:
-                fru_str = str(is_fru).lower() + ":" + "unknown"
+                fru_str = str(is_fru).lower() + ":" + "cold_swappable"
         return fru_str
 
 
