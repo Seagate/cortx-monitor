@@ -23,6 +23,8 @@ import time
 
 from cortx.utils.message_bus import MessageProducer
 from cortx.utils.message_bus.error import MessageBusError
+from cortx.utils.iem_framework import EventMessage
+from cortx.utils.iem_framework.error import EventMessageError
 
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.base.module_thread import ScheduledModuleThread
@@ -120,20 +122,32 @@ class EgressAccumulatedMsgsProcessor(ScheduledModuleThread, InternalMsgQ):
                     if isinstance(message, bytes):
                         message = message.decode()
                     dict_msg = json.loads(message)
-                    if "actuator_response_type" in dict_msg["message"]:
-                        event_time = dict_msg["message"] \
-                            ["actuator_response_type"]["info"]["event_time"]
-                        time_diff = int(time.time()) - int(event_time)
-                        if time_diff > self.MSG_TIMEOUT:
-                            continue
-                    if "sensor_response_type" in dict_msg["message"]:
-                        logger.info(f"Publishing Accumulated Alert: {message}")
-                    if isinstance(self._producer, MessageProducer):
-                        self._producer.send([message])
-                        logger.info(f"Published Accumulated Message {message}")
-                        self.store_queue.delete()
+                    if dict_msg.get("iem"):
+                        try:
+                            EventMessage.send(
+                                module=dict_msg["iem"]["module"],
+                                event_id=dict_msg["iem"]["event_code"],
+                                severity=dict_msg["iem"]["severity"],
+                                message_blob=dict_msg["iem"]["description"])
+                            logger.info("Accumulated IEM sent.")
+                            self.store_queue.delete()
+                        except EventMessageError as e:
+                            logger.error(f"Failed to send IEM. ERROR: {e}")
                     else:
-                        self.create_MsgProducer_obj()
+                        if "actuator_response_type" in dict_msg["message"]:
+                            event_time = dict_msg["message"] \
+                                ["actuator_response_type"]["info"]["event_time"]
+                            time_diff = int(time.time()) - int(event_time)
+                            if time_diff > self.MSG_TIMEOUT:
+                                continue
+                        if "sensor_response_type" in dict_msg["message"]:
+                            logger.info(f"Publishing Accumulated Alert: {message}")
+                        if isinstance(self._producer, MessageProducer):
+                            self._producer.send([message])
+                            logger.info(f"Published Accumulated Message {message}")
+                            self.store_queue.delete()
+                        else:
+                            self.create_MsgProducer_obj()
         except MessageBusError as e:
             logger.error("EgressAccumulatedMsgsProcessor, run, %r" % e)
         except Exception as e:
