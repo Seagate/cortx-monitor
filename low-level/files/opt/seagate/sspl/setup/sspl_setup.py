@@ -26,6 +26,7 @@ import shutil
 import os
 import syslog
 import time
+import pwd
 from urllib.parse import urlparse
 from cortx.utils.conf_store.error import ConfError
 
@@ -38,9 +39,8 @@ from cortx.utils.validator.error import VError
 from files.opt.seagate.sspl.setup.setup_error import SetupError
 from files.opt.seagate.sspl.setup.setup_logger import init_logging, logger
 from framework.base.sspl_constants import (
-    PRVSNR_CONFIG_INDEX, GLOBAL_CONFIG_INDEX, global_config_path,
-    file_store_config_path, SSPL_BASE_DIR, TEST_REQ_SERVICE_RESTART,
-    sspl_config_path)
+    PRVSNR_CONFIG_INDEX, GLOBAL_CONFIG_INDEX,
+    global_config_path, sspl_config_path, TEST_REQ_SERVICE_RESTART)
 from framework.base.conf_upgrade import ConfUpgrade
 
 
@@ -69,7 +69,7 @@ class Cmd:
             [ manifest_support_bundle [<id>] [<path>] ]
             [ support_bundle [<id>] [<path>] ]
             [ check ]
-            [ cleanup ]
+            [ cleanup [--pre-factory]]
             \n""")
 
     @staticmethod
@@ -500,14 +500,11 @@ class CleanupCmd(Cmd):
         logger.info("%s - Validation done" % self.name)
 
     def process(self):
-        try:
-            if os.path.exists(file_store_config_path):
-                os.remove(file_store_config_path)
-            shutil.copyfile("%s/conf/sspl.conf.%s.yaml" % (
-                SSPL_BASE_DIR, self.product), file_store_config_path)
-            logger.info("%s - Process done" % self.name)
-        except OSError as e:
-            logger.error(f"Failed in Cleanup. ERROR: {e}")
+        """Cleanup sspl config and log files."""
+        from files.opt.seagate.sspl.setup.sspl_cleanup import SSPLCleanup
+        sspl_cleanup = SSPLCleanup(self.args.args)
+        sspl_cleanup.process(self.product)
+        logger.info("%s - Process done" % self.name)
 
 
 class BackupCmd(Cmd):
