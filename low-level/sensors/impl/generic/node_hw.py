@@ -34,8 +34,7 @@ from framework.base.debug import Debug
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.base.module_thread import SensorThread
 from framework.base.sspl_constants import (
-    DATA_PATH, BMCInterface, PRODUCT_FAMILY, ServiceTypes, node_key_id,
-    DEFAULT_RECOMMENDATION)
+    DATA_PATH, BMCInterface, PRODUCT_FAMILY, ServiceTypes, node_key_id)
 from framework.utils import encryptor
 from framework.utils.conf_utils import (
     GLOBAL_CONF, IP, SECRET, SSPL_CONF, BMC_INTERFACE, BMC_CHANNEL_IF,
@@ -49,7 +48,7 @@ from framework.utils.iem import Iem
 from message_handlers.node_data_msg_handler import NodeDataMsgHandler
 from sensors.INode_hw import INodeHWsensor
 from framework.utils.ipmi_client import IpmiFactory
-from sensors.impl.generic.node_hw_alerts_info import alert_for_event, Alert
+from sensors.impl.generic.node_hw_alerts_info import alert_for_event
 
 # bash exit codes
 BASH_ILLEGAL_CMD = 127
@@ -1216,10 +1215,12 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
             try:
                 alert = alert_for_event[self.TYPE_DISK][event][status]
             except KeyError:
-                alert = Alert("fault", "informational", f"{event} - {status}",
-                              "unknown", DEFAULT_RECOMMENDATION)
+                logger.error(f"{self.TYPE_DISK} : " +
+                             f"Unknown event: {event}, status: {status}")
+                return
             except Exception as e:
                 logger.exception(e)
+                return
             info = {
                 "resource_type": resource_type,
                 "fru": self.ipmi_client.is_fru(self.fru_map[self.TYPE_DISK]),
