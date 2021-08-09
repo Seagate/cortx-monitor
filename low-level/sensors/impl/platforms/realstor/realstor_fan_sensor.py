@@ -48,7 +48,7 @@ class RealStorFanSensor(SensorThread, InternalMsgQ):
 
     SENSOR_NAME = "RealStorFanSensor"
     SENSOR_TYPE = "enclosure_fan_module_alert"
-    RESOURCE_TYPE = "enclosure:fru:fan"
+    RESOURCE_TYPE = "enclosure:hw:fan"
 
     PRIORITY = 1
 
@@ -289,11 +289,13 @@ class RealStorFanSensor(SensorThread, InternalMsgQ):
         epoch_time = str(int(time.time()))
 
         alert_id = self._get_alert_id(epoch_time)
+        fru = self.rssencl.is_storage_fru('FAN MODULE')
         resource_id = fan_module_info_dict.get("name", "")
         host_name = self.os_utils.get_fqdn()
 
         info = {
                 "resource_type": self.RESOURCE_TYPE,
+                "fru": fru,
                 "resource_id": resource_id,
                 "event_time": epoch_time
                 }

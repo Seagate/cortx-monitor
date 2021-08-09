@@ -50,7 +50,7 @@ class RealStorEnclosureSensor(SensorThread, InternalMsgQ):
 
     SENSOR_NAME = "RealStorEnclosureSensor"
     SENSOR_RESP_TYPE = "enclosure_alert"
-    RESOURCE_CATEGORY = "fru"
+    RESOURCE_CATEGORY = "hw"
     RESOURCE_TYPE = "enclosure"
 
     ENCL_FAULT_RESOLVED_EVENTS = ["The network-port Ethernet link is down for controller A",\
@@ -211,11 +211,13 @@ class RealStorEnclosureSensor(SensorThread, InternalMsgQ):
         severity = severity_reader.map_severity(alert_type)
         epoch_time = str(int(time.time()))
         alert_id = self._get_alert_id(epoch_time)
+        fru = self.rssencl.is_storage_fru('enclosure')
         resource_id = "0"
         host_name = self.os_utils.get_fqdn()
 
         info = {
                 "resource_type": self.RESOURCE_TYPE,
+                "fru": fru,
                 "resource_id": resource_id,
                 "event_time": epoch_time,
                 "description": encl_status

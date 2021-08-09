@@ -30,7 +30,7 @@ def init(args):
 
 def test_real_stor_controller_sensor(agrs):
     check_sspl_ll_is_running()
-    controller_sensor_message_request("enclosure:fru:controller")
+    controller_sensor_message_request("enclosure:hw:controller")
     controller_sensor_msg = None
     time.sleep(4)
     while not world.sspl_modules[IngressProcessorTests.name()]._is_my_msgQ_empty():
@@ -39,7 +39,7 @@ def test_real_stor_controller_sensor(agrs):
         print("Received: %s" % ingressMsg)
         try:
             msg_type = ingressMsg.get("sensor_response_type")
-            if msg_type["info"]["resource_type"] == "enclosure:fru:controller":
+            if msg_type["info"]["resource_type"] == "enclosure:hw:controller":
                 controller_sensor_msg = msg_type
                 break
         except Exception as exception:

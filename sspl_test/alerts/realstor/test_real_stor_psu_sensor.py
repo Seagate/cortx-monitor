@@ -30,7 +30,7 @@ def init(args):
 
 def test_real_stor_psu_sensor(args):
     check_sspl_ll_is_running()
-    psu_sensor_message_request("enclosure:fru:psu")
+    psu_sensor_message_request("enclosure:hw:psu")
 
     psu_sensor_msg = None
     time.sleep(4)
@@ -41,7 +41,7 @@ def test_real_stor_psu_sensor(args):
         try:
             # Make sure we get back the message type that matches the request
             msg_type = ingressMsg.get("sensor_response_type")
-            if msg_type["info"]["resource_type"] == "enclosure:fru:psu":
+            if msg_type["info"]["resource_type"] == "enclosure:hw:psu":
                 psu_sensor_msg = msg_type
                 break
 
