@@ -24,7 +24,7 @@ def init(args):
 def test_real_stor_sideplane_module_actuator(agrs):
     check_sspl_ll_is_running()
     instance_id = "*"
-    resource_type = "enclosure:fru:sideplane"
+    resource_type = "enclosure:hw:sideplane"
     send_enclosure_request("ENCL:%s" % resource_type, instance_id)
     ingressMsg = get_fru_response(resource_type, instance_id)
     sideplane_module_actuator_msg = ingressMsg.get("actuator_response_type")

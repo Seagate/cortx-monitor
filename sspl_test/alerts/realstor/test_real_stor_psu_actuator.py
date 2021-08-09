@@ -23,7 +23,7 @@ def init(args):
 
 def test_real_stor_psu_actuator(agrs):
     instance_id = "*"
-    resource_type = "enclosure:fru:psu"
+    resource_type = "enclosure:hw:psu"
     send_enclosure_request("ENCL:%s" % resource_type, instance_id)
     ingressMsg = get_fru_response(resource_type, instance_id)
     psu_actuator_msg = ingressMsg.get("actuator_response_type")

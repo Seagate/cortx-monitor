@@ -96,6 +96,13 @@ class RealStorEnclosure(StorageEnclosure):
     DATA_FORMAT_JSON = "json"
     FAULT_KEY = "unhealthy-component"
 
+    # Realstor FRUs mapping
+    fru_mapping = {
+        "fan": "FAN MODULE",
+        "psu": "POWER_SUPPLY",
+        "sideplane": "SIDEPLANE"
+    }
+
     # Current support for 'cliapi', future scope for 'rest', 'redfish' apis
     # once available
     realstor_supported_interfaces = ['cliapi']
@@ -482,6 +489,57 @@ class RealStorEnclosure(StorageEnclosure):
             fru_data = response_data.get(fru)
 
         return fru_data
+
+    def load_storage_fru_list(self):
+        """Get Storage FRU list and merge it with storage_fru_list,
+        maintained in global config, with which FRU list can be extended
+        for a solution.
+
+        Ex: Storage Enclosures not listing disk as FRU,
+        though its most common FRU in storage, and
+        practically it can be replaced easily.
+        So if for a solution, FRU list needs to be extended
+        beyond what publishes, 'storage_fru_list' from global config
+        can be used.
+        Some of the usual FRU examples are:- disk.
+
+        """
+        self.fru_list = []
+        # Read FRU data using /show/frus cli api.
+        fru_data = singleton_realstorencl.get_realstor_encl_data("frus")
+        for fru_dict in fru_data:
+            if "name" in fru_dict.keys():
+                self.fru_list.append(fru_dict["name"])
+        self.fru_list = list(set(self.fru_list))
+        try:
+            self.hot_swapped_frus = Conf.get(GLOBAL_CONF,
+                "storage_enclosure>storage_fru_list>hot_swappable",
+                ['disk', 'controller'])
+            self.cold_swapped_frus = Conf.get(GLOBAL_CONF,
+                "storage_enclosure>storage_fru_list",
+                [])
+        except ValueError as e:
+            logger.error("Failed to get storage_fru_list from config."
+                         f"Error:{e}")
+        self.fru_list = list(set(self.fru_list + self.hot_swapped_frus +
+                                 self.cold_swapped_frus))
+        logger.info(f"Fetched Enclosure FRU list:{self.fru_list}")
+
+    def is_storage_fru(self, fru):
+        try:
+            is_fru = True if fru in self.fru_list or \
+                self.fru_mapping[fru] in self.fru_list else False
+        except KeyError:
+            is_fru = False
+
+        fru_str = str(is_fru).lower()
+        if is_fru:
+            if fru in self.hot_swapped_frus:
+                fru_str = str(is_fru).lower() + ":" + "hot_swappable"
+            else:
+                fru_str = str(is_fru).lower() + ":" + "cold_swappable"
+        return fru_str
+
 
 # Object to use as singleton instance
 singleton_realstorencl = RealStorEnclosure()

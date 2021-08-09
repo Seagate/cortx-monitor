@@ -58,6 +58,7 @@ class RealStorEnclDataMsg(BaseSensorMsg):
 
         self._resource_id = self._encl_info.get("resource_id")
         self._resource_type = self._encl_info.get("resource_type")
+        self._fru = self._encl_info.get("fru")
         self._event_time = self._encl_info.get("event_time")
         description = self._specific_info.get("event")
 
@@ -82,6 +83,7 @@ class RealStorEnclDataMsg(BaseSensorMsg):
                         "info": {
                                 "resource_id": self._resource_id,
                                 "resource_type": self._resource_type,
+                                "fru": self._fru,
                                 "event_time": self._event_time,
                                 "description": description
                             },

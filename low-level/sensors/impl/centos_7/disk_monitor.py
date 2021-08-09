@@ -89,7 +89,7 @@ class DiskMonitor(SensorThread, InternalMsgQ):
     DRIVE_DBUS_INFO = 'dbus_info'
     DRIVE_FAULT_ATTR = 'smart_attributes'
     NODE_DISK_RESOURCE_TYPE = "node:os:disk"
-    ENCLOSURE_DISK_RESOURCE_TYPE = "enclosure:fru:disk"
+    ENCLOSURE_DISK_RESOURCE_TYPE = "enclosure:hw:disk"
     SMARTCTL_PASSED_RESPONSE = "SMART overall-health self-assessment test result: PASSED"
     UDISKS2_UNAVAILABLE = "org.freedesktop.UDisks2 was not provided"
 

@@ -318,7 +318,7 @@
 											"required": true
 										},
 										"resource_type": {
-											"description": "Type Of Resource, eg enclosure:fru:fan",
+											"description": "Type Of Resource, eg enclosure:hw:fan",
 											"type": "string",
 											"required": true
 										},
@@ -680,7 +680,7 @@
 									"required": true
 								},
 								"resource_type": {
-									"description": "Type Of Resource, eg enclosure:fru:fan",
+									"description": "Type Of Resource, eg enclosure:hw:fan",
 									"type": "string",
 									"required": true
 								},

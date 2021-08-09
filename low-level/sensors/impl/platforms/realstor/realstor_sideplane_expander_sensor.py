@@ -47,7 +47,7 @@ class RealStorSideplaneExpanderSensor(SensorThread, InternalMsgQ):
 
     SENSOR_NAME = "RealStorSideplaneExpanderSensor"
     SENSOR_TYPE = "enclosure_sideplane_expander_alert"
-    RESOURCE_TYPE = "enclosure:fru:sideplane"
+    RESOURCE_TYPE = "enclosure:hw:sideplane"
 
     PRIORITY = 1
 
@@ -298,10 +298,11 @@ class RealStorSideplaneExpanderSensor(SensorThread, InternalMsgQ):
         name = sideplane_expander_info_dict.get("name", "")
         resource_id = drawer_id + ' ' + name
         host_name = self.os_utils.get_fqdn()
-
+        fru = self.rssencl.is_storage_fru('SIDEPLANE')
 
         info = {
                 "resource_type": self.RESOURCE_TYPE,
+                "fru": fru,
                 "resource_id": resource_id,
                 "event_time": epoch_time
                 }
