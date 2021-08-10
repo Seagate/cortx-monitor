@@ -1,0 +1,8 @@
+# support framework format
+
+bundle: 
+    create:
+      url: "sh /opt/seagate/cortx/sspl/sspl_support_bundle create"
+
+    status:
+      url: "sh /opt/seagate/cortx/sspl/sspl_support_bundle status"
