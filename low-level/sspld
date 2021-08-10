@@ -611,7 +611,7 @@ def shutdown_handler(signum=None, frame=None):
 
 def print_usage():
     """Display the syntax usage for this script"""
-    print("""sspl_d
+    print("""sspld
     -h:    Display this help
     """)
 

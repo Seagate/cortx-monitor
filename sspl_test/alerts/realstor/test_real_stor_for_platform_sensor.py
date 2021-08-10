@@ -170,7 +170,7 @@ def check_sspl_ll_is_running():
 
     # Support for python-psutil < 2.1.3
     for proc in psutil.process_iter():
-        if proc.name == "sspl_d" and \
+        if proc.name == "sspld" and \
            proc.status in (psutil.STATUS_RUNNING, psutil.STATUS_SLEEPING):
                found = True
 
@@ -178,7 +178,7 @@ def check_sspl_ll_is_running():
     if found == False:
         for proc in psutil.process_iter():
             pinfo = proc.as_dict(attrs=['cmdline', 'status'])
-            if "sspl_d" in str(pinfo['cmdline']) and \
+            if "sspld" in str(pinfo['cmdline']) and \
                 pinfo['status'] in (psutil.STATUS_RUNNING, psutil.STATUS_SLEEPING):
                     found = True
 

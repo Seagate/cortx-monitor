@@ -29,7 +29,7 @@ Scenarios to test:
 
 1. Primary Node must be promoted and SSPL should switch to Active state.
    - This we can validate with SSPL logs:
-     "INFO Received SIGHUP to switch to active state (sspl_d)"
+     "INFO Received SIGHUP to switch to active state (sspld)"
 
 2. Stop the service on secondary Node:
    - "systemctl stop sspl.service"

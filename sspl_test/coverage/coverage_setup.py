@@ -28,7 +28,7 @@ topdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 os.sys.path.insert(0, topdir)
 from framework.base.sspl_constants import DATA_PATH
 
-SSPL_LL_D = "/opt/seagate/cortx/sspl/low-level/sspl_d"
+SSPL_LL_D = "/opt/seagate/cortx/sspl/low-level/sspld"
 REPORT_PATH = f"{DATA_PATH}coverage/sspl_xml_coverage_report.xml"
 
 PATCH_1 = """\
@@ -73,7 +73,7 @@ def coverage_setup():
     """
     Create required files for code coverage.
 
-    Creates a temporary sspl_d file and injects different patches of code
+    Creates a temporary sspld file and injects different patches of code
     to enable code coverage tracking. Also creates target directory for code
     coverage report and assigns permission to the directory.
     """
@@ -119,13 +119,13 @@ def coverage_setup():
 def coverage_reset():
     """Generates the code coverage report and resets the environment.
 
-    Sends SIGUSR1 signal to sspl_d to trigger code coverage report
-    generation. Restores the original sspl_d file.
+    Sends SIGUSR1 signal to sspld to trigger code coverage report
+    generation. Restores the original sspld file.
     """
     print("Generating the coverage report..")
     pid = 0
     for proc in psutil.process_iter():
-        if "sspl_d" in proc.name():
+        if "sspld" in proc.name():
             pid = proc.pid
 
     if pid:
