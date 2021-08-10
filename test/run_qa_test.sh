@@ -133,7 +133,7 @@ deleteMockedInterface()
 $sudo cp /etc/sspl.conf /etc/sspl.conf.back
 $sudo $script_dir/set_threshold.sh
 echo "Restarting SSPL"
-systemctl restart sspl-ll
+systemctl restart sspl.service
 echo "Waiting for SSPL to complete initialization of all the plugins"
 $script_dir/rabbitmq_start_checker sspl-out actuator-resp-key
 echo "Initialization completed. Starting tests"

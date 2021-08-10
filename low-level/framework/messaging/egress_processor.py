@@ -190,7 +190,7 @@ class EgressProcessor(ScheduledModuleThread, InternalMsgQ):
                     self._jsonMsg.get("message").get(
                         "actuator_response_type").get("thread_controller").get(
                         "thread_response") == \
-                    "SSPL-LL is shutting down":
+                    "SSPL is shutting down":
                 logger.info(
                     "EgressProcessor, _transmit_msg_on_exchange, received"
                     "global shutdown message from sspl_ll_d")

@@ -341,20 +341,20 @@ class SSPLPostInstall:
         """Copy service file to systemd location based on product."""
         # Create soft link for SINGLE product name service to existing LDR_R1, LR2 service
         # Instead of keeping separate service file for SINGLE product with same content.
-        currentProduct = "%s/conf/sspl-ll.service.%s" % (consts.SSPL_BASE_DIR,
+        currentProduct = "%s/conf/sspl.service.%s" % (consts.SSPL_BASE_DIR,
                                                          self.product)
         if (self.product == "SINGLE" and not os.path.exists(currentProduct)) or \
                 (self.product == "DUAL" and not os.path.exists(currentProduct)):
-            os.symlink("%s/conf/sspl-ll.service.%s" % (consts.SSPL_BASE_DIR, self.product),
+            os.symlink("%s/conf/sspl.service.%s" % (consts.SSPL_BASE_DIR, self.product),
                        currentProduct)
         if self.product == "CLUSTER" and not os.path.exists(currentProduct):
-            os.symlink("%s/conf/sspl-ll.service.LR2" % (consts.SSPL_BASE_DIR),
+            os.symlink("%s/conf/sspl.service.LR2" % (consts.SSPL_BASE_DIR),
                        currentProduct)
-        shutil.copyfile(currentProduct, "/etc/systemd/system/sspl-ll.service")
+        shutil.copyfile(currentProduct, "/etc/systemd/system/sspl.service")
 
     def enable_sspl_service(self):
-        """Enable sspl-ll service."""
-        self.dbus_service.enable("sspl-ll.service")
+        """Enable sspl service."""
+        self.dbus_service.enable("sspl.service")
         daemon_reload_cmd = "systemctl daemon-reload"
         output, error, rc = SimpleProcess(daemon_reload_cmd).run()
         if rc != 0:

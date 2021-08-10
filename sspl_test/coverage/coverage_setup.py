@@ -134,7 +134,7 @@ def coverage_reset():
         except Exception as err:
             print(err)
     else:
-        print("sspl-ll.service is not running.")
+        print("sspl.service is not running.")
 
     time.sleep(5)
 
@@ -153,7 +153,7 @@ def coverage_reset():
         print("%s file does not exists."%REPORT_PATH)
 
     print("Stoping the SSPL service..")
-    cmd = 'systemctl stop sspl-ll.service'
+    cmd = 'systemctl stop sspl.service'
     _, err, return_code = SimpleProcess(cmd).run()
     if return_code:
         print(err)

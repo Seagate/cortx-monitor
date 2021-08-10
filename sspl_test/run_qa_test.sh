@@ -314,7 +314,7 @@ fi
 if [ "$IS_VIRTUAL" == "true" ]
 then
     echo "Stoping the SSPL service"
-    $sudo systemctl stop sspl-ll
+    $sudo systemctl stop sspl.service
     echo "Code Coverage enabled : $coverage_enabled"
     if [ "$coverage_enabled" == "True" ]
     then
@@ -326,7 +326,7 @@ then
     # before SSPL initialization
     $script_dir/messaging/consume.py
     echo "Starting the SSPL service"
-    $sudo systemctl start sspl-ll
+    $sudo systemctl start sspl.service
     sleep 5
     echo "Waiting for SSPL to complete initialization of all the plugins.."
     $script_dir/sspl_start_checker

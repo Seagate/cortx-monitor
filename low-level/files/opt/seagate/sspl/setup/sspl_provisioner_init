@@ -102,20 +102,20 @@ setup_provisioner_prereq(){
 
 start_req_services(){
     [ "$rmq_cluster" == true ] && systemctl start rabbitmq-server.service
-    systemctl start sspl-ll.service
+    systemctl start sspl.service
 
     # TODO: Temporary change until HA integration is in place
     # Switch SSPL to active state to resume all the suspended plugins. If SSPL is
     # not switched to active state then plugins will not respond and tests will
     # fail. Sending SIGUP to SSPL makes SSPL to read state file and switch state.
     TRIES=0
-    SSPL_STATUS=$(systemctl show -p ActiveState sspl-ll | sed 's/ActiveState=//g')
+    SSPL_STATUS=$(systemctl show -p ActiveState sspl | sed 's/ActiveState=//g')
     while [ $SSPL_STATUS != "active" ]
     do
         echo SSPL Service not started. Waiting...
         sleep 2
         TRIES=$((TRIES+1))
-        SSPL_STATUS=$(systemctl show -p ActiveState sspl-ll | sed 's/ActiveState=//g')
+        SSPL_STATUS=$(systemctl show -p ActiveState sspl | sed 's/ActiveState=//g')
         if [ $TRIES -gt 4 ]
         then
             break

@@ -32,7 +32,7 @@ def process_msg(body):
     Low Level - Actuator Response", "title": "SSPL-LL Actuator Response",
     "expires": 3600, "signature": "None", "time": "2019-10-03 07:52:40.268960",
     "message": {"actuator_response_type": {"thread_controller": {"module_name":
-    "ThreadController", "thread_response": "SSPL-LL service has started successfully",
+    "ThreadController", "thread_response": "SSPL service has started successfully",
     "ack_type": "N/A"}}, "sspl_ll_msg_header": {"msg_version": "1.0.0",
     "schema_version": "1.0.0", "sspl_version": "1.0.0"}}}
 
@@ -41,7 +41,7 @@ def process_msg(body):
     """
 
     # print(body)
-    successfull_msg = "SSPL-LL service has started successfully"
+    successfull_msg = "SSPL service has started successfully"
     received_msg = None
     msg_dict = None
     try:

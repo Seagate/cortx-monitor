@@ -62,11 +62,11 @@ def _run_thread_capture_errors(curr_module, sspl_modules, msgQlist,
 
     except BaseException as ex:
         logger.critical(
-            "SSPL-LL encountered a fatal error, terminating service Error: %s" % ex)
+            "SSPL encountered a fatal error, terminating service Error: %s" % ex)
         logger.exception(ex)
 
         # Populate an actuator response message and transmit back to HAlon
-        error_msg = "SSPL-LL encountered an error, terminating service Error: " + \
+        error_msg = "SSPL encountered an error, terminating service Error: " + \
                     ", Exception: " + logger.exception(ex)
         json_msg = ThreadControllerMsg(curr_module.name(), error_msg).getJson()
 
@@ -203,7 +203,7 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
                 return
 
             # Notify external applications that've started up successfully
-            startup_msg = "SSPL-LL service has started successfully"
+            startup_msg = "SSPL service has started successfully"
             json_msg = ThreadControllerMsg(ThreadController.name(), startup_msg).getJson()
             self._write_internal_msgQ(EgressProcessor.name(), json_msg)
             self._threads_initialized = True

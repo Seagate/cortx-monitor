@@ -254,7 +254,7 @@ class SSPLTestCmd:
                     "%s - ERROR: %s - CMD %s" % (self.name, error, CMD))
 
             print('Restarting the SSPL service..')
-            CMD = "systemctl restart sspl-ll"
+            CMD = "systemctl restart sspl.service"
             try:
                 SimpleProcess(CMD).run(realtime_output=True)
             except Exception as error:

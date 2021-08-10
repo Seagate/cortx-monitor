@@ -1181,7 +1181,7 @@ class SSPLtest():
                 : 1 -> respective test failed
         """
 
-        command = "systemctl restart sspl-ll"
+        command = "systemctl restart sspl.service"
         subprocess.Popen(command, shell=True, stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE)
         time.sleep(300)

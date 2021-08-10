@@ -89,7 +89,7 @@ class SSPLCleanup:
         sspl_sudoers_file = '/etc/sudoers.d/sspl'
         sspl_dbus_policy_rules = '/etc/polkit-1/rules.d/sspl-ll_dbus_policy.rules'
         sspl_dbus_policy_conf = '/etc/dbus-1/system.d/sspl-ll_dbus_policy.conf'
-        sspl_service_file = '/etc/systemd/system/sspl-ll.service'
+        sspl_service_file = '/etc/systemd/system/sspl.service'
         sspl_test_backup = '/etc/sspl_tests.conf.back'
         sspl_test_file_path = '/etc/sspl_test_gc_url.yaml'
         sspl_sb_log_file_path = sspl_log_file_path.replace(

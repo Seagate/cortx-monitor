@@ -113,7 +113,7 @@ SSPL_DIR=/opt/seagate/%{product_family}/sspl
 if [ "$1" == "1" ]; then
     echo "Installation complete. Follow the instructions."
     echo "Run SSPL mini provisioner commands (post_install, prepare, config, init)"
-    echo "Start sspl-ll service."
+    echo "Start sspl service."
 fi
 
 %preun
@@ -121,7 +121,7 @@ fi
 if [ "$1" == "0" ]; then
     rm -f /var/%{product_family}/sspl/sspl-configured
 fi
-systemctl stop sspl-ll.service 2> /dev/null || true
+systemctl stop sspl.service 2> /dev/null || true
 
 %postun
 SSPL_DIR=/opt/seagate/%{product_family}/sspl
@@ -155,7 +155,7 @@ rm -f $SSPL_DIR/extension/solution
 - Adding service watchdog module
 
 * Fri Apr 24 2015 Aden jake Abernathy <aden.j.abernathy@seagate.com> - 1.0.0-7
-- Updating to run sspl-ll service as sspl-ll user instead of root
+- Updating to run sspl service as sspl-ll user instead of root
 
 * Fri Feb 13 2015 Aden Jake Abernathy <aden.j.abernathy@seagate.com> - 1.0.0-1
 - Initial spec file

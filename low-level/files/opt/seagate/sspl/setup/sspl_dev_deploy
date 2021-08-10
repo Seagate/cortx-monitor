@@ -133,7 +133,7 @@ class SSPLDevDeploy:
 
     def cleanup(self):
         """Stop sspl service and remove SSPL RPMS."""
-        cmd = "systemctl stop sspl-ll.service"
+        cmd = "systemctl stop sspl.service"
         self._execute_cmd(cmd)
         cmd = "systemctl stop kafka.service"
         self._execute_cmd(cmd)
@@ -510,7 +510,7 @@ if __name__ == '__main__':
         add_help=True, allow_abbrev=False)
     # cleanup arg
     argParser.add_argument("--cleanup", action="store_true",
-                           help="Stop sspl-ll and remove installed SSPL RPMs")
+                           help="Stop sspl.service and remove installed SSPL RPMs")
     argParser.add_argument("--reset_config", action="store_true",
                            help="Restores default SSPL config")
 

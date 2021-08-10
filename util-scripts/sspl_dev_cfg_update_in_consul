@@ -46,7 +46,7 @@ for conf_val in "${!sspl_conf_update[@]}";
 done
 
 echo "Restarting SSPL"
-$sudo systemctl restart sspl-ll
+$sudo systemctl restart sspl.service
 
 echo "SSPL Service started."
 echo "Waiting 5 seconds to initialize."

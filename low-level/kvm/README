@@ -30,7 +30,7 @@ cp /opt/seagate/<product>/sspl/low-level/kvm/openhpi.conf.sspl /etc/openhpi/open
 5) Restart services
 systemctl restart openhpid
 systemctl restart dcs-collector
-systemctl restart sspl-ll
+systemctl restart sspl.service
 
 6) Wait for /tmp/dcs/hpi & /tmp/dcs/dmreport to be populated, ~60 seconds
 
