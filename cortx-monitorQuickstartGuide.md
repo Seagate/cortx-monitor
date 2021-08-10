@@ -189,7 +189,9 @@ This guide provides a step-by-step walkthrough for getting you CORTX-Monitor Ser
     ```
     Make sure to update TMPL_MACHINE_ID, TMPL_HOSTNAME, TMPL_ENCLOSURE_ID, TMPL_BMC_SECRET, TMPL_CONTROLLER_SECRET with actual values.
     
-    To generate passwords you can use below steps.
+    To generate passwords you can use below steps. The encryption keys are generated based on machine id and enclosure id. Feel free to use any sample machine id
+    and enclosure id if actual IDs are not available.
+  
     ```
     machine_id="xyz"
     enclosure_id="enc_xyz"
