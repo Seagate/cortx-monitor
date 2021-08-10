@@ -13,12 +13,13 @@
 # about this software or licensing, please email opensource@seagate.com or
 # cortx-questions@seagate.com.
 
-
+import json
 import os
 import psutil
 
 from framework.base.sspl_constants import IEM_DATA_PATH, IEM_INIT_FAILED
 from framework.utils.service_logging import logger
+from framework.utils.store_queue import StoreQueue
 from cortx.utils.iem_framework import EventMessage
 from cortx.utils.iem_framework.error import EventMessageError
 
@@ -78,6 +79,8 @@ class Iem:
             "Cortx health alerts will get delivered to consumers like CSM.",
             ""]
     }
+
+    iem_store_queue = StoreQueue()
 
     def check_existing_iem_event(self, event_name, event_code):
         """Before logging iem, check if is already present."""
@@ -157,20 +160,31 @@ class Iem:
     @staticmethod
     def generate_iem(module, event_code, severity, description):
         """Generate iem and send it to a MessgaeBroker."""
+
+        IEM_msg = json.dumps(
+            {"iem": {"module": module, "event_code": event_code,
+                "severity": severity, "description": description}})
         try:
-            logger.info(f"Sending IEM alert for module:{module}"
-                        f" and event_code:{event_code}")
-            # check if IEM Framework initialized,
-            # if not, retry initializing the IEM Frameowork
-            if os.path.exists(IEM_INIT_FAILED):
-                with open(IEM_INIT_FAILED, 'r') as f:
-                    sspl_pid = f.read()
-                if sspl_pid and psutil.pid_exists(int(sspl_pid)):
-                    EventMessage.init(component='sspl', source='S')
-                    logger.info("IEM framework initialization completed!!")
-                os.remove(IEM_INIT_FAILED)
-            EventMessage.send(module=module, event_id=event_code,
-                              severity=severity, message_blob=description)
-        except EventMessageError as e:
-            logger.error("Failed to send IEM alert."
-                         f"Error:{e}")
+            if Iem.iem_store_queue.is_empty():
+                logger.info(f"Sending IEM alert for module:{module}"
+                            f" and event_code:{event_code}")
+                # check if IEM Framework initialized,
+                # if not, retry initializing the IEM Frameowork
+                if os.path.exists(IEM_INIT_FAILED):
+                    with open(IEM_INIT_FAILED, 'r') as f:
+                        sspl_pid = f.read()
+                    if sspl_pid and psutil.pid_exists(int(sspl_pid)):
+                        EventMessage.init(component='sspl', source='S')
+                        logger.info("IEM framework initialization completed!!")
+                    os.remove(IEM_INIT_FAILED)
+                EventMessage.send(module=module, event_id=event_code,
+                                severity=severity, message_blob=description)
+            else:
+                logger.info(
+                    "'Accumulated iem queue' is not Empty."
+                        " Adding IEM to the end of the queue")
+                Iem.iem_store_queue.put(IEM_msg)
+        except (EventMessageError, Exception) as e:
+            logger.error(f"Failed to send IEM alert. Error:{e}."
+                "Adding IEM in accumulated queue.")
+            Iem.iem_store_queue.put(IEM_msg)

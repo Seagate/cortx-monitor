@@ -40,8 +40,8 @@ source $base_dir/files/opt/seagate/sspl/setup/constants.sh
 chown -R sspl-ll:root /opt/seagate/$PRODUCT_FAMILY/sspl
 
 # Create a link to low-level cli for easy global access
-if [ -f /opt/seagate/$PRODUCT_FAMILY/sspl/low-level/cli/sspl_ll_cli ]; then
-    ln -sf /opt/seagate/$PRODUCT_FAMILY/sspl/low-level/cli/sspl_ll_cli /usr/bin/sspl_ll_cli
+if [ -f /opt/seagate/$PRODUCT_FAMILY/sspl/low-level/cli/sspl-ll-cli ]; then
+    ln -sf /opt/seagate/$PRODUCT_FAMILY/sspl/low-level/cli/sspl-ll-cli /usr/bin/sspl_ll_cli
 fi
 
 # Assign the required groups

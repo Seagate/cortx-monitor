@@ -20,7 +20,6 @@ Sensor Module Thread responsible for sensing RAM memory faults on the Node serve
 
 import json
 import os
-import socket
 import time
 import uuid
 
@@ -34,6 +33,7 @@ from framework.utils.service_logging import logger
 from framework.utils.severity_reader import SeverityReader
 from framework.utils.store_factory import file_store
 from framework.utils.tool_factory import ToolFactory
+from framework.utils.os_utils import OSUtils
 from message_handlers.node_data_msg_handler import NodeDataMsgHandler
 
 # Override default store
@@ -83,6 +83,7 @@ class MemFaultSensor(SensorThread, InternalMsgQ):
         self.fault_alert_state = "Neutral State"
         # Flag to indicate suspension of module
         self._suspended = False
+        self.os_utils = OSUtils()
 
 
     def initialize(self, conf_reader, msgQlist, product):
@@ -204,7 +205,7 @@ class MemFaultSensor(SensorThread, InternalMsgQ):
         epoch_time = str(int(time.time()))
 
         alert_id = self._get_alert_id(epoch_time)
-        host_name = socket.gethostname()
+        host_name = self.os_utils.get_fqdn()
 
         specific_info = {}
         specific_info_list = []

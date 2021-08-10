@@ -33,6 +33,7 @@ SSPL_STORE_TYPE = 'file'
 CONSUL_HOST = '127.0.0.1'
 CONSUL_PORT = '8500'
 CONSUL_PATH = '/usr/bin/'
+DEFAULT_NODE_ID = 'SN01'
 
 # required only for init
 component = 'sspl_test/config'

@@ -32,7 +32,8 @@ from framework.base.module_thread import ScheduledModuleThread
 from framework.base.sspl_constants import RESOURCE_PATH
 from framework.messaging.egress_processor import \
     EgressProcessor
-from framework.utils.conf_utils import CLUSTER, SRVNODE, SSPL_CONF, Conf
+from framework.utils.conf_utils import (
+    SSPL_CONF, Conf, GLOBAL_CONF, NODE_ID_KEY)
 from framework.utils.service_logging import logger
 from json_msgs.messages.actuators.ack_response import AckResponseMsg
 from . import producer_initialized
@@ -55,12 +56,11 @@ class IngressProcessor(ScheduledModuleThread, InternalMsgQ):
     # Section and keys in configuration file
     PROCESSOR = MODULE_NAME.upper()
     CONSUMER_ID = "consumer_id"
-    CONSUMER_GROUP = "consumer_group"
+    CONSUMER_GROUP_PREFIX = "consumer_group_prefix"
     MESSAGE_TYPE = "message_type"
     OFFSET = "offset"
     SYSTEM_INFORMATION_KEY = 'SYSTEM_INFORMATION'
     CLUSTER_ID_KEY = 'cluster_id'
-    NODE_ID_KEY = 'node_id'
 
     JSON_ACTUATOR_SCHEMA = "SSPL-LL_Actuator_Request.json"
     JSON_SENSOR_SCHEMA = "SSPL-LL_Sensor_Request.json"
@@ -106,7 +106,7 @@ class IngressProcessor(ScheduledModuleThread, InternalMsgQ):
         # Initialize internal message queues for this module
         super(IngressProcessor, self).initialize_msgQ(msgQlist)
 
-        self._read_config()
+        self._init_config()
         producer_initialized.wait()
         self.create_MsgConsumer_obj()
 
@@ -137,7 +137,7 @@ class IngressProcessor(ScheduledModuleThread, InternalMsgQ):
                     self.create_MsgConsumer_obj()
                 if message:
                     logger.info(
-                        f"IngressProcessor, Message Recieved: {message}")
+                        f"IngressProcessor, Message Received: {message}")
                     self._process_msg(message)
                     if isinstance(self._consumer, MessageConsumer):
                         self._consumer.ack()
@@ -185,33 +185,45 @@ class IngressProcessor(ScheduledModuleThread, InternalMsgQ):
                     "IngressProcessor, Authentication failed on message: %s" % ingressMsg)
                 return
 
+            logger.debug("_process_msg, ingressMsg: %s" % ingressMsg)
+
             # Get the incoming message type
             if message.get("actuator_request_type") is not None:
                 msgType = message.get("actuator_request_type")
 
                 # Validate against the actuator schema
                 validate(ingressMsg, self._actuator_schema)
+                # Compare target_node_id from the request to determine
+                # if request is meant for the current node
+                target_node_id = message.get("target_node_id")
+                if target_node_id is None:
+                    logger.warning(
+                        "Required attribute target_node_id is missing "
+                        "from actuator request %s, IGNORING!!" % (msgType))
+                    return
+                elif target_node_id == self._node_id:
+                    self._send_to_msg_handler(msgType, message, uuid)
+                else:
+                    logger.debug(
+                        "Node identifier mismatch, actuator request ignored.")
+                    return
 
             elif message.get("sensor_request_type") is not None:
                 msgType = message.get("sensor_request_type")
 
                 # Validate against the sensor schema
                 validate(ingressMsg, self._sensor_schema)
+                self._send_to_msg_handler(msgType, message, uuid)
 
             else:
                 # We only handle incoming actuator and sensor requests, ignore
                 # everything else.
                 return
 
-            # Check for debugging being activated in the message header
-            self._check_debug(message)
-            self._log_debug("_process_msg, ingressMsg: %s" % ingressMsg)
-
-            self._send_to_msg_handler(msgType, message, uuid)
-
         except Exception as ex:
             logger.error(
-                "IngressProcessor, _process_msg unrecognized message: %r" % ingressMsg)
+                "IngressProcessor, _process_msg failed to recognize "
+                "message: %r with error %r" % (ingressMsg, ex))
             ack_msg = AckResponseMsg("Error Processing Msg",
                                      "Msg Handler Not Found", uuid).getJson()
             self._write_internal_msgQ(EgressProcessor.name(), ack_msg)
@@ -248,18 +260,17 @@ class IngressProcessor(ScheduledModuleThread, InternalMsgQ):
             self._write_internal_msgQ(EgressProcessor.name(),
                                       ack_msg)
 
-    def _read_config(self):
+    def _init_config(self):
         """Read config for messaging bus."""
         # Make methods locally available
-        self._node_id = Conf.get(SSPL_CONF,
-                                 f"{CLUSTER}>{SRVNODE}>{self.NODE_ID_KEY}",
-                                 'SN01')
+        self._node_id = Conf.get(GLOBAL_CONF, NODE_ID_KEY, 'SN01')
+        self._consumer_group_prefix = Conf.get(
+            SSPL_CONF, f"{self.PROCESSOR}>{self.CONSUMER_GROUP_PREFIX}",
+            'cortx_monitor')
+        self._consumer_group = self._consumer_group_prefix + "_" + str(self._node_id)
         self._consumer_id = Conf.get(SSPL_CONF,
                                      f"{self.PROCESSOR}>{self.CONSUMER_ID}",
                                      'sspl_actuator')
-        self._consumer_group = Conf.get(SSPL_CONF,
-                                        f"{self.PROCESSOR}>{self.CONSUMER_GROUP}",
-                                        'cortx_monitor')
         self._message_type = Conf.get(SSPL_CONF,
                                       f"{self.PROCESSOR}>{self.MESSAGE_TYPE}",
                                       'requests')

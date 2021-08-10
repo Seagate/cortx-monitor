@@ -30,7 +30,7 @@ def init(args):
 
 def test_real_stor_fan_module_sensor(agrs):
     check_sspl_ll_is_running()
-    fan_sensor_message_request("enclosure:fru:fan")
+    fan_sensor_message_request("enclosure:hw:fan")
     fan_module_sensor_msg = None
     time.sleep(4)
     while not world.sspl_modules[IngressProcessorTests.name()]._is_my_msgQ_empty():
@@ -40,7 +40,7 @@ def test_real_stor_fan_module_sensor(agrs):
         try:
             # Make sure we get back the message type that matches the request
             msg_type = ingressMsg.get("sensor_response_type")
-            if msg_type["info"]["resource_type"] == "enclosure:fru:fan":
+            if msg_type["info"]["resource_type"] == "enclosure:hw:fan":
                 fan_module_sensor_msg = ingressMsg.get("sensor_response_type")
                 break
         except Exception as exception:

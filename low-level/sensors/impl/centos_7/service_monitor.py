@@ -20,7 +20,6 @@
  ****************************************************************************
 """
 
-import socket
 import time
 from collections import namedtuple
 from queue import Queue
@@ -36,10 +35,11 @@ from framework.base.sspl_constants import DATA_PATH
 from framework.platforms.server.platform import Platform
 from framework.utils.conf_utils import (SSPL_CONF, Conf)
 from framework.utils.iem import Iem
-from framework.utils.mon_utils import get_alert_id
+from framework.utils.mon_utils import MonUtils
 from framework.utils.service_logging import logger
 from framework.utils.severity_reader import SeverityReader
 from framework.utils.store_factory import store
+from framework.utils.os_utils import OSUtils
 from message_handlers.service_msg_handler import ServiceMsgHandler
 from sensors.ISystem_monitor import ISystemMonitor
 
@@ -499,10 +499,10 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
         return {
             "sensor_request_type": {
                 "service_status_alert": {
-                    "host_id": socket.getfqdn(),
+                    "host_id": OSUtils.get_fqdn(),
                     "severity": SeverityReader().map_severity(
                         alert.alert_type),
-                    "alert_id": get_alert_id(str(int(time.time()))),
+                    "alert_id": MonUtils.get_alert_id(str(int(time.time()))),
                     "alert_type": alert.alert_type,
                     "info": {
                         "resource_type": cls.RESOURCE_TYPE,

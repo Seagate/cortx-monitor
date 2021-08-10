@@ -20,8 +20,9 @@ import time
 
 from cortx.utils.discovery.error import ResourceMapError
 from framework.utils.conf_utils import GLOBAL_CONF, Conf, STORAGE_TYPE_KEY
-from framework.base.sspl_constants import MANIFEST_SVC_NAME
+from framework.base.sspl_constants import MANIFEST_SVC_NAME, HEALTH_UNDESIRED_VALS
 from framework.utils.service_logging import CustomLog, logger
+from framework.utils.mon_utils import MonUtils
 from framework.platforms.realstor.realstor_enclosure import (
     singleton_realstorencl as ENCL)
 from framework.platforms.storage.platform import Platform
@@ -45,7 +46,7 @@ class StorageManifest():
             "psu": self.get_psu_info,
             "fan": self.get_fan_modules_info,
             "disk": self.get_drives_info,
-            "sideplane": self.get_sideplane_expander_info
+            "sideplane_expander": self.get_sideplane_expander_info
         }
         fw_resources = {
             "version": self.get_versions_info,
@@ -54,6 +55,8 @@ class StorageManifest():
             "hw": hw_resources,
             "fw": fw_resources
         }
+        self.resource_indexing_map = StorageResourceMap.resource_indexing_map\
+            ["manifest"]
 
     def get_data(self, rpath):
         """Fetch Manifest information for given rpath."""
@@ -108,6 +111,7 @@ class StorageManifest():
             logger.error(self.log.svc_log(f"{msg}"))
             raise ResourceMapError(errno.EINVAL, msg)
 
+        info = MonUtils.normalize_kv(info, HEALTH_UNDESIRED_VALS, "Not Available")
         return info
 
     def get_storage_manifest_info(self):
@@ -198,6 +202,8 @@ class StorageManifest():
             data.append(controller_dict)
             logger.debug(self.log.svc_log(
                 f"Controller Manifest Data:{data}"))
+        sort_key_path = self.resource_indexing_map["hw"]["controller"]
+        data = MonUtils.sort_by_specific_kv(data, sort_key_path, self.log)
         return data
 
     def get_psu_info(self):
@@ -230,6 +236,8 @@ class StorageManifest():
             data.append(psu_dict)
             logger.debug(self.log.svc_log(
                 f"PSU Manifest Data:{data}"))
+        sort_key_path = self.resource_indexing_map["hw"]["psu"]
+        data = MonUtils.sort_by_specific_kv(data, sort_key_path, self.log)
         return data
 
     def get_drives_info(self):
@@ -271,6 +279,8 @@ class StorageManifest():
             data.append(drive_dict)
             logger.debug(self.log.svc_log(
                 f"Drive Manifest Data:{data}"))
+        sort_key_path = self.resource_indexing_map["hw"]["disk"]
+        data = MonUtils.sort_by_specific_kv(data, sort_key_path, self.log)
         return data
 
     @staticmethod
@@ -297,6 +307,11 @@ class StorageManifest():
         fanmoduels_data = ENCL.get_realstor_encl_data("fan-modules")
         if fanmoduels_data:
             for fan_module in fanmoduels_data:
+                specifics = [self.get_fan_specifics(fan) for fan in \
+                    fan_module['fan']]
+                sort_key_path = self.resource_indexing_map["hw"]["fan"]
+                specifics = MonUtils.sort_by_specific_kv(specifics, sort_key_path,
+                    self.log)
                 fan_module_resp = {
                     "uid": fan_module.get("durable-id", "NA"),
                     "type": fan_module.get("type", "NA"),
@@ -307,11 +322,13 @@ class StorageManifest():
                     "version": fan_module.get("hardware-version", "NA"),
                     "part_number": fan_module.get("part-number", "NA"),
                     "last_updated": int(time.time()),
-                    "specifics": [self.get_fan_specifics(fan) for fan in fan_module['fan']]
+                    "specifics": specifics
                 }
                 data.append(fan_module_resp)
                 logger.debug(self.log.svc_log(
                     f"Fan Manifest Data:{data}"))
+        sort_key_path = self.resource_indexing_map["hw"]["fan"]
+        data = MonUtils.sort_by_specific_kv(data, sort_key_path, self.log)
         return data
 
     @staticmethod
@@ -347,6 +364,11 @@ class StorageManifest():
                 sideplanes = drawer.get("sideplanes")
                 sideplane_expander_list.extend(sideplanes)
         for sideplane in sideplane_expander_list:
+            expanders = [self.get_expander_data(expander) for expander in \
+                sideplane['expanders']]
+            key_path = self.resource_indexing_map["hw"]["sideplane_expander"]
+            expanders = MonUtils.sort_by_specific_kv(expanders, key_path,
+                self.log)
             sideplane_dict = {
                 "uid": sideplane.get("durable-id", "NA"),
                 "type": sideplane.get("type", "NA"),
@@ -362,13 +384,14 @@ class StorageManifest():
                     "location": sideplane.get("location", "NA"),
                     "drawer_id": sideplane.get("drawer-id", "NA"),
                     "status": sideplane.get("status", "NA"),
-                    "expanders": [self.get_expander_data(expander) \
-                        for expander in sideplane['expanders']]
+                    "expanders": expanders
                 }]
             }
             data.append(sideplane_dict)
             logger.debug(self.log.svc_log(
                 f"Sideplane Manifest Data:{data}"))
+        sort_key_path = self.resource_indexing_map["hw"]["sideplane_expander"]
+        data = MonUtils.sort_by_specific_kv(data, sort_key_path, self.log)
         return data
 
     def get_versions_info(self):

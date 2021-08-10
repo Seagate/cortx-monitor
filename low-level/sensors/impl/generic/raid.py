@@ -21,7 +21,6 @@
 """
 import json
 import os
-import socket
 import subprocess
 import time
 import uuid
@@ -35,6 +34,7 @@ from framework.utils.conf_utils import (GLOBAL_CONF, SSPL_CONF, Conf,
     NODE_ID_KEY)
 from framework.utils.service_logging import logger
 from framework.utils.severity_reader import SeverityReader
+from framework.utils.os_utils import OSUtils
 # Modules that receive messages from this module
 from message_handlers.node_data_msg_handler import NodeDataMsgHandler
 from sensors.Iraid import IRAIDsensor
@@ -92,6 +92,7 @@ class RAIDsensor(SensorThread, InternalMsgQ):
 
         # Flag to indicate suspension of module
         self._suspended = False
+        self.os_utils = OSUtils()
 
     def initialize(self, conf_reader, msgQlist, product):
         """initialize configuration reader and internal msg queues"""
@@ -482,7 +483,7 @@ class RAIDsensor(SensorThread, InternalMsgQ):
         severity_reader = SeverityReader()
         severity = severity_reader.map_severity(alert_type)
         self._alert_id = self._get_alert_id(epoch_time)
-        host_name = socket.getfqdn()
+        host_name = self.os_utils.get_fqdn()
 
         if alert_type == self.MISSING:
             description = "RAID array or drive from RAID array is missing."

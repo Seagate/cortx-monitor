@@ -26,7 +26,7 @@ from actuators.impl.actuator import Actuator
 
 from framework.base.debug import Debug
 from framework.utils.service_logging import logger
-from framework.utils import mon_utils
+from framework.utils.mon_utils import MonUtils
 from framework.platforms.realstor.realstor_enclosure import singleton_realstorencl
 from framework.base.sspl_constants import AlertTypes, SeverityTypes, ResourceTypes
 
@@ -93,16 +93,16 @@ class RealStorActuator(Actuator, Debug):
             ctrl_action = ""
             ctrl_type = ""
             if enclosure_request_data[-1] == "shutdown":
-                # "ENCL: enclosure:fru:controller:shutdown"
+                # "ENCL: enclosure:hw:controller:shutdown"
                 (request_type, _, component, component_type,
                     ctrl_action) = enclosure_request_data
             elif enclosure_request_data[-1] == "restart":
-                # "ENCL: enclosure:fru:controller:sc:restart"
-                # "ENCL: enclosure:fru:controller:mc:restart"
+                # "ENCL: enclosure:hw:controller:sc:restart"
+                # "ENCL: enclosure:hw:controller:mc:restart"
                 (request_type, _, component, component_type,
                     ctrl_type, ctrl_action) = enclosure_request_data
             else:
-                # "ENCL: enclosure:fru:controller"
+                # "ENCL: enclosure:hw:controller"
                 (request_type, _, component, component_type) = \
                     enclosure_request_data
 
@@ -113,7 +113,7 @@ class RealStorActuator(Actuator, Debug):
                     resource.strip(), enclosure_request),
                     component, component_type, resource,
                     ctrl_action = ctrl_action)
-            elif component == "fru":
+            elif component == "hw":
                 response = self.make_response(self.request_fru_func[
                     request_type][component_type](resource), component,
                     component_type, resource)
@@ -150,7 +150,8 @@ class RealStorActuator(Actuator, Debug):
 
         resource_type = "enclosure:{}:{}".format(component, component_type)
         epoch_time = str(int(time.time()))
-        alert_id = mon_utils.get_alert_id(epoch_time)
+        alert_id = MonUtils.get_alert_id(epoch_time)
+        fru = self.rssencl.is_storage_fru(component_type)
 
         if ctrl_action in self.CTRL_ACTION_LST:
             resource_type = component_details['resource_type']
@@ -161,7 +162,7 @@ class RealStorActuator(Actuator, Debug):
             del component_details['severity']
             if self.SEVERITY == "warning":
                 del component_details['description']
-        elif component == "fru":
+        elif component == "hw":
             if resource_id == self.RESOURCE_ALL:
                 for comp in component_details:
                     comp['resource_id'] = self.fru_response_manipulators[
@@ -176,6 +177,7 @@ class RealStorActuator(Actuator, Debug):
           "alert_id": alert_id,
           "info": {
             "resource_type": resource_type,
+            "fru": fru,
             "resource_id": resource_id,
             "event_time": epoch_time
           },
@@ -520,7 +522,7 @@ class RealStorActuator(Actuator, Debug):
         response['instance_id'] = self._resource_id
         response['alert_type'] = AlertTypes.GET.value
         response['severity'] = SeverityTypes.INFORMATIONAL.value
-        response['alert_id'] = mon_utils.get_alert_id(epoch_time)
+        response['alert_id'] = MonUtils.get_alert_id(epoch_time)
         response['info'] = {
             "resource_type": f"enclosure:{self._enclosure_type.lower()}:{self._enclosure_resource_type.lower()}",
             "resource_id": self._resource_id,
@@ -682,7 +684,7 @@ class RealStorActuator(Actuator, Debug):
 
         if invalid_args:
             # Invalid resource 'shutdown abc' for an
-            # 'ENCL: enclosure:fru:controller:shutdown' actuator request
+            # 'ENCL: enclosure:hw:controller:shutdown' actuator request
             err_msg = "Invalid resource '{}' for an '{}' actuator request".format(
                 resource, enclosure_request)
             logger.error(err_msg)
@@ -711,7 +713,7 @@ class RealStorActuator(Actuator, Debug):
                 'command': ctrl_cmd,
                 'alert_type': 'control:shutdown',
                 'severity': severity,
-                'resource_type': 'enclosure:fru:controller'
+                'resource_type': 'enclosure:hw:controller'
                 },
             'restart sc' : {
                 'message': 'Restart / Start Storage Controller %s' % (message),
@@ -725,7 +727,7 @@ class RealStorActuator(Actuator, Debug):
                 'command': ctrl_cmd,
                 'alert_type': 'control:restart',
                 'severity': severity,
-                'resource_type': 'enclosure:fru:controller:sc'
+                'resource_type': 'enclosure:hw:controller:sc'
                 },
             'restart mc' : {
                 'message' : 'Restart / Start Management Controller %s' % (message),
@@ -738,7 +740,7 @@ class RealStorActuator(Actuator, Debug):
                 'command': ctrl_cmd,
                 'alert_type': 'control:restart',
                 'severity': severity,
-                'resource_type': 'enclosure:fru:controller:mc'
+                'resource_type': 'enclosure:hw:controller:mc'
                 }
         }
         return response_str[action_type]
