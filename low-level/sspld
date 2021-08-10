@@ -573,7 +573,7 @@ def shutdown_handler(signum=None, frame=None):
 
 def print_usage():
     """Display the syntax usage for this script"""
-    print("""sspl_ll_d
+    print("""sspld
     -h:    Display this help
     """)
 
@@ -741,7 +741,7 @@ if __name__ == "__main__":
 
     # Initialize logging
     logging_level = Conf.get(SSPL_CONF, f"{SYSTEM_INFORMATION}>{LOG_LEVEL}", "INFO")
-    init_logging("sspl", SSPL_LOG_PATH , logging_level)
+    init_logging("SSPL", SSPL_LOG_PATH , logging_level)
     logger.info(f"Logging has been initialized for SSPL !!!")
 
     # Handle signals for log level change

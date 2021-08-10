@@ -57,7 +57,7 @@ This guide provides a step-by-step walkthrough for getting you CORTX-Monitor Ser
 
 - cortx-monitor RPMs named as cortx-sspl.
 
-- cortx-monitor service named as sspl-ll.
+- cortx-monitor service named as sspl.
 
 1. Before you build the RPM, you'll need to install the dependencies using:
 
@@ -203,8 +203,8 @@ This guide provides a step-by-step walkthrough for getting you CORTX-Monitor Ser
 4. To start the CORTX-Monitor service, run the commands:
 
     ```shell
-    $ systemctl start sspl-ll
-    $ systemctl status sspl-ll
+    $ systemctl start sspl
+    $ systemctl status sspl
     ```
     You'll see the following service status:
     
@@ -230,7 +230,7 @@ This guide provides a step-by-step walkthrough for getting you CORTX-Monitor Ser
         cortx-sspl-1.0.0-1_git8907300.el7.noarch
         cortx-sspl-test-1.0.0-1_git8907300.el7.noarch
       ```
-      `$ systemctl status sspl-ll`
+      `$ systemctl status sspl`
 
   2. Run sanity test using:
 

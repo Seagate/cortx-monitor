@@ -326,7 +326,7 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
                 return
 
             # Notify external applications that've started up successfully
-            startup_msg = "SSPL-LL service has started successfully"
+            startup_msg = "SSPL service has started successfully"
             json_msg = ThreadControllerMsg(ThreadController.name(), startup_msg).getJson()
             self._write_internal_msgQ(EgressProcessor.name(), json_msg)
             self._threads_initialized = True

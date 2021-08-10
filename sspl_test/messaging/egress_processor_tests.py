@@ -80,7 +80,7 @@ class EgressProcessorTests(ScheduledModuleThread, InternalMsgQ):
         super(EgressProcessorTests, self).initialize_msgQ(msgQlist)
 
         # Flag denoting that a shutdown message has been placed
-        #  into our message queue from the main sspl_ll_d handler
+        #  into our message queue from the main sspld handler
         self._request_shutdown = False
 
         self._msg_sent_succesfull = True
@@ -128,7 +128,7 @@ class EgressProcessorTests(ScheduledModuleThread, InternalMsgQ):
 
         self._log_debug("Finished processing successfully")
 
-        # Shutdown is requested by the sspl_ll_d shutdown handler
+        # Shutdown is requested by the sspld shutdown handler
         #  placing a 'shutdown' msg into our queue which allows us to
         #  finish processing any other queued up messages.
         if self._request_shutdown is True:
@@ -195,7 +195,7 @@ class EgressProcessorTests(ScheduledModuleThread, InternalMsgQ):
             "_transmit_msg_on_exchange, jsonMsg: %s" % self._jsonMsg)
 
         try:
-            # Check for shut down message from sspl_ll_d and set a flag to shutdown
+            # Check for shut down message from sspld and set a flag to shutdown
             #  once our message queue is empty
             if self._jsonMsg.get("message").get(
                     "actuator_response_type") is not None and \
@@ -205,10 +205,10 @@ class EgressProcessorTests(ScheduledModuleThread, InternalMsgQ):
                     self._jsonMsg.get("message").get(
                         "actuator_response_type").get("thread_controller").get(
                         "thread_response") == \
-                    "SSPL-LL is shutting down":
+                    "SSPL is shutting down":
                 logger.info(
                     "EgressProcessorTests, _transmit_msg_on_exchange, received"
-                    "global shutdown message from sspl_ll_d")
+                    "global shutdown message from sspld")
                 self._request_shutdown = True
 
             # Publish json message to the correct channel

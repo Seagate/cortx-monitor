@@ -11,7 +11,7 @@
         /opt/seagate/cortx/sspl/bin/sspl_post_install -p LDR_R2
         /opt/seagate/cortx/sspl/bin/sspl_setup_init -r cortx
         /opt/seagate/cortx/sspl/bin/sspl_config
-        systemctl start sspl-ll.service
+        systemctl start sspl.service
         systemctl start rabbitmq-server.service
 
 3. Installation of SSPL resource agent script
@@ -29,10 +29,10 @@ Scenarios to test:
 
 1. Primary Node must be promoted and SSPL should switch to Active state.
    - This we can validate with SSPL logs:
-     "INFO Received SIGHUP to switch to active state (sspl_ll_d)"
+     "INFO Received SIGHUP to switch to active state (sspld)"
 
 2. Stop the service on secondary Node:
-   - "systemctl stop sspl-ll"
+   - "systemctl stop sspl.service"
      Pacemaker should restart the service on same node.
 
 3. Kill the service on primary Node:

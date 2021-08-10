@@ -351,7 +351,7 @@ then
     # before SSPL initialization
     $script_dir/messaging/consume.py
     echo "Starting the SSPL service"
-    $sudo systemctl start sspl-ll
+    $sudo systemctl start sspl.service
     sleep 5
     echo "Waiting for SSPL to complete initialization of all the plugins.."
     $script_dir/sspl_start_checker
@@ -365,7 +365,7 @@ echo "Initialization completed. Starting tests"
 if [ "$IS_VIRTUAL" == "true" ]
 then
     echo "state=active" > /var/$PRODUCT_FAMILY/sspl/data/state.txt
-    PID=`/usr/bin/pgrep -d " " -f /opt/seagate/cortx/sspl/low-level/sspl_ll_d`
+    PID=`/usr/bin/pgrep -d " " -f /opt/seagate/cortx/sspl/low-level/sspld`
     kill -s SIGHUP $PID
 fi
 

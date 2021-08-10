@@ -90,7 +90,7 @@ class Service:
             "s3backgroundconsumer.service",
             "hare-hax.service",
             "haproxy.service",
-            "sspl-ll.service",
+            "sspl.service",
             "kibana.service",
             "csm_agent.service",
             "csm_web.service",

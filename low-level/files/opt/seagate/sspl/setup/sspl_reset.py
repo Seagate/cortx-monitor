@@ -42,12 +42,12 @@ class Reset:
     def process(self):
         dbus_service = DbusServiceHandler()
         # Stop SSPL service if state is active
-        service_state = dbus_service.get_state('sspl-ll.service')
+        service_state = dbus_service.get_state('sspl.service')
         if service_state._state == 'active':
             logger.warning ("SSPL service should have been stopped,"
                             f"before {self.name} interface is invoked")
             logger.warning("Stopping SSPL service now...")
-            dbus_service.stop('sspl-ll.service')
+            dbus_service.stop('sspl.service')
 
         # Remove sspl data
         shutil.rmtree(DATA_PATH, ignore_errors=True)
