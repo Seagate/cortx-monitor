@@ -1176,13 +1176,14 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         """Parse out Disk related changes that gets reaflected in the ipmi sel list"""
 
         sensor_id = self.sensor_id_map[self.TYPE_DISK][sensor_num]
-        disk_slot = re.search(r'\d+', sensor_id)
+        # eg. sensor_id => "HDD 0 Status"
+        disk_slot = re.search(r'\d+', sensor_id)  # eg. disk_slot => "0"
         if disk_slot:
             disk_slot = disk_slot.group()
         if 'Status' in sensor_id:
             disk_name = sensor_id.replace('Status', f'(0x{sensor_num})')
         else:
-            disk_name = sensor_id +  f' (0x{sensor_num})'
+            disk_name = sensor_id +  f' (0x{sensor_num})'  # eg. "HDD 0 (0xf1)"
 
         common, specific, specific_dynamic = self._get_sensor_props(sensor_id)
         if common:

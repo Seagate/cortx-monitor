@@ -26,7 +26,8 @@ alert_for_event = {
             "Asserted": Alert(
                     "insertion", "informational",
                     "Disk is inserted in slot '0'. [{}]",
-                    # Disk is inserted in slot '0'. [HDD 0 (0xF1)].
+                    # Disk is inserted in slot '0'. [HDD 0 (0xF1)]. (Intel)
+                    # Disk is inserted in slot '0'. [Drive 0 (0xF1)]. (Dell)
                     "None", "None"),
             "Deasserted": Alert(
                     "missing", "critical",
