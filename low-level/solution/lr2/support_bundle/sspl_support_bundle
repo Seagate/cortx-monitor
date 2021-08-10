@@ -22,7 +22,6 @@ import glob
 import time
 import json
 import errno
-import shlex
 import shutil
 import psutil
 import tarfile
@@ -37,7 +36,8 @@ from framework.base import sspl_constants as sspl_const
 from framework.utils.conf_utils import (
     Conf, SSPL_CONF, SYSTEM_INFORMATION, SSPL_STATE)
 from framework.utils.ipmi_client import IpmiFactory
-from cortx.utils.process import SimpleProcess
+from framework.utils.drive_utils import DriveUtils
+from framework.utils.storage_encl import StorageEncl
 
 
 # Load bundle request status tracker
@@ -222,7 +222,7 @@ class SupportBundle(object):
             self.get_config_data()
             self.get_drives_smart_data()
             if sspl_state == "active" and not include_encl:
-                self.get_enclosure_logs()
+                StorageEncl().get_enclosure_logs(self.enclosure_log, logger)
 
             if os.path.exists(self.enclosure_log) and sspl_state == 'active' \
                     and not include_encl:
@@ -276,145 +276,19 @@ class SupportBundle(object):
         return response.rstrip('\n'), error.rstrip('\n'), return_code
 
     def get_drives_smart_data(self):
-        lsscsi_cmd = " ".join(["lsscsi", "|", "grep", "disk"])
-        lsscsi_cmd = shlex.split(lsscsi_cmd)
-        # lsscsi_response, _, _ = SimpleProcess(lsscsi_cmd).run()
-        lsscsi_response, _, _ = self._run_command(lsscsi_cmd)
+        """Get drives data using smartctl."""
         os.makedirs(self.boot_drvs_dta, exist_ok=True)
-        for res in lsscsi_response.split("\n"):
-            drive_path = res.strip().split(' ')[-1]
-            smartctl_cmd = f"sudo smartctl -a {drive_path} --json"
-            # response, _, _ = SimpleProcess(smartctl_cmd).run()
-            response, _, _ = self._run_command(smartctl_cmd)
-            response = json.loads(response)
+        response = DriveUtils().extract_smart_data()
+        for res in response:
             try:
-                if 'device' in response \
-                        and response['device']['protocol'] == 'ATA':
-                    file_name = drive_path.replace('/', '_')[1:]
+                if 'device' in res \
+                        and res['device']['protocol'] == 'ATA':
+                    file_name = res["drive_path"].replace('/', '_')[1:]
                     with open(f"{self.boot_drvs_dta}/{file_name}.json", "w+") as fp:
-                        json.dump(response, fp,  indent=4)
-
+                        json.dump(res, fp,  indent=4)
             except Exception as e:
                 logger.error(
                     "Error in writing {0} file: {1}".format(response, e))
-
-    def get_enclosure_logs(self):
-        from framework.platforms.realstor.realstor_enclosure \
-            import singleton_realstorencl
-        url = singleton_realstorencl.build_url(
-            singleton_realstorencl.URI_CLIAPI_BASE)
-        COLLECTING_DEBUG_LOG_STARTED = False
-        for encl_trigger_log_retry_index in range(0,
-                                        sspl_const.ENCL_TRIGGER_LOG_MAX_RETRY):
-            post_data_string = '{0}/"{1}"{2}"{3}'.format(
-                singleton_realstorencl.URL_ENCLLOGS_POSTDATA,
-                sspl_const.SUPPORT_REQUESTOR_NAME,
-                sspl_const.SUPPORT_EMAIL_ID,
-                sspl_const.SUPPORT_CONTACT_NUMBER)
-            response = singleton_realstorencl\
-                .ws_request(url,
-                            singleton_realstorencl.ws.HTTP_POST,
-                            post_data=post_data_string)
-
-            if not response:
-                logger.error("{0} status unavailable as ws request {1}"
-                             " failed".format(singleton_realstorencl.LDR_R1_ENCL, url))
-                break
-
-            elif response.status_code != singleton_realstorencl.ws.HTTP_OK:
-                logger.error("{0} http request {1} to get {3} failed "
-                             "with err {2} enclosure trigger log retry "
-                             "index {4}".format(singleton_realstorencl.LDR_R1_ENCL,
-                                                url,
-                                                response.status_code,
-                                                "Debug log",
-                                                encl_trigger_log_retry_index))
-
-            else:
-                response_data = response.json()
-                if response_data["status"][0]["response-type"] == "Success" \
-                        and response_data["status"][0]["response"] == "Collecting debug logs.":
-                    logger.info("Collecting enclosure debug logs in progress")
-                    COLLECTING_DEBUG_LOG_STARTED = True
-                    break
-                else:
-                    logger.error("{0}:: http request {1} to get {3} failed with "
-                                 "response-type {2}".format(
-                                     singleton_realstorencl.LDR_R1_ENCL,
-                                     url,
-                                     response_data["status"][0]["response-type"],
-                                     "Debug log"))
-
-        if COLLECTING_DEBUG_LOG_STARTED is True:
-            self.enclosure_wwn = self.get_enclosure_wwn(singleton_realstorencl)
-            url = singleton_realstorencl.build_url(
-                singleton_realstorencl.URI_CLIAPI_DOWNLOADDEBUGDATA)
-            for encl_download_retry_index in range(0,
-                                            sspl_const.ENCL_DOWNLOAD_LOG_MAX_RETRY):
-                response = singleton_realstorencl.ws_request(
-                    url, singleton_realstorencl.ws.HTTP_GET)
-                if not response:
-                    logger.error("{0}:: {2} status unavailable as ws request {1}"
-                                 " failed".format(
-                                     singleton_realstorencl.LDR_R1_ENCL,
-                                     url,
-                                     "Debug log"))
-                elif response.status_code != singleton_realstorencl.ws.HTTP_OK:
-                    logger.error("{0}:: http request {1} to get {3} failed "
-                                 "with error {2}".format(
-                                     singleton_realstorencl.LDR_R1_ENCL,
-                                     url,
-                                     response.status_code,
-                                     "Debug log"))
-                else:
-                    if response.headers.get('Content-Type') == 'application/json; charset="utf-8"':
-                        response_data = response.json()
-                        if response_data["status"][0]["response-type"] == "Error":
-                            time.sleep(
-                                sspl_const.ENCL_DOWNLOAD_LOG_WAIT_BEFORE_RETRY)
-                        else:
-                            logger.error("ERR: Unexpected response-type {0} URL {1}".format(
-                                response_data["status"][0]["response-type"], url))
-                            break
-                    elif response.headers.get('Content-Type') == 'IntentionallyUnknownMimeType; charset="utf-8"':
-                        if response.headers.get('content-disposition') == 'attachment; filename="store.zip"':
-                            with open(self.enclosure_log, 'wb') as enclosure_resp:
-                                enclosure_resp.write(response.content)
-                                enclosure_resp.close()
-                                logger.info(
-                                    "Enclosure debug logs saved successfully")
-                        else:
-                            logger.error(
-                                "ERR: No attachment found::{0}".format(url))
-                        break
-                    else:
-                        logger.error(
-                            "ERR: Unknown Content-Type::{0}".format(url))
-                        break
-                if encl_download_retry_index == (sspl_const.ENCL_DOWNLOAD_LOG_MAX_RETRY - 1):
-                    logger.error(
-                        "ERR: Enclosure debug logs retry count exceeded::{0}".format(url))
-
-    def get_enclosure_wwn(self, singleton_realstorencl):
-        url = singleton_realstorencl.build_url(
-            singleton_realstorencl.URI_CLIAPI_SHOWENCLOSURE)
-        response = singleton_realstorencl.ws_request(
-            url, singleton_realstorencl.ws.HTTP_GET)
-
-        if not response:
-            logger.error("{0}:: {2} status unavailable as ws request {1}"
-                         " failed".format(singleton_realstorencl.EES_ENCL, url, fru))
-            return
-
-        if response.status_code != singleton_realstorencl.ws.HTTP_OK:
-            if url.find(singleton_realstorencl.ws.LOOPBACK) == -1:
-                logger.error("{0}:: http request {1} to get {3} failed with"
-                             " err {2}".format(singleton_realstorencl.EES_ENCL, url, response.status_code, fru))
-            return
-
-        response_data = json.loads(response.text)
-        enclosure_wwn = response_data.get("enclosures")[0]["enclosure-wwn"]
-        return enclosure_wwn
 
     @staticmethod
     def _update_bundle_request_info(bundle_id: str,
