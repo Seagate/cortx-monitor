@@ -26,9 +26,8 @@ from framework.platforms.realstor.realstor_enclosure \
 
 class StorageEncl:
     """Base class for storage enclosure related utility functions."""
-
     def get_enclosure_logs(self, file_name, logger):
-        """Accumulate enclosure logs & write to supplied file"""
+        """Accumulate enclosure logs & write to supplied file."""
         url = singleton_realstorencl.build_url(
             singleton_realstorencl.URI_CLIAPI_BASE)
         COLLECTING_DEBUG_LOG_STARTED = False
@@ -123,10 +122,12 @@ class StorageEncl:
                             "ERR: Unknown Content-Type::{0}".format(url))
                         break
                 if encl_download_retry_index == (sspl_const.ENCL_DOWNLOAD_LOG_MAX_RETRY - 1):
-                    logger.error(
-                        "ERR: Enclosure debug logs retry count exceeded::{0}".format(url))
+                    logger.error("ERR: Enclosure debug logs retry count "
+                                 "exceeded::{0}".format(url))
 
-    def get_enclosure_wwn(self, singleton_realstorencl, logger):
+    @staticmethod
+    def get_enclosure_wwn(singleton_realstorencl, logger):
+        """Get enclosure wwn."""
         url = singleton_realstorencl.build_url(
             singleton_realstorencl.URI_CLIAPI_SHOWENCLOSURE)
         response = singleton_realstorencl.ws_request(

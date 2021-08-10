@@ -25,7 +25,6 @@ from cortx.utils.process import SimpleProcess
 
 class DriveUtils:
     """Base class for drive related utility functions."""
-
     def extract_smart_data(self):
         """Extract drive data using smartctl."""
         response = []
