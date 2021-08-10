@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: smarter-device-manager-xavier
+data:
+  conf.yaml: |
+        - devicematch: sda
+          nummaxdevices: 1
+        - devicematch: md0
+          nummaxdevices: 1
