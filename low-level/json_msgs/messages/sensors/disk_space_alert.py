@@ -39,7 +39,7 @@ class DiskSpaceAlertMsg(BaseSensorMsg):
     MESSAGE_VERSION  = "1.0.0"
 
     SEVERITY = "warning"
-    RESOURCE_TYPE = "node:os:disk_space"
+    RESOURCE_TYPE = "server:hw:disk_space"
     RESOURCE_ID = "0"
 
     def __init__(self, host_id,

@@ -46,7 +46,7 @@ class CPUFaultSensor(SensorThread, InternalMsgQ):
 
     SENSOR_NAME = "CPUFaultSensor"
     PRIORITY = 1
-    RESOURCE_TYPE = "node:os:cpu:core"
+    RESOURCE_TYPE = "server:hw:cpu"
 
     # Section in the configuration store
     SYSTEM_INFORMATION_KEY = "SYSTEM_INFORMATION"

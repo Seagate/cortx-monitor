@@ -48,7 +48,7 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
 
     SENSOR_NAME       = "RAIDIntegritySensor"
     PRIORITY          = 1
-    RESOURCE_TYPE     = "node:os:raid_integrity"
+    RESOURCE_TYPE     = "server:sw:raid_integrity"
 
     # Section and keys in configuration file
     RAIDIntegritySensor = SENSOR_NAME.upper()
@@ -379,7 +379,7 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
             {"sensor_request_type" : {
                 "node_data": {
                     "status": "update",
-                    "sensor_type" : "node:os:raid_integrity",
+                    "sensor_type" : self.RESOURCE_TYPE,
                     "host_id": host_name,
                     "alert_type": alert_type,
                     "alert_id": self._alert_id,

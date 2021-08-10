@@ -24,7 +24,7 @@ def init(args):
 def test_node_temperature_sensor(agrs):
     check_sspl_ll_is_running()
     instance_id = "*"
-    resource_type = "node:sensor:temperature"
+    resource_type = "server:hw:platform_sensor:temperature"
     send_node_controller_message_request(UUID, "NDHW:%s" % resource_type, instance_id)
     ingressMsg = get_fru_response(resource_type, instance_id)
 
@@ -68,7 +68,51 @@ def test_node_temperature_sensor(agrs):
 def test_node_voltage_sensor(agrs):
     check_sspl_ll_is_running()
     instance_id = "*"
-    resource_type = "node:sensor:voltage"
+    resource_type = "server:hw:platform_sensor:voltage"
+    send_node_controller_message_request(UUID, "NDHW:%s" % resource_type, instance_id)
+    ingressMsg = get_fru_response(resource_type, instance_id)
+
+    assert(ingressMsg.get("sspl_ll_msg_header").get("uuid") == UUID)
+    sensor_msg = ingressMsg.get("actuator_response_type")
+    assert(sensor_msg is not None)
+    assert(sensor_msg.get("alert_type") is not None)
+    assert(sensor_msg.get("severity") is not None)
+    assert(sensor_msg.get("host_id") is not None)
+    assert(sensor_msg.get("info") is not None)
+    assert(sensor_msg.get("instance_id") == instance_id)
+
+    volt_module_info = sensor_msg.get("info")
+    assert(volt_module_info.get("site_id") is not None)
+    assert(volt_module_info.get("node_id") is not None)
+    assert(volt_module_info.get("rack_id") is not None)
+    assert(volt_module_info.get("resource_type") is not None)
+    assert(volt_module_info.get("event_time") is not None)
+    assert(volt_module_info.get("resource_id") is not None)
+
+    fru_specific_infos = sensor_msg.get("specific_info")
+    assert(fru_specific_infos is not None)
+
+    for fru_specific_info in fru_specific_infos:
+        assert(fru_specific_info is not None)
+        if fru_specific_info.get("ERROR"):
+            # Skip any validation on specific info if ERROR seen on FRU
+            continue
+        assert(fru_specific_info.get("resource_id") is not None)
+        resource_id = fru_specific_info.get("resource_id")
+        if fru_specific_info.get(resource_id):
+            assert(fru_specific_info.get(resource_id).get("ERROR") is not None)
+            # Skip any validation on specific info if ERROR seen on sensor
+            continue
+        assert(fru_specific_info.get("sensor_number") is not None)
+        assert(fru_specific_info.get("sensor_status") is not None)
+        assert(fru_specific_info.get("entity_id_instance") is not None)
+        assert(fru_specific_info.get("sensor_reading") is not None)
+
+
+def test_node_current_sensor(agrs):
+    check_sspl_ll_is_running()
+    instance_id = "*"
+    resource_type = "server:hw:platform_sensor:current"
     send_node_controller_message_request(UUID, "NDHW:%s" % resource_type, instance_id)
     ingressMsg = get_fru_response(resource_type, instance_id)
 
@@ -111,6 +155,7 @@ def test_node_voltage_sensor(agrs):
 
 test_list = [
     test_node_temperature_sensor,
-    test_node_voltage_sensor
+    test_node_voltage_sensor,
+    test_node_current_sensor
     ]
 

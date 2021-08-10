@@ -25,4 +25,4 @@ class TestServiceMsgHandler(unittest.TestCase):
         assert resp_msg['specific_info'][0]['service_name'] == 'kafka'
         assert resp_msg['specific_info'][0]['status'] == 'failed'
         assert resp_msg['alert_type'] == 'UPDATE'
-        assert resp_msg['info']['resource_type'] == 'node:sw:os:service'
+        assert resp_msg['info']['resource_type'] == 'server:sw:external_sw_services'

@@ -22,7 +22,7 @@ from messaging.ingress_processor_tests import IngressProcessorTests
 from messaging.egress_processor_tests import EgressProcessorTests
 from common import check_sspl_ll_is_running, get_current_node_id
 
-RESOURCE_TYPE = "node:sw:os:service"
+RESOURCE_TYPE = "server:sw:external_sw_services"
 
 def init(args):
     pass

@@ -71,7 +71,8 @@ class SASPortSensor(SensorThread, InternalMsgQ):
 
     SENSOR_NAME = "SASPortSensor"
     PRIORITY = 1
-    RESOURCE_TYPE = "node:interface:sas"
+    PORT_RESOURCE_TYPE = "server:hw:sas_port"
+    HBA_RESOURCE_TYPE = "server:hw:sas_hba"
 
     # section in the configuration store
     SYSTEM_INFORMATION = "SYSTEM_INFORMATION"
@@ -450,7 +451,7 @@ class SASPortSensor(SensorThread, InternalMsgQ):
                 description = "SAS connection re-established in SAS HBA %s." %self.RESOURCE_ID
 
             info = {
-                    "resource_type": self.RESOURCE_TYPE, # node:interface:sas
+                    "resource_type": self.HBA_RESOURCE_TYPE, # server:hw:sas_hba
                     "resource_id": self.RESOURCE_ID,  # eg. SASHBA-1
                     "event_time": epoch_time,
                     "description": description
@@ -465,7 +466,7 @@ class SASPortSensor(SensorThread, InternalMsgQ):
                 description = "Connection established on SAS port."
 
             info = {
-                    "resource_type": self.RESOURCE_TYPE + ':port', # node:interface:sas:port
+                    "resource_type": self.PORT_RESOURCE_TYPE, # server:hw:sas_port
                     "resource_id": f'sas_port-{self.HOST_ID}:{port}',
                     # eg. sas_port-1:0 represents 0th port of SASHBA-1
                     "event_time": epoch_time,

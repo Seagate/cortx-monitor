@@ -1,0 +1,21 @@
+Sensor ID              : PS1 Curr Out (0x58)
+ Entity ID             : 10.1 (Power Supply)
+ Sensor Type (Threshold)  : Current (0x03)
+ Sensor Reading        : 15 (+/- 0) percent
+ Status                : ok
+ Nominal Reading       : 50.000
+ Normal Minimum        : 0.000
+ Normal Maximum        : 100.000
+ Upper critical        : 125.000
+ Upper non-critical    : 100.000
+ Positive Hysteresis   : Unspecified
+ Negative Hysteresis   : Unspecified
+ Minimum sensor range  : Unspecified
+ Maximum sensor range  : Unspecified
+ Event Message Control : Per-threshold
+ Readable Thresholds   : unc ucr
+ Settable Thresholds   : unc ucr
+ Threshold Read Mask   : unc ucr
+ Assertion Events      :
+ Assertions Enabled    : unc+ ucr+
+ Deassertions Enabled  : unc+ ucr+

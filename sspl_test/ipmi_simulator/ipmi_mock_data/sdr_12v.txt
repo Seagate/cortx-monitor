@@ -1,0 +1,25 @@
+Sensor ID              : 12V (0x30)
+ Entity ID             : 7.32 (System Board)
+ Sensor Type (Threshold)  : Voltage (0x02)
+ Sensor Reading        : 12.366 (+/- 0) Volts
+ Status                : ok
+ Nominal Reading       : 12.000
+ Normal Minimum        : 10.780
+ Normal Maximum        : 12.915
+ Upper non-recoverable : 13.403
+ Upper critical        : 13.281
+ Upper non-critical    : 12.915
+ Lower non-recoverable : 10.170
+ Lower critical        : 10.536
+ Lower non-critical    : 10.780
+ Positive Hysteresis   : 0.061
+ Negative Hysteresis   : 0.061
+ Minimum sensor range  : Unspecified
+ Maximum sensor range  : Unspecified
+ Event Message Control : Per-threshold
+ Readable Thresholds   : lnr lcr lnc unc ucr unr
+ Settable Thresholds   : lnr lcr lnc unc ucr unr
+ Threshold Read Mask   : lnr lcr lnc unc ucr unr
+ Assertion Events      :
+ Assertions Enabled    : lcr- lnr- ucr+ unr+
+ Deassertions Enabled  : lcr- lnr- ucr+ unr+

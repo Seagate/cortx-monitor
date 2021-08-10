@@ -23,7 +23,7 @@ from common import check_sspl_ll_is_running
 from cortx.utils.service import DbusServiceHandler
 from alerts.os.dummy_service_files import simulate_service_alerts
 
-RESOURCE_TYPE = "node:sw:os:service"
+RESOURCE_TYPE = "server:sw:external_sw_services"
 WAIT_TIME = 50   # 30s wait_time (set for testing) + 20s buffer
 service_name = "dummy_service.service"
 
