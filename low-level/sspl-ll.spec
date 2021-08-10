@@ -74,6 +74,7 @@ cp -p $SSPL_SETUP/generate_sspl_bundle/sspl_bundle_generate $SSPL_BASE/low-level
 cp -p $SSPL_SETUP/manifest_support_bundle $SSPL_BASE/low-level/
 cp -p $SSPL_SETUP/sspl_setup.py $SSPL_BASE/low-level/sspl_setup
 cp -p $SSPL_SETUP/consuldump.py $SSPL_BASE/low-level/
+cp -p $SSPL_BASE/low-level/solution/lr2/support_bundle/sspl_support_bundle $SSPL_BASE/low-level/
 
 %pre
 # take backup of cache folder if exists
@@ -97,6 +98,8 @@ SSPL_DIR=/opt/seagate/%{product_family}/sspl
     ln -sf $SSPL_DIR/low-level/manifest_support_bundle /usr/bin/manifest_support_bundle
     ln -sf $SSPL_DIR/low-level/framework $SSPL_DIR/low-level/solution/lr2/
     ln -sf $SSPL_DIR/low-level/solution $SSPL_DIR/extension/solution
+    ln -sf $SSPL_DIR/low-level/sspl_support_bundle $SSPL_DIR/bin/sspl_support_bundle
+    ln -sf $SSPL_DIR/low-level/sspl_support_bundle /usr/bin/sspl_support_bundle
 }
 
 # restore of data & iem folder
