@@ -144,9 +144,12 @@ alert_for_event = {
                 "None", "None"),
             "Deasserted": Alert(
                 "fault", "critical",
-                "'{} Sensor', is Fully redundant . [{}]",
-                "Fan efficiency will be impacted",
-                DEFAULT_RECOMMENDATION)
+                "'{} Sensor', lost redundancy . [{}]",
+                ("Other System Fans may adjust speed to maintain "
+                 "optimal server temperature."),
+                ("Rectify Fan issue soon. If not sure, contact Seagate Support,"
+                 "as persistent problem may impact server availability.")
+            )
         }),
         **dict.fromkeys(["Lower Non-Recoverable", "Lower Non-Recoverable ()"], {
             "Asserted": Alert(
