@@ -302,7 +302,7 @@ class DiskMonitor(SensorThread, InternalMsgQ):
             self._read_my_msgQ_noWait()
             if self.is_running() is True:
                 self._log_debug(f"Ungracefully breaking out of dbus loop with error: {ae}")
-                # Let the top level sspl_ll_d know that we have a fatal error
+                # Let the top level sspl_d know that we have a fatal error
                 #  and shutdown so that systemd can restart it
                 raise Exception(ae)
 

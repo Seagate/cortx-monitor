@@ -39,7 +39,7 @@ def given_that_all_drives_are_set_to_condition_and_sspl_is_started(step, conditi
 
     # Support for python-psutil < 2.1.3
     for proc in psutil.process_iter():
-        if proc.name == "sspl_ll_d" and \
+        if proc.name == "sspl_d" and \
            proc.status in (psutil.STATUS_RUNNING, psutil.STATUS_SLEEPING):
                found = True
 
@@ -47,7 +47,7 @@ def given_that_all_drives_are_set_to_condition_and_sspl_is_started(step, conditi
     if found == False:
         for proc in psutil.process_iter():
             pinfo = proc.as_dict(attrs=['name', 'status'])
-            if pinfo['name'] == "sspl_ll_d" and \
+            if pinfo['name'] == "sspl_d" and \
                 pinfo['status'] in (psutil.STATUS_RUNNING, psutil.STATUS_SLEEPING):
                     found = True
 
