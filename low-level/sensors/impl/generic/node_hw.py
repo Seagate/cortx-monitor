@@ -959,19 +959,21 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         original_event = event
         original_status = status
 
-        if status.lower() == "deasserted" and event.lower() == "fully redundant":
-            alert_type = "fault"
-        elif status.lower() == "asserted" and event.lower() == "fully redundant":
-            alert_type = "fault_resolved"
-        elif "going high" in event.lower() or "going low" in event.lower():
-            if status.lower() == "deasserted":
-                alert_type = "fault_resolved"
-                event = "Deasserted - " + event
-            elif status.lower() == "asserted":
-                alert_type = "fault"
-                event = "Asserted - " + event
-
         sensor_name = self.sensor_id_map[self.TYPE_FAN][sensor_id]
+        fan_state=None
+        for specific in fan_specific_list:
+            if specific.lower() in event.lower():
+                fan_state = specific
+                break
+        try:
+            alert = alert_for_event[self.TYPE_FAN][fan_state][status]
+        except KeyError:
+            logger.error(f"{self.TYPE_FAN} : " +
+                         f"Unknown event: {fan_state}, status: {status}")
+            return
+        except Exception as e:
+            logger.exception(e)
+            return
 
         fan_common_data, fan_specific_data, fan_specific_data_dynamic = self._get_sensor_props(sensor_name)
 
@@ -980,40 +982,33 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
                 del fan_specific_data[key]
 
         fan_info = fan_specific_data
-        fan_info.update({"fru_id" : device_id, "event" : event})
+        fan_info.update({"fru_id" : device_id, "event" : status + " - " + event})
         resource_type = NodeDataMsgHandler.IPMI_RESOURCE_TYPE_FAN
         fru = self.ipmi_client.is_fru(self.fru_map[self.TYPE_FAN])
-        severity_reader = SeverityReader()
-        if alert_type:
-            severity = severity_reader.map_severity(alert_type)
-        else:
-            # Else section will handle some unknown as well as known events like
-            # "State Asserted", "State Deasserted" or "Sensor Reading" and also it is
-            # keeping default severity and alert_type for those events.
-            alert_type = "miscellaneous"
-            severity = "informational"
 
         fru_info = {    "resource_type": resource_type,
                         "fru": fru,
                         "resource_id": sensor_name,
                         "event_time": self._get_epoch_time_from_date_and_time(date, _time),
-                        "description": event
+                        "description": alert.description.format(sensor_name, device_id),
+                        "impact": alert.impact,
+                        "recommendation": alert.recommendation
                     }
 
         if is_last:
             fan_info.update(fan_specific_data_dynamic)
 
-        if alert_type == "fault":
+        if alert.type == "fault":
             self.faulty_resources[sensor_name] = {
                 'status': original_status,
                 'event': original_event,
                 'device_id': device_id,
                 'fru_type': self.TYPE_FAN
             }
-        elif alert_type in ['fault_resolved', 'miscellaneous'] and sensor_name in self.faulty_resources:
+        elif alert.type in ['fault_resolved'] and sensor_name in self.faulty_resources:
             del self.faulty_resources[sensor_name]
 
-        self._send_json_msg(resource_type, alert_type, severity, fru_info, fan_info)
+        self._send_json_msg(resource_type, alert.type, alert.severity, fru_info, fan_info)
         store.put(self.faulty_resources, self.faulty_resources_path)
 
     def _parse_psu_supply_info(self, index, date, _time, sensor, sensor_num, event, status, is_last):

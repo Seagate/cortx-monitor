@@ -135,5 +135,117 @@ alert_for_event = {
                 "Power Supply regained the healthy state.", "None"
             )
         })
+    },
+    "Fan": {
+        **dict.fromkeys(["Fully Redundant", "Fully Redundant ()"], {
+            "Asserted": Alert(
+                "fault_resolved", "informational",
+                "'{} Sensor' has recovered from a failure. [{}]",
+                "None", "None"),
+            "Deasserted": Alert(
+                "fault", "critical",
+                "'{} Sensor', lost redundancy . [{}]",
+                ("Other System Fans may adjust speed to maintain "
+                 "optimal server temperature."),
+                ("Rectify Fan issue soon. If not sure, contact Seagate Support,"
+                 "as persistent problem may impact server availability.")
+            )
+        }),
+        **dict.fromkeys(["Lower Non-Recoverable", "Lower Non-Recoverable ()"], {
+            "Asserted": Alert(
+                "fault", "critical",
+                ("Lower Non-Recoverable threshold breached for '{}'. [{}]."
+                "Its outside expected limits"),
+                ("Other System Fans may adjust speed to maintain "
+                 "optimal server temperature."),
+                ("System should recover by itself overtime."
+                 "However, If issue persists for long, contact Seagate support")
+            ),
+            "Deasserted": Alert(
+                "fault_resolved", "informational",
+                "'{} Sensor has recovered from the failure'. [{}]",
+                "None", "None"
+            )
+        }),
+        **dict.fromkeys(["Lower Critical", "Lower Critical ()"], {
+            "Asserted": Alert(
+                "fault", "critical",
+                ("Lower Critical threshold breached for '{}'. [{}]."
+                "Its outside expected limits"),
+                ("Other System Fans may adjust speed to maintain "
+                 "optimal server temperature."),
+                ("System should recover by itself overtime."
+                 "However, If issue persists for long, contact Seagate support")
+            ),
+            "Deasserted": Alert(
+                "fault_resolved", "informational",
+                "'{} Sensor' recovered from the failure. [{}]",
+                "None", "None"
+            )
+        }),
+        **dict.fromkeys(["Lower Non-Critical", "Lower Non-Critical ()"], {
+            "Asserted": Alert(
+                "fault", "critical",
+                ("Lower Non-Critical threshold breached for '{}'. [{}]."
+                "Its outside expected limits"),
+                ("Other System Fans may adjust speed to maintain "
+                 "optimal server temperature."),
+                ("System should recover by itself overtime."
+                 "However, If issue persists for long, contact Seagate support")
+            ),
+            "Deasserted": Alert(
+                "fault_resolved", "informational",
+                "'{} Sensor' recovered from the failure. [{}]",
+                "None", "None"
+            )
+        }),
+        **dict.fromkeys(["Upper Non-Critical", "Upper Non-Critical ()"], {
+            "Asserted": Alert(
+                "fault", "critical",
+                ("Upper Non-Critical threshold breached for '{}'. [{}]."
+                "Its outside expected limits"),
+                ("Other System Fans may adjust speed to maintain "
+                 "optimal server temperature."),
+                ("System should recover by itself overtime."
+                 "However, If issue persists for long, contact Seagate support")
+            ),
+            "Deasserted": Alert(
+                "fault_resolved", "informational",
+                "'{} Sensor' recovered from the failure. [{}]",
+                "None", "None"
+            )
+        }),
+        **dict.fromkeys(["Upper Critical", "Upper Critical ()"], {
+            "Asserted": Alert(
+                "fault", "critical",
+                ("Upper Critical threshold breached for '{}'. [{}]"
+                "Its outside expected limits"),
+                ("Other System Fans may adjust speed to maintain "
+                 "optimal server temperature."),
+                ("System should recover by itself overtime."
+                 "However, If issue persists for long, contact Seagate support")
+            ),
+            "Deasserted": Alert(
+                "fault_resolved", "informational",
+                "'{} Sensor' recovered from the failure. [{}]",
+                "None", "None"
+            )
+        }),
+        **dict.fromkeys(["Upper Non-Recoverable", "Upper Non-Recoverable ()"], {
+            "Asserted": Alert(
+                "fault", "critical",
+                ("Upper Non-Recoverable threshold breached for '{}'. [{}]"
+                 "Its outside expected limits"),
+                ("Other System Fans may adjust speed to maintain "
+                 "optimal server temperature."),
+                ("System should recover by itself overtime."
+                 "However, If issue persists for long, contact Seagate support")
+            ),
+            "Deasserted": Alert(
+                "fault_resolved", "informational",
+                "'{} Sensor' recovered from the failure. [{}]",
+                "None", "None"
+            )
+        })
     }
 }
