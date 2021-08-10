@@ -1,0 +1,3 @@
+bundle: 
+    create:
+      url: "sh /usr/bin/sspl_support_bundle"
