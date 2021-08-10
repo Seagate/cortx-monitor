@@ -48,6 +48,7 @@ from framework.utils.os_utils import OSUtils
 from message_handlers.node_data_msg_handler import NodeDataMsgHandler
 from sensors.INode_hw import INodeHWsensor
 from framework.utils.ipmi_client import IpmiFactory
+from sensors.impl.generic.node_hw_alerts_info import alert_for_event
 
 # bash exit codes
 BASH_ILLEGAL_CMD = 127
@@ -1017,45 +1018,37 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
 
     def _parse_psu_supply_info(self, index, date, _time, sensor, sensor_num, event, status, is_last):
         """Parse out PSU related changes that gets reflected in the ipmi sel list"""
-
-        alerts = {
-            ("Config Error", "Asserted"): ("fault","error"),
-            ("Config Error", "Deasserted"): ("fault_resolved","informational"),
-            ("Failure detected ()", "Asserted"): ("fault","error"),
-            ("Failure detected ()", "Deasserted"): ("fault_resolved","informational"),
-            ("Failure detected", "Asserted"): ("fault","error"),
-            ("Failure detected", "Deasserted"): ("fault_resolved","informational"),
-            ("Power Supply AC lost", "Asserted"): ("fault","critical"),
-            ("Power Supply AC lost", "Deasserted"): ("fault_resolved","informational"),
-            ("Power Supply Inactive", "Asserted"): ("fault","critical"),
-            ("Power Supply Inactive", "Deasserted"): ("fault_resolved","informational"),
-            ("Predictive failure", "Asserted"): ("fault","warning"),
-            ("Predictive failure", "Deasserted"): ("fault_resolved","informational"),
-            ("Predictive failure ()", "Asserted"): ("fault","warning"),
-            ("Predictive failure ()", "Deasserted"): ("fault_resolved","informational"),
-            ("Presence detected", "Asserted"): ("insertion","informational"),
-            ("Presence detected", "Deasserted"): ("missing","critical"),
-            ("Presence detected ()", "Asserted"): ("insertion","informational"),
-            ("Presence detected ()", "Deasserted"): ("missing","critical"),
-        }
-
         sensor_id = self.sensor_id_map[self.TYPE_PSU_SUPPLY][sensor_num]
+        # eg. sensor_id "PS1 Status", "Pwr Supply 1"
+        port_num = re.search(r'\d+', sensor_id)
+        # TODO: Handle the case => port_num can't be extracted on Dell servers.
+        #       since Sensor_id is just `Status` without any numerical id,
+        #       unlike 'PS1 Status'/'Power Supply 1' present on other servers.
+        if port_num:
+            port_num = port_num.group()  # eg. "1"
+        if 'Status' in sensor_id:
+            port_name = sensor_id.replace('Status', f'(0x{sensor_num})')
+        else:
+            port_name = sensor_id + f'({sensor_num})' # eg. "PS1 (0xc2)"
         resource_type = NodeDataMsgHandler.IPMI_RESOURCE_TYPE_PSU
-        fru = self.ipmi_client.is_fru(self.fru_map[self.TYPE_PSU_SUPPLY])
+        try:
+            alert = alert_for_event[self.TYPE_PSU_SUPPLY][event][status]
+        except KeyError:
+            logger.error(f"{self.TYPE_PSU_SUPPLY} : " +
+                         f"Unknown event: {event}, status: {status}")
+            return
+        except Exception as e:
+            logger.exception(e)
+            return
         info = {
             "resource_type": resource_type,
-            "fru": fru,
+            "fru": self.ipmi_client.is_fru(self.fru_map[self.TYPE_PSU_SUPPLY]),
             "resource_id": sensor,
             "event_time": self._get_epoch_time_from_date_and_time(date, _time),
-            "description": event
+            "description": alert.description.format(port_num, port_name),
+            "impact": alert.impact,
+            "recommendation": alert.recommendation
         }
-
-        try:
-            (alert_type, severity) = alerts[(event, status)]
-        except KeyError:
-            logger.error(f"Unknown event: {event}, status: {status}")
-            return
-
         dynamic, static = self._get_sensor_sdr_props(sensor_id)
         specific_info = {}
         specific_info["fru_id"] = sensor
@@ -1074,18 +1067,19 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         if is_last:
             specific_info.update(dynamic)
 
-        if alert_type in ["fault", "missing"]:
+        if alert.type in ["fault", "missing"]:
             self.faulty_resources[sensor_id] = {
                 'status': status,
                 'event': event,
                 'device_id': sensor,
                 'fru_type': self.TYPE_PSU_SUPPLY
             }
-        elif alert_type in ['fault_resolved', 'miscellaneous', 'insertion'] and \
+        elif alert.type in ['fault_resolved', 'insertion'] and \
             sensor_id in self.faulty_resources:
             del self.faulty_resources[sensor_id]
 
-        self._send_json_msg(resource_type, alert_type, severity, info, specific_info)
+        self._send_json_msg(resource_type, alert.type, alert.severity,
+                            info, specific_info)
         store.put(self.faulty_resources, self.faulty_resources_path)
 
     def _parse_psu_unit_info(self, index, date, _time, sensor, sensor_num, event, status, is_last):
@@ -1175,37 +1169,40 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         """Parse out Disk related changes that gets reaflected in the ipmi sel list"""
 
         sensor_id = self.sensor_id_map[self.TYPE_DISK][sensor_num]
+        # eg. sensor_id => "HDD 0 Status"
+        disk_slot = re.search(r'\d+', sensor_id)  # eg. disk_slot => "0"
+        if disk_slot:
+            disk_slot = disk_slot.group()
+        if 'Status' in sensor_id:
+            disk_name = sensor_id.replace('Status', f'(0x{sensor_num})')
+        else:
+            disk_name = sensor_id +  f' (0x{sensor_num})'  # eg. "HDD 0 (0xf1)"
 
         common, specific, specific_dynamic = self._get_sensor_props(sensor_id)
         if common:
-            disk_sensors_list = self._get_sensor_list_by_entity(common['Entity ID'])
-            disk_sensors_list.remove(sensor_id)
-
-            description = f"{event} - {status}"
-
             if not specific:
                 specific = {"States Asserted": "N/A", "Sensor Type (Discrete)": "N/A"}
             specific_info = specific
-            alert_severity_dict = {
-                ("Drive Present", "Asserted"): ("insertion", "informational"),
-                ("Drive Present", "Deasserted"): ("missing", "critical"),
-                }
             resource_type = NodeDataMsgHandler.IPMI_RESOURCE_TYPE_DISK
-            fru = self.ipmi_client.is_fru(self.fru_map[self.TYPE_DISK])
+            try:
+                alert = alert_for_event[self.TYPE_DISK][event][status]
+            except KeyError:
+                logger.error(f"{self.TYPE_DISK} : " +
+                             f"Unknown event: {event}, status: {status}")
+                return
+            except Exception as e:
+                logger.exception(e)
+                return
             info = {
                 "resource_type": resource_type,
-                "fru": fru,
-                "resource_id": sensor,
+                "fru": self.ipmi_client.is_fru(self.fru_map[self.TYPE_DISK]),
+                "resource_id": disk_name,
                 "event_time": self._get_epoch_time_from_date_and_time(date, _time),
-                "description": description
+                "description": alert.description.format(disk_slot, disk_name),
+                "impact": alert.impact,
+                "recommendation": alert.recommendation
             }
-            if (event, status) in alert_severity_dict:
-                alert_type = alert_severity_dict[(event, status)][0]
-                severity   = alert_severity_dict[(event, status)][1]
-            else:
-                alert_type = "fault"
-                severity   = "informational"
-            specific_info["fru_id"] = sensor
+            specific_info["fru_id"] = disk_name
 
             if is_last:
                 specific_info.update(specific_dynamic)
@@ -1218,18 +1215,19 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
                 except KeyError:
                     pass
 
-            if alert_type in ["fault", "missing"]:
+            if alert.type in ["fault", "missing"]:
                 self.faulty_resources[sensor_id] = {
                     'status': status,
                     'event': event,
                     'device_id': sensor,
                     'fru_type': self.TYPE_DISK
                 }
-            elif alert_type in ['fault_resolved', 'miscellaneous', 'insertion'] and \
+            elif alert.type in ['fault_resolved', 'insertion'] and \
                 sensor_id in self.faulty_resources:
                 del self.faulty_resources[sensor_id]
 
-            self._send_json_msg(resource_type, alert_type, severity, info, specific_info)
+            self._send_json_msg(resource_type, alert.type, alert.severity,
+                                info, specific_info)
             store.put(self.faulty_resources, self.faulty_resources_path)
 
     def _parse_temperature_info(self, index, date, _time, sensor, sensor_num, event, status, is_last):
