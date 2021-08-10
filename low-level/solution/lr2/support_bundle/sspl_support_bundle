@@ -26,15 +26,13 @@ import shlex
 import shutil
 import psutil
 import tarfile
+import logging
 import argparse
 import subprocess
-
-import logging
 
 from datetime import datetime
 
 from cortx.utils.conf_store import Conf
-from cortx.utils import const
 from cortx.utils.kv_store import KvStoreFactory
 from framework.base import sspl_constants as sspl_const
 from framework.utils.conf_utils import (
@@ -42,21 +40,15 @@ from framework.utils.conf_utils import (
 from framework.utils.ipmi_client import IpmiFactory
 from cortx.utils.process import SimpleProcess
 
-# Load cortx common config
-store_type = "json"
-config_url = "%s://%s" % (store_type, const.CORTX_CONF_FILE)
-common_config = KvStoreFactory.get_instance(config_url)
-common_config.load()
 
-# Load bundle request request status tracker
+# Load bundle request status tracker
+store_type = "json"
 try:
-    os.makedirs(common_config.get(
-        ["discovery>resource_map>location"])[0], exist_ok=True)
+    bundle_tracker = "/var/cortx/resources/"
+    os.makedirs(bundle_tracker, exist_ok=True)
 except PermissionError as err:
     print("Failed to create default store directory. %s" % err)
-requests_url = "%s://%s" % (store_type, os.path.join(
-    common_config.get(["discovery>resource_map>location"])[0],
-    "requests.json"))
+requests_url = "%s://%s" % (store_type, os.path.join(bundle_tracker,"bundle_requests.json"))
 req_register = KvStoreFactory.get_instance(requests_url)
 req_register.load()
 
@@ -97,8 +89,7 @@ class BundleRequestHandler:
                 errno.EINVAL, "Request ID '%s' not found." % req_id)
         else:
             # Set failed status to stale request ID
-            expiry_sec = int(common_config.get(
-                ["discovery>resource_map>expiry_sec"])[0])
+            expiry_sec = 1800
             last_reboot = int(psutil.boot_time())
             # Set request is expired if processing time exceeds
             system_time = time.strptime(
@@ -140,17 +131,14 @@ class BundleRequestHandler:
 
 class SupportBundle(object):
     """SSPL support bundle class"""
-    _tmp_dir = '/tmp/cortx'
-    _default_path = '%s/support_bundle/' % _tmp_dir
-    _tar_name = 'sspl'
-    _tmp_src = '%s/%s/' % (_tmp_dir, _tar_name)
-    _conf_file = 'json:///etc/cortx/cluster.conf'
 
     def __init__(self):
 
         self.SYS_INFORMATION = "SYSTEM_INFORMATION"
         self.IEM_SENSOR = "IEMSENSOR"
-        self.localTempPath = "/tmp/support_bundle/"
+        self._tmp_dir = '/tmp/cortx'
+        self._default_path = '%s/support_bundle/' % self._tmp_dir
+        self.tmp_bundle_path = "/tmp/support_bundle/"
         self.sspl_log_default = f"/var/log/{sspl_const.PRODUCT_FAMILY}/sspl"
         self.iem_log_default = f"/var/log/{sspl_const.PRODUCT_FAMILY}/iem"
         self.sspl_conf_dir = f"{sspl_const.SSPL_SB_TMP}/sspl_conf/"
@@ -164,8 +152,7 @@ class SupportBundle(object):
                                     (self.IEM_SENSOR)).replace("/iem_messages", "")
 
     def generate(self, args):
-        if os.path.exists(SupportBundle._tmp_src):
-            SupportBundle.__clear_tmp_files()
+        """Generate support bundle."""
         bundle_time = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
         self.prepare_bundle(args.bundle_id, args.target_path,
                             bundle_time, args.noencl)
@@ -193,18 +180,13 @@ class SupportBundle(object):
 
     def prepare_bundle(self, bundle_id: str, target_path: str, bundle_time: str, include_encl):
         """Collect sspl support bundle data."""
-        directory = os.path.dirname(SupportBundle._tmp_src)
-        if not os.path.exists(directory):
-            os.makedirs(directory)
-        tar_name, file_name = SupportBundle.__generate_file_names(
-            bundle_id, bundle_time)
+        tar_name = "sspl_" % bundle_id
         tar_file = os.path.join(target_path, tar_name + '.tar.gz')
 
         sspl_sb_id = self.get_sspl_bundle_data(target_path, include_encl)
 
         self._generate_tar(target_path, tar_name)
-        SupportBundle._update_bundle_id(bundle_id, sspl_sb_id,
-                                         tar_file)
+        SupportBundle._update_bundle_id(bundle_id, sspl_sb_id, tar_file)
 
     def get_sspl_bundle_data(self, file_path, include_encl):
         print(include_encl)
@@ -214,12 +196,13 @@ class SupportBundle(object):
 
         if file_path:
             if os.path.exists(file_path):
-                self.localTempPath = file_path+"sspl/"
+                file_path = file_path+"/sspl/"
+                self.tmp_bundle_path = os.path.normpath(file_path)
             else:
                 msg = "Given path %s doesn't exist" % (file_path)
                 self.__clear_tmp_files()
                 raise SupportBundleError(1, msg)
-        os.makedirs(self.localTempPath, exist_ok=True)
+        os.makedirs(self.tmp_bundle_path, exist_ok=True)
         try:
             DEFAULT_STATE = Conf.get(
                 SSPL_CONF, f"{SYSTEM_INFORMATION}>{SSPL_STATE}", "active")
@@ -249,9 +232,9 @@ class SupportBundle(object):
                 enclosure_zip_file = "enclosure-wwn-{0}-logs-{1}.zip".format(
                     self.enclosure_wwn, str(int(time.time())))
                 shutil.copy(self.enclosure_log,
-                            self.localTempPath+enclosure_zip_file)
+                            self.tmp_bundle_path+enclosure_zip_file)
                 logger.info("Enclosure Log File Location: %s" %
-                            self.localTempPath+enclosure_zip_file)
+                            self.tmp_bundle_path+enclosure_zip_file)
 
 
         except (OSError, tarfile.TarError) as err:
@@ -442,7 +425,7 @@ class SupportBundle(object):
         EXCLUDE_FILES = [sspl_const.SB_DATA_PATH]
 
         try:
-            with tarfile.open(self.localTempPath+file_name, "w:gz") as tar:
+            with tarfile.open(self.tmp_bundle_path+file_name, "w:gz") as tar:
                 for key, value in tarfile_data.items():
                     if os.path.exists(key):
                         try:
@@ -457,33 +440,8 @@ class SupportBundle(object):
             raise SupportBundleError(1, msg)
 
     @staticmethod
-    def __generate_file_names(bundle_id: str, bundle_time: str):
-        """Will return a unique file name for every support bundle request."""
-        Conf.load("cluster", SupportBundle._conf_file, skip_reload=True)
-        cluster_conf = Conf.get("cluster", "server_node")
-        cluster_id = cluster_conf["cluster_id"]
-        hostname = SupportBundle.__get_private_hostname(cluster_conf)
-        tar_name = "sspl_{0}_SN-{1}_Server-{2}_{3}".format(
-            bundle_id, cluster_id, hostname, bundle_time,)
-
-        file_name = "{0}.json".format(tar_name.replace("sspl_", "MS_")
-                                      .replace(f"_{bundle_id}", "").replace("plus_", ""))
-        return tar_name, file_name
-
-    @staticmethod
-    def __get_private_hostname(cluster_conf):
-        """Returning private hostname."""
-        try:
-            private_fqdn = cluster_conf["network"]["data"]["private_fqdn"]
-            hostname = private_fqdn.split(".")[0]
-        except:
-            hostname = "NA"
-        return hostname
-
-    @staticmethod
     def __clear_tmp_files():
         """Clean temporary files created by the support bundle."""
-        shutil.rmtree(SupportBundle._tmp_src)
         if os.path.exists(sspl_const.SSPL_SB_TMP):
             shutil.rmtree(sspl_const.SSPL_SB_TMP)
 
