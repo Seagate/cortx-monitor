@@ -32,7 +32,6 @@ import subprocess
 
 from datetime import datetime
 
-from cortx.utils.conf_store import Conf
 from cortx.utils.kv_store import KvStoreFactory
 from framework.base import sspl_constants as sspl_const
 from framework.utils.conf_utils import (
@@ -47,8 +46,8 @@ try:
     os.makedirs(sspl_const.SB_REQUEST_TRACKER_DIR, exist_ok=True)
 except PermissionError as err:
     print("Failed to create default store directory. %s" % err)
-requests_url = "%s://%s" % (store_type,
-                            os.path.join(sspl_const.SB_REQUEST_TRACKER_DIR, "bundle_requests.json"))
+requests_url = "{0}://{1}".format(store_type, os.path.join(
+    sspl_const.SB_REQUEST_TRACKER_DIR, "bundle_requests.json"))
 req_register = KvStoreFactory.get_instance(requests_url)
 req_register.load()
 
@@ -70,7 +69,7 @@ class SupportBundleError(Exception):
 
 class BundleRequestHandler:
     """Handles SSPL support bundle requests."""
-    INPROGRESS = "In-progress"
+    IN_PROGRESS = "In-progress"
     SUCCESS = "Success"
     FAILED = "Failed"
 
@@ -99,7 +98,7 @@ class BundleRequestHandler:
             current_time = int(time.time())
             is_req_expired = (current_time - req_start_time) > expiry_sec
             if is_req_expired or (last_reboot > req_start_time and
-                                  status is BundleRequestHandler.INPROGRESS):
+                                  status is BundleRequestHandler.IN_PROGRESS):
                 # Set request state as failed
                 BundleRequestHandler._update_request_status(
                     req_id, "Failed - request is expired.")
@@ -121,7 +120,7 @@ class BundleRequestHandler:
     def _add_bundle_request(req_id, url):
         """Updates new request information."""
         req_info = {
-            "status": BundleRequestHandler.INPROGRESS,
+            "status": BundleRequestHandler.IN_PROGRESS,
             "url": url,
             "time": datetime.strftime(
                 datetime.now(), '%Y-%m-%d %H:%M:%S')
@@ -141,12 +140,14 @@ class SupportBundle(object):
         self.sspl_log_default = f"/var/log/{sspl_const.PRODUCT_FAMILY}/sspl"
         self.iem_log_default = f"/var/log/{sspl_const.PRODUCT_FAMILY}/iem"
         self.sspl_conf_dir = f"{sspl_const.SSPL_SB_TMP}/sspl_conf/"
-        self.ipmi_sel_data = f"{sspl_const.SSPL_SB_TMP}/ipmi_sel_data_{str(int(time.time()))}.txt"
-        self.boot_drvs_dta = f'{sspl_const.SSPL_SB_TMP}/Server_OS_boot_drives_SMART_data_{str(int(time.time()))}'
+        self.ipmi_sel_data = "{0}/ipmi_sel_data_{1}.txt".format(
+            sspl_const.SSPL_SB_TMP, str(int(time.time())))
+        self.boot_drvs_dta = "{0}/Server_OS_boot_drives_SMART_data_{1}".format(
+            sspl_const.SSPL_SB_TMP, str(int(time.time())))
         self.enclosure_log = f"{sspl_const.SSPL_SB_TMP}/enclosure_logs.zip"
         self.enclosure_wwn = "NA"
         self.sspl_log_dir = Conf.get(SSPL_CONF, "%s>sspl_log_file_path" %
-                                     (self.SYS_INFORMATION)).replace("/sspl.log", "")
+                                    (self.SYS_INFORMATION)).replace("/sspl.log", "")
         self.iem_log_dir = Conf.get(SSPL_CONF, "%s>log_file_path" %
                                     (self.IEM_SENSOR)).replace("/iem_messages", "")
 
@@ -178,12 +179,12 @@ class SupportBundle(object):
         bundle_name = "sspl_" + bundle_id
         sspl_sb_id = self.get_sspl_bundle_data(target_path, include_encl)
         bundle_location = self._generate_tar(bundle_name)
-        SupportBundle._update_bundle_request_info(bundle_id, sspl_sb_id, bundle_location)
+        SupportBundle._update_bundle_request_info(
+            bundle_id, sspl_sb_id, bundle_location)
 
     def get_sspl_bundle_data(self, file_path, include_encl):
         """Collect SSPL data for support bundle."""
-        request_id = datetime.strftime(datetime.now(),
-                                       '%Y%m%d%H%M%S%f')
+        request_id = datetime.strftime(datetime.now(),'%Y%m%d%H%M%S%f')
         BundleRequestHandler._add_bundle_request(request_id, file_path)
 
         if file_path:
@@ -200,17 +201,21 @@ class SupportBundle(object):
                 SSPL_CONF, f"{SYSTEM_INFORMATION}>{SSPL_STATE}", "active")
             try:
                 sspl_state = open(
-                    f"/var/{sspl_const.PRODUCT_FAMILY}/sspl/data/state.txt").readline().rstrip().split("=")
+                    f"/var/{sspl_const.PRODUCT_FAMILY}/sspl/data/state.txt")
+                sspl_state = sspl_state.readline().rstrip().split("=")
                 # Capturing enclosure logs only when sspl state is active
                 sspl_state = sspl_state[1] if len(
                     sspl_state) == 2 else DEFAULT_STATE
                 if not sspl_state == 'active':
                     logger.info("SSPL is in 'degraded' mode,"
-                                "so enclosure data not collected as part of this node support bundle.")
+                                "so enclosure data not collected "
+                                "as part of this node support bundle.")
 
-            except (FileNotFoundError, OSError) as e:
-                logger.error(f"Failed to open the SSPL 'state.txt' file with an error '{e}',\
-                    Can't determine the SSPL state, So enclosure logs also being collected.")
+            except (FileNotFoundError, OSError) as err:
+                logger.error("Failed to open the SSPL 'state.txt' "
+                             "file with an error '{0}',Can't determine "
+                             "the SSPL state, So enclosure logs also "
+                             "being collected.".format(err))
                 sspl_state = 'active'
 
             self.get_ipmi_sel_data()
@@ -229,7 +234,8 @@ class SupportBundle(object):
                             self.tmp_bundle_path+enclosure_zip_file)
 
         except OSError as err:
-            msg = "Facing problem while creating sspl support bundle : %s" % err
+            msg = "Facing problem while creating sspl "
+            "support bundle: {0}".format(err)
             self.__clear_tmp_files()
             raise SupportBundleError(1, msg)
         try:
@@ -263,7 +269,8 @@ class SupportBundle(object):
     def _run_command(self, command):
         """Run the command and get the response and error returned"""
         process = subprocess.Popen(
-            command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')
+            command, shell=True, stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE, encoding='utf-8')
         return_code = process.wait()
         response, error = process.communicate()
         return response.rstrip('\n'), error.rstrip('\n'), return_code
@@ -281,7 +288,8 @@ class SupportBundle(object):
             response, _, _ = self._run_command(smartctl_cmd)
             response = json.loads(response)
             try:
-                if 'device' in response and response['device']['protocol'] == 'ATA':
+                if 'device' in response \
+                        and response['device']['protocol'] == 'ATA':
                     file_name = drive_path.replace('/', '_')[1:]
                     with open(f"{self.boot_drvs_dta}/{file_name}.json", "w+") as fp:
                         json.dump(response, fp,  indent=4)
@@ -297,45 +305,67 @@ class SupportBundle(object):
             singleton_realstorencl.URI_CLIAPI_BASE)
         COLLECTING_DEBUG_LOG_STARTED = False
         for encl_trigger_log_retry_index in range(0,
-                                                  sspl_const.ENCL_TRIGGER_LOG_MAX_RETRY):
+                                        sspl_const.ENCL_TRIGGER_LOG_MAX_RETRY):
+            post_data_string = '{0}/"{1}"{2}"{3}'.format(
+                singleton_realstorencl.URL_ENCLLOGS_POSTDATA,
+                sspl_const.SUPPORT_REQUESTOR_NAME,
+                sspl_const.SUPPORT_EMAIL_ID,
+                sspl_const.SUPPORT_CONTACT_NUMBER)
             response = singleton_realstorencl\
                 .ws_request(url,
                             singleton_realstorencl.ws.HTTP_POST,
-                            post_data=f'{singleton_realstorencl.URL_ENCLLOGS_POSTDATA}/"{sspl_const.SUPPORT_REQUESTOR_NAME}"{sspl_const.SUPPORT_EMAIL_ID}"{sspl_const.SUPPORT_CONTACT_NUMBER}')
+                            post_data=post_data_string)
 
             if not response:
-                logger.error("{0}:: {2} status unavailable as ws request {1}"
-                             " failed".format(singleton_realstorencl.LDR_R1_ENCL, url, "Debug log"))
+                logger.error("{0} status unavailable as ws request {1}"
+                             " failed".format(singleton_realstorencl.LDR_R1_ENCL, url))
                 break
 
             elif response.status_code != singleton_realstorencl.ws.HTTP_OK:
-                logger.error("{0}:: http request {1} to get {3} failed with"
-                             " err {2} enclosure trigger log retry index {4}".format(singleton_realstorencl.LDR_R1_ENCL, url, response.status_code,
-                                                                                     "Debug log", encl_trigger_log_retry_index))
+                logger.error("{0} http request {1} to get {3} failed "
+                             "with err {2} enclosure trigger log retry "
+                             "index {4}".format(singleton_realstorencl.LDR_R1_ENCL,
+                                                url,
+                                                response.status_code,
+                                                "Debug log",
+                                                encl_trigger_log_retry_index))
 
             else:
                 response_data = response.json()
-                if response_data["status"][0]["response-type"] == "Success" and response_data["status"][0]["response"] == "Collecting debug logs.":
+                if response_data["status"][0]["response-type"] == "Success" \
+                        and response_data["status"][0]["response"] == "Collecting debug logs.":
                     logger.info("Collecting enclosure debug logs in progress")
                     COLLECTING_DEBUG_LOG_STARTED = True
                     break
                 else:
-                    logger.error("{0}:: http request {1} to get {3} failed with"
-                                 " response-type {2}".format(singleton_realstorencl.LDR_R1_ENCL, url, response_data["status"][0]["response-type"], "Debug log"))
+                    logger.error("{0}:: http request {1} to get {3} failed with "
+                                 "response-type {2}".format(
+                                     singleton_realstorencl.LDR_R1_ENCL,
+                                     url,
+                                     response_data["status"][0]["response-type"],
+                                     "Debug log"))
 
         if COLLECTING_DEBUG_LOG_STARTED is True:
             self.enclosure_wwn = self.get_enclosure_wwn(singleton_realstorencl)
             url = singleton_realstorencl.build_url(
                 singleton_realstorencl.URI_CLIAPI_DOWNLOADDEBUGDATA)
-            for encl_download_retry_index in range(0, sspl_const.ENCL_DOWNLOAD_LOG_MAX_RETRY):
+            for encl_download_retry_index in range(0,
+                                            sspl_const.ENCL_DOWNLOAD_LOG_MAX_RETRY):
                 response = singleton_realstorencl.ws_request(
                     url, singleton_realstorencl.ws.HTTP_GET)
                 if not response:
                     logger.error("{0}:: {2} status unavailable as ws request {1}"
-                                 " failed".format(singleton_realstorencl.LDR_R1_ENCL, url, "Debug log"))
+                                 " failed".format(
+                                     singleton_realstorencl.LDR_R1_ENCL,
+                                     url,
+                                     "Debug log"))
                 elif response.status_code != singleton_realstorencl.ws.HTTP_OK:
-                    logger.error("{0}:: http request {1} to get {3} failed with"
-                                 " err {2}".format(singleton_realstorencl.LDR_R1_ENCL, url, response.status_code, "Debug log"))
+                    logger.error("{0}:: http request {1} to get {3} failed "
+                                 "with error {2}".format(
+                                     singleton_realstorencl.LDR_R1_ENCL,
+                                     url,
+                                     response.status_code,
+                                     "Debug log"))
                 else:
                     if response.headers.get('Content-Type') == 'application/json; charset="utf-8"':
                         response_data = response.json()
@@ -387,7 +417,8 @@ class SupportBundle(object):
         return enclosure_wwn
 
     @staticmethod
-    def _update_bundle_request_info(bundle_id: str, sspl_sb_id: str, tar_file: str):
+    def _update_bundle_request_info(bundle_id: str,
+                                    sspl_sb_id: str, tar_file: str):
         """Updates new request information with bundle specific attributes."""
         req_id = "sb_%s" % bundle_id
         req_info = {
@@ -419,11 +450,12 @@ class SupportBundle(object):
                             tar.add(key, arcname=value,
                                     exclude=lambda x: x in EXCLUDE_FILES)
                         except IOError as err:
-                            logger.error("Unable to include %s logs with an error %s"
-                                         % (key, err))
+                            logger.error("Unable to include {0} logs "
+                            "with an error {1}".format(key, err))
             return tar_location
         except (OSError, tarfile.TarError) as err:
-            msg = "Facing problem while creating sspl support bundle : %s" % err
+            msg = "Facing issues while creating sspl "
+            "support bundle: {0}".format(err)
             self.__clear_tmp_files()
             raise SupportBundleError(1, msg)
 
@@ -435,12 +467,17 @@ class SupportBundle(object):
     @staticmethod
     def parse_arguments():
         parser = argparse.ArgumentParser(description="SSPL Support Bundle")
-        parser.add_argument('bundle_id', help='Unique bundle id')
-        parser.add_argument('target_path', help='Path to store the created bundle',
-                            nargs='?', default="/var/seagate/cortx/support_bundle/")
-        parser.add_argument('-noencl', action='store_true',
+        parser.add_argument('bundle_id',
+                            help='Unique bundle id')
+        parser.add_argument('target_path',
+                            help='Path to store the created bundle',
+                            nargs='?',
+                            default="/var/seagate/cortx/support_bundle/")
+        parser.add_argument('-noencl',
+                            action='store_true',
                             help='Exclude enclosure logs')
-        parser.add_argument('-console', action='store_true',
+        parser.add_argument('-console',
+                            action='store_true',
                             help='Print logs on console')
         args = parser.parse_args()
         return args
