@@ -53,7 +53,7 @@ alert_for_event = {
             "Asserted": Alert(
                 "insertion", "informational",
                 "'Power Supply {}' is present. [{}]",
-                # 'Power Supply 1' is present. [PS1 (0xc1)]
+                # Intel/Supermicro: 'Power Supply 1' is present. [PS1 (0x85)]
                 "Power Supply Port is being monitored.", "None"),
             "Deasserted": Alert(
                 "missing", "critical",
