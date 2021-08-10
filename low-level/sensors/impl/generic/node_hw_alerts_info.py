@@ -58,59 +58,64 @@ alert_for_event = {
             "Deasserted": Alert(
                 "missing", "critical",
                 "'Power Supply {}', is missing. [{}]",
-                "Power Supply Port monitoring has stopped.",
-                DEFAULT_RECOMMENDATION)
+                "Power supply redundancy is affected, if more power " +
+                "supplies go down or missing, server may go offline.",
+                "Install missing Power supply immediately.")
         }),
         **dict.fromkeys(["Predictive failure", "Predictive failure ()"], {
             "Asserted": Alert(
                 "fault", "warning",
                 "Failure is predicted for 'Power Supply {}'. [{}]",
-                "Power Supply might stop if no action taken.",
-                DEFAULT_RECOMMENDATION
+                "Power Supply Redundancy will be affected. If more power " +
+                "supplies go down or missing, server may go offline.",
+                "Please replace the faulty Power supply soon."
             ),
             "Deasserted": Alert(
                 "fault_resolved", "informational",
                 "No Failure threat anymore for 'Power Supply {}'. [{}]",
-                "None", "None"
+                "Power Supply Redundancy is in good state.", "None"
             )
         }),
         **dict.fromkeys(["Failure detected", "Failure detected ()"], {
             "Asserted": Alert(
                 "fault", "error",
                 "Failure detected for 'Power Supply {}'. [{}]",
-                "Power Supply is interrupted.,",
-                DEFAULT_RECOMMENDATION
+                "Power Supply Redundancy is affected. If more power " +
+                "supplies go down or missing, server may go offline.",
+                "Please replace the faulty Power Supply immediately."
             ),
             "Deasserted": Alert(
                 "fault_resolved", "informational",
                 "'Power Supply {}' recovered from the failure. [{}]",
-                "None", "None"
+                "Power Supply Redundancy is in good state.", "None"
             )
         }),
         **dict.fromkeys(["Config Error", "Config Error ()"], {
             "Asserted": Alert(
                 "fault", "error",
                 "'Power Supply {}' has configuration error. [{}]",
-                "Power Supply port might produce issues.",
+                "Power Supply Redundancy is affected. If error is not fixed, "+
+                "and other power supplies go down, server may go offline.",
                 DEFAULT_RECOMMENDATION
             ),
             "Deasserted": Alert(
                 "fault_resolved", "informational",
                 "Configuration error resolved for 'Power Supply {}'. [{}]",
-                "None", "None"
+                "Power Supply Redundancy is in good state.", "None"
             )
         }),
         **dict.fromkeys(["Power Supply AC lost", "Power Supply AC lost ()"], {
             "Asserted": Alert(
                 "fault", "critical",
                 "'Power Supply {}' lost the AC supply. [{}]",
-                "AC supply is unavailable.",
-                DEFAULT_RECOMMENDATION
+                "Power Supply Redundancy is affected. If more power " +
+                "supplies go down or missing, server may go offline.",
+                "Please Plug on the AC Power Supply Redundancy."
             ),
             "Deasserted": Alert(
                 "fault_resolved", "informational",
                 "'Power Supply {}' regained the AC Supply. [{}]",
-                "None", "None"
+                "Power Supply Redundancy is in good state.", "None"
             )
         }),
         **dict.fromkeys(["Power Supply Inactive",
@@ -118,13 +123,14 @@ alert_for_event = {
             "Asserted": Alert(
                 "fault", "critical",
                 "'Power Supply {}' is inactive. [{}]",
-                "Power Supply is unavailable.",
-                DEFAULT_RECOMMENDATION
+                "Power Supply Redundancy is affected. If more power " +
+                "supplies go down or missing, server may go offline.",
+                "Please Plug on the Power Supply Redundancy."
             ),
             "Deasserted": Alert(
                 "fault_resolved", "informational",
                 "'Power Supply {}' is active now. [{}]",
-                "None", "None"
+                "Power Supply Redundancy is in good state.", "None"
             )
         })
     }
