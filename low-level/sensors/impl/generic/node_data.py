@@ -23,7 +23,6 @@ import errno
 import math
 import os
 import re
-import socket
 import subprocess as sp
 import threading
 import time
@@ -38,6 +37,7 @@ from framework.utils.config_reader import ConfigReader
 from framework.utils.service_logging import logger
 from framework.utils.sysfs_interface import SysFS
 from framework.utils.tool_factory import ToolFactory
+from framework.utils.os_utils import OSUtils
 from sensors.INode_data import INodeData
 
 
@@ -59,10 +59,11 @@ class NodeData(Debug):
     def __init__(self):
         super(NodeData, self).__init__()
 
-        self.host_id = socket.getfqdn()
+        self.os_utils = OSUtils()
         self._epoch_time = str(int(time.time()))
         # Total number of CPUs
         self.cpus = psutil.cpu_count()
+        self.host_id = self.os_utils.get_fqdn()
 
         # Calculate the load averages on separate blocking threads
         self.load_1min_average  = []
@@ -109,14 +110,10 @@ class NodeData(Debug):
             elif units == "KB":
                 self.units_factor = 1000
 
-            # First call gethostname() to see if it returns something that looks like a host name,
-            # if not then get the host by address
-            # Find a meaningful hostname to be used
-            self.host_id = socket.getfqdn()
-            # getfqdn() function checks the socket.gethostname() to get the host name if it not available
+            self.host_id = self.os_utils.get_fqdn()
+            # get_fqdn() function checks the socket.gethostname() to get the host name if it not available
             # then it try to find host name from socket.gethostbyaddr(socket.gethostname())[0] and return the
-            # meaningful host name priviously we chking the this two conditions explicitly which is implicitly
-            # doing by getfqdn() function. so removing the code and adding the getfqdn() function to get Hostname.
+            # meaningful host name.
 
             self.local_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S %Z')
 
@@ -157,11 +154,14 @@ class NodeData(Debug):
         # Calculate the current number of running processes at this moment
         total_running_proc = 0
         for proc in psutil.process_iter():
-            pinfo = proc.as_dict(attrs=['status'])
-            if pinfo['status'] not in (psutil.STATUS_ZOMBIE, psutil.STATUS_DEAD,
-                                       psutil.STATUS_STOPPED, psutil.STATUS_IDLE,
-                                       psutil.STATUS_SLEEPING):
-                total_running_proc += 1
+            try:
+                pinfo = proc.as_dict(attrs=['status'])
+                if pinfo['status'] not in (psutil.STATUS_ZOMBIE, psutil.STATUS_DEAD,
+                                        psutil.STATUS_STOPPED, psutil.STATUS_IDLE,
+                                        psutil.STATUS_SLEEPING):
+                    total_running_proc += 1
+            except psutil.NoSuchProcess:
+                logger.warn(f"(psutil) Process '{proc.name()}' exited unexpectedly.")
         self.running_process_count = total_running_proc
 
     def _get_local_mount_data(self):

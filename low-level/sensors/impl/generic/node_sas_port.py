@@ -21,7 +21,6 @@ on the Node server
 import errno
 import json
 import os
-import socket
 import time
 import uuid
 
@@ -37,6 +36,7 @@ from framework.utils.severity_reader import SeverityReader
 from framework.utils.store_factory import file_store
 from framework.utils.sysfs_interface import SysFS
 from framework.utils.tool_factory import ToolFactory
+from framework.utils.os_utils import OSUtils
 from message_handlers.node_data_msg_handler import NodeDataMsgHandler
 from framework.platforms.server.sas import SAS
 from framework.platforms.server.error import SASError
@@ -117,6 +117,7 @@ class SASPortSensor(SensorThread, InternalMsgQ):
         self.sas_ports_status = {}
         self.port_phy_list_dict = {}
         self.sas_phy_stored_alert = None
+        self.os_utils = OSUtils()
 
     def initialize(self, conf_reader, msgQlist, product):
         """initialize configuration reader and internal msg queues"""
@@ -418,7 +419,7 @@ class SASPortSensor(SensorThread, InternalMsgQ):
         epoch_time = str(int(time.time()))
 
         alert_id = self._get_alert_id(epoch_time)
-        host_name = socket.gethostname()
+        host_name = self.os_utils.get_fqdn()
 
         specific_info = {}
         specific_info_list = []

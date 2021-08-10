@@ -20,12 +20,13 @@ import time
 from default import world
 from messaging.ingress_processor_tests import IngressProcessorTests
 from messaging.egress_processor_tests import EgressProcessorTests
-from common import check_sspl_ll_is_running
+from common import check_sspl_ll_is_running, get_current_node_id
 
 RESOURCE_TYPE = "node:sw:os:service"
 
 def init(args):
     pass
+
 
 def test_systemd_service_valid_request(args):
     service_name = "rsyslog.service"
@@ -148,6 +149,7 @@ def service_actuator_request(service_name, action):
                         "node_id": "1"
                     },
                     "response_dest": {},
+                    "target_node_id": get_current_node_id(),
                         "actuator_request_type": {
                             "service_controller": {
                                 "service_request": action,

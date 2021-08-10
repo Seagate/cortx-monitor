@@ -20,7 +20,6 @@
 """
 import json
 import os
-import socket
 import time
 import uuid
 from threading import Event
@@ -36,6 +35,7 @@ from framework.utils.conf_utils import (POLLING_FREQUENCY_OVERRIDE, SSPL_CONF,
 from framework.utils.service_logging import logger
 from framework.utils.severity_reader import SeverityReader
 from framework.utils.store_factory import store
+from framework.utils.os_utils import OSUtils
 # Modules that receive messages from this module
 from message_handlers.real_stor_encl_msg_handler import RealStorEnclMsgHandler
 from sensors.Icontroller import IControllersensor
@@ -54,8 +54,8 @@ class RealStorControllerSensor(SensorThread, InternalMsgQ):
 
     SENSOR_NAME = "RealStorControllerSensor"
     SENSOR_RESP_TYPE = "enclosure_controller_alert"
-    RESOURCE_CATEGORY = "fru"
-    RESOURCE_TYPE = "enclosure:fru:controller"
+    RESOURCE_CATEGORY = "hw"
+    RESOURCE_TYPE = "enclosure:hw:controller"
 
     PRIORITY          = 1
 
@@ -99,6 +99,7 @@ class RealStorControllerSensor(SensorThread, InternalMsgQ):
         self._suspended = False
 
         self._event = Event()
+        self.os_utils = OSUtils()
 
     def initialize(self, conf_reader, msgQlist, products):
         """initialize configuration reader and internal msg queues"""
@@ -303,10 +304,12 @@ class RealStorControllerSensor(SensorThread, InternalMsgQ):
         epoch_time = str(int(time.time()))
 
         alert_id = self._get_alert_id(epoch_time)
+        fru = self.rssencl.is_storage_fru('controller')
         resource_id = controller_detail.get("durable-id", "")
-        host_name = socket.gethostname()
+        host_name = self.os_utils.get_fqdn()
         info = {
                 "resource_type": self.RESOURCE_TYPE,
+                "fru": fru,
                 "resource_id": resource_id,
                 "event_time": epoch_time
                 }

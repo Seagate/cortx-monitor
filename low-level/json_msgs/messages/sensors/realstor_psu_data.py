@@ -55,6 +55,7 @@ class RealStorPSUDataMsg(BaseSensorMsg):
 
         self._resource_id = self._fru_info.get("resource_id")
         self._resource_type = self._fru_info.get("resource_type")
+        self._fru = self._fru_info.get("fru")
         self._event_time = self._fru_info.get("event_time")
         description = self._fru_specific_info.get("health-reason")
 
@@ -78,6 +79,7 @@ class RealStorPSUDataMsg(BaseSensorMsg):
                                     "severity": self._severity,
                                     "info": {
                                             "resource_type": self._resource_type,
+                                            "fru": self._fru,
                                             "event_time": self._event_time,
                                             "resource_id": self._resource_id,
                                             "description": description

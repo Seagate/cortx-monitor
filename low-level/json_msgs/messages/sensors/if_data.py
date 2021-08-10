@@ -29,7 +29,7 @@ import json
 import time
 
 from json_msgs.messages.sensors.base_sensors_msg import BaseSensorMsg
-from framework.utils import mon_utils
+from framework.utils.mon_utils import MonUtils
 
 class IFdataMsg(BaseSensorMsg):
     '''
@@ -66,7 +66,7 @@ class IFdataMsg(BaseSensorMsg):
         self._severity          = severity
 
         epoch_time = str(int(time.time()))
-        alert_id = mon_utils.get_alert_id(epoch_time)
+        alert_id = MonUtils.get_alert_id(epoch_time)
         self._json = {
                        "username": self._username,
                        "expires": self._expires,

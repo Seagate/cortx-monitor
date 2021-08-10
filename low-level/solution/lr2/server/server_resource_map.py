@@ -29,6 +29,33 @@ class ServerResourceMap(ResourceMap):
     """
 
     name = "server"
+    # Resources and their common key path.
+    resource_indexing_map = {
+        "health": {
+            "hw": {
+                "disk": "['health']['specifics'][0]['SMART']['serial_number']",
+                "psu": "['health']['specifics']['serial_number']",
+                "cpu": "['uid']",
+                "nw_port": "['health']['specifics'][0]['logical_name']"
+            },
+            "sw": {
+                "cortx_sw_services": "['uid']",
+                "external_sw_services": "['uid']"
+            }
+        },
+        "manifest":{
+            "hw": {
+                "disk": "['serial_number']",
+                "psu": "['serial_number']",
+                "cpu": "['uid']",
+                "nw_port": "['logical_name']"
+            },
+            "sw": {
+                "cortx_sw_services": "['uid']",
+                "external_sw_services": "['uid']"
+            }
+        }
+    }
 
     def __init__(self):
         """Initialize server."""
@@ -44,9 +71,9 @@ class ServerResourceMap(ResourceMap):
 
         rpath: Resource path to fetch its health
                Examples:
-                    node>compute[0]
-                    node>compute[0]>hw
-                    node>compute[0]>hw>disks
+                    node>server[0]
+                    node>server[0]>hw
+                    node>server[0]>hw>disks
         """
         from server.health import ServerHealth
         health = ServerHealth()
@@ -60,7 +87,7 @@ class ServerResourceMap(ResourceMap):
 
         rpath: Resource path to fetch its manifest
                Examples:
-                    node>compute[0]
+                    node>server[0]
         """
         from server.manifest import ServerManifest
         manifest = ServerManifest()
@@ -75,8 +102,8 @@ class ServerResourceMap(ResourceMap):
             "storage"    -> ("storage", "*")
             "storage[0]" -> ("storage", "0")
 
-            "compute"    -> ("compute", "*")
-            "compute[0]" -> ("compute", "0")
+            "server"    -> ("server", "*")
+            "server[0]" -> ("server", "0")
         """
         res = re.search(r"(\w+)\[([\d]+)\]|(\w+)", node)
         inst = res.groups()[1] if res.groups()[1] else "*"

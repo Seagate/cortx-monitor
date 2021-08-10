@@ -62,7 +62,6 @@ class SSPLDevDeploy:
     def __init__(self, args):
         """Initialize required config variables."""
         self.args = args
-        self.CORTX_MONITOR_BASE_URL = "https://raw.githubusercontent.com/Seagate/cortx-monitor/main"
         file = "/etc/system-release"
         with open(file) as fObj:
             content = fObj.read()
@@ -73,13 +72,16 @@ class SSPLDevDeploy:
             self.cortx_utils_build_url = ("http://cortx-storage.colo.seagate.com/releases/"
                      "cortx/components/github/main/centos-7.9.2009/"
                      "dev/cortx-utils/last_successful/")
-        else:
+        elif "CentOS Linux release 7.8" in content:
             self.build_url = ("http://cortx-storage.colo.seagate.com/releases"
                           "/cortx/github/main/centos-7.8.2003"
                           "/last_successful_prod/")
             self.cortx_utils_build_url = ("http://cortx-storage.colo.seagate.com/releases/"
                      "cortx/components/github/main/centos-7.8.2003/"
                      "dev/cortx-utils/last_successful/")
+        else:
+            raise DeployError(1, "%s is not supported", content)
+
         self.target_build = None
         self.rpms_path = None
         self.nodes = {localhost_fqdn}
@@ -149,7 +151,7 @@ class SSPLDevDeploy:
         if rc != 0:
             raise DeployError(rc, "%s - %s CMD: %s",
                 out, "Unable to remove sspl RPMS. Cleanup failed.", cmd)
-        cmd = "yum --setopt=tsflags=noscripts erase -y cortx-py-utils"
+        cmd = "yum remove -y cortx-py-utils"
         out, rc = self._execute_cmd(cmd)
         if rc != 0:
             raise DeployError(rc, "%s - %s CMD: %s",
@@ -157,28 +159,14 @@ class SSPLDevDeploy:
         if os.path.exists(self.temp_dir):
             cmd = "rm -rf %s" % self.temp_dir
             self._execute_cmd(cmd)
+        cmd = "yum remove -y cortx-prereq"
+        out, rc = self._execute_cmd(cmd)
+        if rc != 0:
+            raise DeployError(rc, "%s - %s CMD: %s",
+                out, "Unable to remove cortx-prereq RPMS. Cleanup failed.", cmd)
 
     def setup_yum_repos(self):
         """Setup common, 3rd_party and build specific repos."""
-        setup_repo_url = self.CORTX_MONITOR_BASE_URL + \
-            "/low-level/files/opt/seagate/sspl/setup/setup_yum_repos.py"
-        with urllib.request.urlopen(setup_repo_url) as response, open(
-                "setup_yum_repos.py", 'wb') as out_file:
-            shutil.copyfileobj(response, out_file)
-        os.chmod("setup_yum_repos.py", 0o775)
-
-        if self.target_build:
-            cmd = "./setup_yum_repos.py -t %s" % (self.target_build)
-            out, rc = self._execute_cmd(cmd)
-        else:
-            cmd = "./setup_yum_repos.py"
-            out, rc = self._execute_cmd(cmd)
-        if rc != 0:
-            raise DeployError(rc, "%s - %s CMD: %s",
-                out, "Failed to setup yum repos.", cmd)
-
-    def install_dependencies(self):
-        """Install common and 3rd_party applications."""
         if not (self.target_build or self.rpms_path):
             raise DeployError(1, "Target build or RPMS path is not given.")
         pkg_name = "cortx-prereq"
@@ -190,11 +178,34 @@ class SSPLDevDeploy:
             shutil.copyfileobj(response, out_file)
         os.chmod("install-cortx-prereq.sh", 0o775)
         cmd = "sh install-cortx-prereq.sh"
-        out, rc = self._execute_cmd(cmd)
-        if rc != 0:
-            raise DeployError(rc, "%s - %s CMD: %s",
-                out, "Failed to install %s." % (pkg_name), cmd)
 
+        if self.target_build:
+            cmd = cmd + " -b " + self.target_build
+            out, rc = self._execute_cmd(cmd)
+            if rc != 0:
+                raise DeployError(rc, "%s - %s CMD: %s",
+                    out, "Failed to install %s." % (pkg_name), cmd)
+            # Add repos to yum.repos.d
+            cmd1 = "yum-config-manager --add-repo %s/cortx_iso/" % self.target_build
+            cmd2 = "yum-config-manager --add-repo %s/3rd_party/" % self.target_build
+            for repo_cmd in [cmd1, cmd2]:
+                out, rc = self._execute_cmd(repo_cmd)
+                if rc != 0:
+                    raise DeployError(rc, "%s - %s CMD: %s",
+                        out, "Setup repo failed", repo_cmd)
+        else:
+            out, rc = self._execute_cmd(cmd)
+            if rc != 0:
+                raise DeployError(rc, "%s - %s CMD: %s",
+                    out, "Failed to install %s." % (pkg_name), cmd)
+            repo_cmd = "yum-config-manager --add-repo %s/3rd_party/" % self.build_url
+            out, rc = self._execute_cmd(repo_cmd)
+            if rc != 0:
+                raise DeployError(rc, "%s - %s CMD: %s",
+                    out, "Setup repo failed", repo_cmd)
+
+    def install_dependencies(self):
+        """Install dependencies."""
         pkg_name = "cortx-py-utils"
         print("INFO: INSTALLING cortx-py-utils...")
         print("Downloading pyutils from %s" % self.build_url)
@@ -390,7 +401,6 @@ class SSPLDevDeploy:
         post_install_tmpl = "%s/conf/sspl.post-install.tmpl.%s" % (SSPL_BASE_DIR, self.deploy_type)
         prepare_tmpl = "%s/conf/sspl.prepare.tmpl.%s" % (SSPL_BASE_DIR, self.deploy_type)
         config_tmpl = "%s/conf/sspl.config.tmpl.%s" % (SSPL_BASE_DIR, self.deploy_type)
-        utils_config_tmpl = "/tmp/utils.config.tmpl.%s" % (self.deploy_type)
         init_tmpl = "%s/conf/sspl.init.tmpl.%s" % (SSPL_BASE_DIR, self.deploy_type)
         tmpl_files = [post_install_tmpl, prepare_tmpl, config_tmpl, init_tmpl]
         if os.path.exists(self.temp_dir):
@@ -416,7 +426,7 @@ class SSPLDevDeploy:
             "%s post_install --config yaml://%s" % (utils_setup_script, post_install_config),
             "%s post_install --config yaml://%s" % (sspl_setup_script, post_install_config),
             "%s prepare --config yaml://%s" % (sspl_setup_script, prepare_config),
-            "%s config --config yaml://%s" % (utils_setup_script, utils_config_tmpl),
+            "%s config --config yaml://%s" % (utils_setup_script, config_config),
             "%s config --config yaml://%s" % (sspl_setup_script, config_config),
             "%s init" % (utils_setup_script),
             "%s init --config yaml://%s" % (sspl_setup_script, init_config)

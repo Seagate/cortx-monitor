@@ -23,7 +23,6 @@ import calendar
 import json
 import os
 import re
-import socket
 import subprocess
 import time
 import uuid
@@ -45,6 +44,7 @@ from framework.utils.service_logging import logger
 from framework.utils.severity_reader import SeverityReader
 from framework.utils.store_factory import file_store
 from framework.utils.iem import Iem
+from framework.utils.os_utils import OSUtils
 from message_handlers.node_data_msg_handler import NodeDataMsgHandler
 from sensors.INode_hw import INodeHWsensor
 from framework.utils.ipmi_client import IpmiFactory
@@ -164,7 +164,8 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
 
     def __init__(self):
         super(NodeHWsensor, self).__init__(self.SENSOR_NAME.upper(), self.PRIORITY)
-        self.host_id = self._get_host_id()
+        self.os_utils = OSUtils()
+        self.host_id = self.os_utils.get_fqdn()
 
         self.fru_types = {
             self.TYPE_FAN: self._parse_fan_info,
@@ -1401,9 +1402,6 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
 
         # Send the event to node data message handler to generate json message and send out
         self._write_internal_msgQ(NodeDataMsgHandler.name(), internal_json_msg)
-
-    def _get_host_id(self):
-        return socket.getfqdn()
 
     def _get_alert_id(self, epoch_time):
         """Returns alert id which is a combination of

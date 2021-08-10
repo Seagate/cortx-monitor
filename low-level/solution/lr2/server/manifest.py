@@ -25,8 +25,9 @@ from cortx.utils.kv_store import KvStoreFactory
 from cortx.utils.discovery.error import ResourceMapError
 from framework.utils.conf_utils import GLOBAL_CONF, Conf, NODE_TYPE_KEY
 from framework.base.sspl_constants import (MANIFEST_SVC_NAME, LSHW_FILE,
-    MANIFEST_OUTPUT_FILE)
+    MANIFEST_OUTPUT_FILE, HEALTH_UNDESIRED_VALS)
 from framework.utils.service_logging import CustomLog, logger
+from framework.utils.mon_utils import MonUtils
 from framework.platforms.server.software import Service
 from framework.platforms.server.platform import Platform
 from server.server_resource_map import ServerResourceMap
@@ -57,16 +58,17 @@ class ServerManifest():
             'part_number': 'part_number',
             'model_number': 'model_number',
             'physid': 'physical_id',
-            'version': 'version'
+            'version': 'version',
+            'logicalname': 'logical_name'
         }
         self.class_mapping = {
             'memory': 'hw>memory[%s]>%s',
             'disk': 'hw>disk[%s]>%s',
             'storage': 'hw>storage[%s]>%s',
             'system': 'hw>system[%s]>%s',
-            'processor': 'hw>processor[%s]>%s',
-            'network': 'hw>network[%s]>%s',
-            'power': 'hw>power[%s]>%s',
+            'processor': 'hw>cpu[%s]>%s',
+            'network': 'hw>nw_port[%s]>%s',
+            'power': 'hw>psu[%s]>%s',
             'volume': 'hw>volume[%s]>%s',
             'bus': 'hw>bus[%s]>%s',
             'bridge': 'hw>bridge[%s]>%s',
@@ -88,12 +90,14 @@ class ServerManifest():
         hw_resources = {value[len('hw>'):-len('[%s]>%s')]: \
             self.get_hw_resources_info for value in self.class_mapping.values()}
         self.server_resources = {
-            "fw": fw_resources,
+            "hw": hw_resources,
             "sw": sw_resources,
-            "hw": hw_resources
+            "fw": fw_resources
         }
         self.service = Service()
         self.platform = Platform()
+        self.resource_indexing_map = ServerResourceMap.resource_indexing_map\
+            ["manifest"]
 
     def get_data(self, rpath):
         """Fetch manifest information for given rpath."""
@@ -105,18 +109,18 @@ class ServerManifest():
         leaf_node, _ = ServerResourceMap.get_node_info(nodes[-1])
 
         # Fetch manifest information for all sub nodes
-        if leaf_node == "compute":
-            # Example rpath: 'node>storage[0]'
+        if leaf_node == "server":
+            # Example rpath: 'node>server[0]'
             server_hw_data = self.get_server_hw_info()
             info = self.get_server_info(server_hw_data)
             resource_found = True
         elif leaf_node == "hw":
-            # Example rpath: 'node>storage[0]>hw'
+            # Example rpath: 'node>server[0]>hw'
             server_hw_data = self.get_server_hw_info()
             info = self.get_hw_resources_info(server_hw_data, "hw")["hw"]
             resource_found = True
         elif leaf_node in ["sw", "fw"]:
-            # Example rpath: 'node>storage[0]>fw' or sw
+            # Example rpath: 'node>server[0]>fw' or sw
             for resource, method in self.server_resources[leaf_node].items():
                 try:
                     info.update({resource: method()})
@@ -126,7 +130,7 @@ class ServerManifest():
                         self.log.svc_log(f"{err.__class__.__name__}: {err}"))
                     info = None
         else:
-            # Example rpath: 'node>storage[0]>hw>disk'
+            # Example rpath: 'node>server[0]>hw>disk'
             server_hw_data = self.get_server_hw_info()
             for node in nodes:
                 resource, _ = ServerResourceMap.get_node_info(node)
@@ -155,6 +159,7 @@ class ServerManifest():
             logger.error(self.log.svc_log(f"{msg}"))
             raise ResourceMapError(errno.EINVAL, msg)
 
+        info = MonUtils.normalize_kv(info, HEALTH_UNDESIRED_VALS, "Not Available")
         return info
 
     def get_server_info(self, server_hw_data):
@@ -197,6 +202,17 @@ class ServerManifest():
         # Adding data to kv
         output_file.set(self.kv_dict.keys(), self.kv_dict.values())
         lshw_data = self.get_manifest_output_data()
+        # Removing out storage enclosure (RBOD/JBOD) drives from disk server data
+        # as they are coming from lshw , as those need to be represented
+        # separately & uniquely
+        if "disk" in lshw_data["hw"]:
+            lshw_data["hw"]["disk"] = self.get_local_disk(lshw_data["hw"]["disk"])
+        # Sort list by serial_number
+        for resource, sort_key_path in self.resource_indexing_map["hw"].items():
+            if resource in lshw_data["hw"]:
+                sorted_data = MonUtils.sort_by_specific_kv(
+                    lshw_data["hw"][resource], sort_key_path, self.log)
+                lshw_data["hw"][resource] = sorted_data
         return lshw_data
 
     def get_hw_resources_info(self, server_hw_data, resource=False):
@@ -247,6 +263,8 @@ class ServerManifest():
             value = data.get(base_key+'>'+field)
         else:
             value = data.get(field)
+        if isinstance(value, list):
+            value = ','.join(value)
         value = value.replace(" (To be filled by O.E.M.)", "") \
             if value else 'NA'
         if field == 'id' and '>' in kv_key:
@@ -279,12 +297,18 @@ class ServerManifest():
         """Get cortx service info in required format."""
         cortx_services = self.service.get_cortx_service_list()
         cortx_service_info = self.get_service_info(cortx_services)
+        sort_key_path = self.resource_indexing_map["sw"]["cortx_sw_services"]
+        cortx_service_info = MonUtils.sort_by_specific_kv(
+            cortx_service_info, sort_key_path, self.log)
         return cortx_service_info
 
     def get_external_service_info(self):
         """Get external service info in required format."""
         external_services = self.service.get_external_service_list()
         external_service_info = self.get_service_info(external_services)
+        sort_key_path = self.resource_indexing_map["sw"]["external_sw_services"]
+        external_service_info = MonUtils.sort_by_specific_kv(
+            external_service_info, sort_key_path, self.log)
         return external_service_info
 
     def get_service_info(self, services):
@@ -296,12 +320,12 @@ class ServerManifest():
                 uid, _, health_description, _, specifics = response
                 service_info = {
                     "uid": uid,
-                    "type": "NA",
+                    "type": "software",
                     "description": health_description,
                     "product": specifics[0].pop("service_name"),
-                    "manufacturer": "NA",
-                    "serial_number": "NA",
-                    "part_number": "NA",
+                    "manufacturer": "Not Applicable",
+                    "serial_number": "Not Applicable",
+                    "part_number": "Not Applicable",
                     "version": specifics[0].pop("version"),
                     "last_updated": int(time.time()),
                     "specifics": specifics
@@ -316,12 +340,12 @@ class ServerManifest():
         if specifics:
             bmc = {
                 "uid": 'bmc',
-                "type": "NA",
+                "type": "firmware",
                 "description": "BMC and IPMI version information",
                 "product": specifics.get("product_name", "NA"),
                 "manufacturer": specifics.get("manufacturer_name", "NA"),
-                "serial_number": "NA",
-                "part_number": "NA",
+                "serial_number": "Not Applicable",
+                "part_number": "Not Applicable",
                 "version": specifics.get("firmware_revision", "NA"),
                 "last_updated": int(time.time()),
                 "specifics": [specifics]
@@ -336,15 +360,27 @@ class ServerManifest():
         if specifics:
             os_info = {
                 "uid": specifics.get("id", "NA"),
-                "type": "os",
+                "type": "software",
                 "description": "OS information",
                 "product": specifics.get("pretty_name", "NA"),
-                "manufacturer": specifics.get("manufacturer_name", "NA"),
-                "serial_number": "NA",
-                "part_number": "NA",
+                "manufacturer": specifics.get("manufacturer_name",
+                                    "Not Applicable"),
+                "serial_number": "Not Applicable",
+                "part_number": "Not Applicable",
                 "version": specifics.get("version", "NA"),
                 "last_updated": int(time.time()),
                 "specifics": [specifics]
             }
             os_data.append(os_info)
         return os_data
+
+    @staticmethod
+    def get_local_disk(disks):
+        #TODO: We need better logic to identify server local disks.
+        local_disk = []
+        for disk in disks:
+            if disk.get("version") in ["G265", "G280"]:
+                continue
+            else:
+                local_disk.append(disk)
+        return local_disk

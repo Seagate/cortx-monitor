@@ -28,6 +28,27 @@ class StorageResourceMap(ResourceMap):
     """
 
     name = "storage"
+    # Resources and their common key path.
+    resource_indexing_map = {
+        "health": {
+            "hw": {
+                "controller": "['uid']",
+                "psu": "['uid']",
+                "fan": "['uid']",
+                "disk": "['uid']",
+                "sideplane_expander": "['uid']"
+            }
+        },
+        "manifest":{
+            "hw": {
+                "controller": "['uid']",
+                "psu": "['uid']",
+                "fan": "['uid']",
+                "disk": "['uid']",
+                "sideplane_expander": "['uid']"
+            }
+        }
+    }
 
     def __init__(self):
         """Initialize storage."""
@@ -76,8 +97,8 @@ class StorageResourceMap(ResourceMap):
             "storage"    -> ("storage", "*")
             "storage[0]" -> ("storage", "0")
 
-            "compute"    -> ("compute", "*")
-            "compute[0]" -> ("compute", "0")
+            "server"    -> ("server", "*")
+            "server[0]" -> ("server", "0")
         """
         res = re.search(r"(\w+)\[([\d]+)\]|(\w+)", node)
         inst = res.groups()[1] if res.groups()[1] else "*"

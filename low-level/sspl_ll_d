@@ -61,6 +61,7 @@ from framework.utils.service_logging import init_logging, logger
 from framework.utils.store_factory import store
 from framework.utils.utility import Utility
 from framework.utils.ipmi_client import IpmiFactory
+from framework.platforms.realstor.realstor_enclosure import singleton_realstorencl
 from cortx.utils.iem_framework.error import EventMessageError
 # Message to send to HAlon upon critical thread errors
 from json_msgs.messages.actuators.thread_controller import ThreadControllerMsg
@@ -722,7 +723,7 @@ def initialize_iem():
     try:
         if os.path.exists(IEM_INIT_FAILED):
             os.remove(IEM_INIT_FAILED)
-        EventMessage.init(component=None, source='S')
+        EventMessage.init(component='sspl', source='S')
         logger.info("IEM framework initiated successfully!!!")
     except EventMessageError as e:
         # create IEM_INIT_FAILED file and log current sspl pid.
@@ -819,6 +820,10 @@ if __name__ == "__main__":
         # load server fru list
         executor = IpmiFactory().get_implementor("ipmitool")
         executor.load_server_fru_list()
+
+        # load storage fru list
+        rssencl = singleton_realstorencl
+        rssencl.load_storage_fru_list()
 
         # Start sspl-ll as a main process running multiple threads
         main(conf_reader, systemd_support)

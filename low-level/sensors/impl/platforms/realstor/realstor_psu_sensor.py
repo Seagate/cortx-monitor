@@ -21,7 +21,6 @@
 import json
 import os
 import re
-import socket
 import time
 import uuid
 from threading import Event
@@ -37,6 +36,7 @@ from framework.utils.conf_utils import (POLLING_FREQUENCY_OVERRIDE, SSPL_CONF,
 from framework.utils.service_logging import logger
 from framework.utils.severity_reader import SeverityReader
 from framework.utils.store_factory import store
+from framework.utils.os_utils import OSUtils
 # Modules that receive messages from this module
 from message_handlers.real_stor_encl_msg_handler import RealStorEnclMsgHandler
 from sensors.Ipsu import IPSUsensor
@@ -48,7 +48,7 @@ class RealStorPSUSensor(SensorThread, InternalMsgQ):
 
 
     SENSOR_NAME = "RealStorPSUSensor"
-    RESOURCE_CATEGORY = "enclosure:fru:psu"
+    RESOURCE_CATEGORY = "enclosure:hw:psu"
 
     PRIORITY = 1
 
@@ -98,6 +98,7 @@ class RealStorPSUSensor(SensorThread, InternalMsgQ):
         self._suspended = False
 
         self._event = Event()
+        self.os_utils = OSUtils()
 
     def initialize(self, conf_reader, msgQlist, products):
         """initialize configuration reader and internal msg queues"""
@@ -269,7 +270,7 @@ class RealStorPSUSensor(SensorThread, InternalMsgQ):
 
     def _get_hostname(self):
         try:
-            return socket.getfqdn()
+            return self.os_utils.get_fqdn()
         except Exception as e:
             logger.exception("Got exception {} when trying to get hostname"
                     " using getfqdn().".format(e))
@@ -308,11 +309,13 @@ class RealStorPSUSensor(SensorThread, InternalMsgQ):
         epoch_time = str(int(time.time()))
 
         alert_id = self._get_alert_id(epoch_time)
+        fru = self.rssencl.is_storage_fru('POWER_SUPPLY')
         resource_id = psu_detail.get("durable-id")
         host_name = self._get_hostname()
 
         info = {
                 "resource_type": self.RESOURCE_CATEGORY,
+                "fru": fru,
                 "resource_id": resource_id,
                 "event_time": epoch_time
                 }
