@@ -34,14 +34,14 @@ alert_for_event = {
                     "Disk is missing/removed from slot '{}'. [{}]",
                     "Server availability may get impacted if redundant " +
                     "drive goes bad or missing.",
-                    DEFAULT_RECOMMENDATION)
+                    "Please insert back the missing drive soon.")
         }),
         **dict.fromkeys(["Drive Fault", "Drive Fault ()"], {
             "Asserted": Alert(
                     "fault", "critial",
                     "Disk in slot '{}' is faulty. [{}]",
                     "Disk functioning may get impacted if left unaddressed.",
-                    DEFAULT_RECOMMENDATION),
+                    "Please replace the faulty drive with a healthy one."),
             "Deasserted": Alert(
                     "fault_resolved", "informational",
                     "Disk in slot '{}' has recovered. [{}]",
