@@ -570,6 +570,7 @@ class ServerHealth():
     def get_nw_ports_info(self):
         """Return the Network ports information."""
         network_cable_data = []
+        loopback_interface = {}
         sort_key_path = None
         io_counters = psutil.net_io_counters(pernic=True)
 
@@ -606,10 +607,17 @@ class ServerHealth():
             )
             self.set_health_data(nic_info, health_status, description=desc,
                                  specifics=[specifics])
-            network_cable_data.append(nic_info)
+            # Separating out loopback interface and ethernet interface
+            # data to make correct sorting/mapping with manifest data.
+            if interface == 'lo':
+                loopback_interface = nic_info
+            else:
+                network_cable_data.append(nic_info)
         sort_key_path = self.resource_indexing_map["hw"]["nw_port"]
         network_cable_data = MonUtils.sort_by_specific_kv(
             network_cable_data, sort_key_path, self.log)
+        if loopback_interface:
+            network_cable_data.append(loopback_interface)
         return network_cable_data
 
     def get_nw_status(self, nw_interface, interface):

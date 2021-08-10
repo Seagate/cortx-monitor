@@ -208,11 +208,22 @@ class ServerManifest():
         if "disk" in lshw_data["hw"]:
             lshw_data["hw"]["disk"] = self.get_local_disk(lshw_data["hw"]["disk"])
         # Sort list by serial_number
+        eth_ctrl = []
         for resource, sort_key_path in self.resource_indexing_map["hw"].items():
             if resource in lshw_data["hw"]:
+                if resource == "nw_port":
+                    # Separating out ethernet controller and ethernet interface
+                    # data for sorting.
+                    eth_ctrl = [eth_ctr for eth_ctr in lshw_data["hw"][resource] \
+                        if eth_ctr['logical_name']=='NA']
+                    lshw_data["hw"][resource] = [eth_interface for eth_interface \
+                        in lshw_data["hw"][resource] if eth_interface[
+                            'logical_name']!='NA']
                 sorted_data = MonUtils.sort_by_specific_kv(
                     lshw_data["hw"][resource], sort_key_path, self.log)
                 lshw_data["hw"][resource] = sorted_data
+            if resource == "nw_port" and eth_ctrl:
+                lshw_data["hw"][resource] += eth_ctrl
         return lshw_data
 
     def get_hw_resources_info(self, server_hw_data, resource=False):
