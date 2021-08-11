@@ -58,16 +58,17 @@ class ServerManifest():
             'part_number': 'part_number',
             'model_number': 'model_number',
             'physid': 'physical_id',
-            'version': 'version'
+            'version': 'version',
+            'logicalname': 'logical_name'
         }
         self.class_mapping = {
             'memory': 'hw>memory[%s]>%s',
             'disk': 'hw>disk[%s]>%s',
             'storage': 'hw>storage[%s]>%s',
             'system': 'hw>system[%s]>%s',
-            'processor': 'hw>processor[%s]>%s',
-            'network': 'hw>network[%s]>%s',
-            'power': 'hw>power[%s]>%s',
+            'processor': 'hw>cpu[%s]>%s',
+            'network': 'hw>nw_port[%s]>%s',
+            'power': 'hw>psu[%s]>%s',
             'volume': 'hw>volume[%s]>%s',
             'bus': 'hw>bus[%s]>%s',
             'bridge': 'hw>bridge[%s]>%s',
@@ -95,6 +96,8 @@ class ServerManifest():
         }
         self.service = Service()
         self.platform = Platform()
+        self.resource_indexing_map = ServerResourceMap.resource_indexing_map\
+            ["manifest"]
 
     def get_data(self, rpath):
         """Fetch manifest information for given rpath."""
@@ -204,6 +207,23 @@ class ServerManifest():
         # separately & uniquely
         if "disk" in lshw_data["hw"]:
             lshw_data["hw"]["disk"] = self.get_local_disk(lshw_data["hw"]["disk"])
+        # Sort list by serial_number
+        eth_ctrl = []
+        for resource, sort_key_path in self.resource_indexing_map["hw"].items():
+            if resource in lshw_data["hw"]:
+                if resource == "nw_port":
+                    # Separating out ethernet controller and ethernet interface
+                    # data for sorting.
+                    eth_ctrl = [eth_ctr for eth_ctr in lshw_data["hw"][resource] \
+                        if eth_ctr['logical_name']=='NA']
+                    lshw_data["hw"][resource] = [eth_interface for eth_interface \
+                        in lshw_data["hw"][resource] if eth_interface[
+                            'logical_name']!='NA']
+                sorted_data = MonUtils.sort_by_specific_kv(
+                    lshw_data["hw"][resource], sort_key_path, self.log)
+                lshw_data["hw"][resource] = sorted_data
+            if resource == "nw_port" and eth_ctrl:
+                lshw_data["hw"][resource] += eth_ctrl
         return lshw_data
 
     def get_hw_resources_info(self, server_hw_data, resource=False):
@@ -254,6 +274,8 @@ class ServerManifest():
             value = data.get(base_key+'>'+field)
         else:
             value = data.get(field)
+        if isinstance(value, list):
+            value = ','.join(value)
         value = value.replace(" (To be filled by O.E.M.)", "") \
             if value else 'NA'
         if field == 'id' and '>' in kv_key:
@@ -286,12 +308,18 @@ class ServerManifest():
         """Get cortx service info in required format."""
         cortx_services = self.service.get_cortx_service_list()
         cortx_service_info = self.get_service_info(cortx_services)
+        sort_key_path = self.resource_indexing_map["sw"]["cortx_sw_services"]
+        cortx_service_info = MonUtils.sort_by_specific_kv(
+            cortx_service_info, sort_key_path, self.log)
         return cortx_service_info
 
     def get_external_service_info(self):
         """Get external service info in required format."""
         external_services = self.service.get_external_service_list()
         external_service_info = self.get_service_info(external_services)
+        sort_key_path = self.resource_indexing_map["sw"]["external_sw_services"]
+        external_service_info = MonUtils.sort_by_specific_kv(
+            external_service_info, sort_key_path, self.log)
         return external_service_info
 
     def get_service_info(self, services):

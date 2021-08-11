@@ -58,6 +58,8 @@ class StorageHealth():
             "hw": hw_resources,
             "fw": fw_resources
         }
+        self.resource_indexing_map = StorageResourceMap.resource_indexing_map\
+            ["health"]
 
     def get_data(self, rpath):
         """
@@ -176,11 +178,16 @@ class StorageHealth():
                 health = fan_module.get('health')
                 fan_module_resp = self.get_health_template(uid, is_fru=True)
                 specifics = [self.get_fan_specfics(fan) for fan in fan_module['fan']]
+                fan_key_path = self.resource_indexing_map["hw"]["fan"]
+                specifics = MonUtils.sort_by_specific_kv(specifics,
+                    fan_key_path, self.log)
                 self.set_health_data(fan_module_resp, health, specifics=specifics)
                 response.append(fan_module_resp)
             logger.debug(self.log.svc_log(f"Fan modules health Data:{response}"))
         else:
             logger.error(self.log.svc_log("No response received from fan modules"))
+        sort_key_path = self.resource_indexing_map["hw"]["fan"]
+        response = MonUtils.sort_by_specific_kv(response, sort_key_path, self.log)
         return response
 
     def get_storage_health_info(self):
@@ -266,6 +273,8 @@ class StorageHealth():
             data.append(controller_dict)
             logger.debug(self.log.svc_log(
                 f"Contollers Health Data:{data}"))
+        sort_key_path = self.resource_indexing_map["hw"]["controller"]
+        data = MonUtils.sort_by_specific_kv(data, sort_key_path, self.log)
         return data
 
     def get_psu_info(self):
@@ -285,7 +294,8 @@ class StorageHealth():
                     "dc33v": psu.get("dc33v", "NA"),
                     "dc12i": psu.get("dc12i", "NA"),
                     "dc5i": psu.get("dc5i", "NA"),
-                    "dctemp": psu.get("dctemp", "NA")
+                    "dctemp": psu.get("dctemp", "NA"),
+                    "serial-number": psu.get("serial-number", "NA")
                 }
             ]
             psu_dict = self.get_health_template(uid, is_fru=True)
@@ -294,6 +304,8 @@ class StorageHealth():
             data.append(psu_dict)
             logger.debug(self.log.svc_log(
                 f"PSU Health Data:{data}"))
+        sort_key_path = self.resource_indexing_map["hw"]["psu"]
+        data = MonUtils.sort_by_specific_kv(data, sort_key_path, self.log)
         return data
 
     def get_platform_sensors_info(self):
@@ -445,6 +457,9 @@ class StorageHealth():
             uid = sideplane.get("durable-id", "NA")
             expanders = sideplane.get("expanders")
             expander_data = self.get_expander_data(expanders)
+            sort_key_path = self.resource_indexing_map["hw"]["sideplane_expander"]
+            expander_data = MonUtils.sort_by_specific_kv(expander_data,
+                sort_key_path, self.log)
             health = sideplane.get("health", "NA")
             recommendation = sideplane.get("health-recommendation", "NA")
             specifics = [
@@ -461,6 +476,9 @@ class StorageHealth():
                 specifics=specifics)
 
             sideplane_expander_data.append(sideplane_dict)
+        sort_key_path = self.resource_indexing_map["hw"]["sideplane_expander"]
+        sideplane_expander_data = MonUtils.sort_by_specific_kv(
+            sideplane_expander_data, sort_key_path, self.log)
         logger.debug(self.log.svc_log(
             f"Sideplane Expander Health Data:{sideplane_expander_data}"))
         return sideplane_expander_data
@@ -532,6 +550,9 @@ class StorageHealth():
             self.set_health_data(
                 drives_dict, status, description, recommendation, specifics)
             drive_data.append(drives_dict)
+        sort_key_path = self.resource_indexing_map["hw"]["disk"]
+        drive_data = MonUtils.sort_by_specific_kv(drive_data, sort_key_path,
+            self.log)
         logger.debug(self.log.svc_log(
             f"disk Health data:{drive_data}"))
         return drive_data

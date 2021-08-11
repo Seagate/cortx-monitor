@@ -35,8 +35,21 @@ sspl:
     args: --config $URL --plan sanity
 
   upgrade:
-    cmd: /opt/seagate/cortx/sspl/bin/sspl_setup upgrade
-    args: --config $URL
+    post:
+      {% if level == 'node' %}
+      cmd: /opt/seagate/cortx/sspl/bin/sspl_setup post_upgrade node
+      {% else %}
+      cmd: /opt/seagate/cortx/sspl/bin/sspl_setup post_upgrade cluster
+      {% endif %}
+      when: {{ level in ('node', 'cluster') }}
+
+    pre:
+      {% if level == 'node' %}
+      cmd: /opt/seagate/cortx/sspl/bin/sspl_setup pre_upgrade node
+      {% else %}
+      cmd: /opt/seagate/cortx/sspl/bin/sspl_setup pre_upgrade cluster
+      {% endif %}
+      when: {{ level in ('node', 'cluster') }}
 
   reset:
     cmd: /opt/seagate/cortx/sspl/bin/sspl_setup reset
@@ -44,7 +57,7 @@ sspl:
 
   cleanup:
     cmd: /opt/seagate/cortx/sspl/bin/sspl_setup cleanup
-    args: --config $URL
+    args: --config $URL [--pre-factory]
 
   backup:
     cmd: /opt/seagate/cortx/sspl/bin/sspl_setup backup

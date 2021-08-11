@@ -73,7 +73,10 @@
 						"required": false
 					}
 				},
-
+				"target_node_id": {
+					"type": "string",
+					"required": true
+				},
 				"actuator_request_type": {
 					"type": "object",
 					"required": true,

@@ -23,7 +23,7 @@ def init(args):
 
 def test_real_stor_controller_actuator(agrs):
     instance_id = "*"
-    resource_type = "enclosure:fru:controller"
+    resource_type = "enclosure:hw:controller"
     send_enclosure_request("ENCL:%s" % resource_type, instance_id)
     ingressMsg = get_fru_response(resource_type, instance_id)
     controller_actuator_msg = ingressMsg.get("actuator_response_type")

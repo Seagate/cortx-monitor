@@ -20,7 +20,6 @@
 """
 import json
 import os
-import socket
 import subprocess
 import time
 import uuid
@@ -37,6 +36,7 @@ from framework.utils.conf_utils import (SSPL_CONF, Conf, SYSTEM_INFORMATION,
                                         SYSFS_PATH)
 from framework.utils.service_logging import logger
 from framework.utils.severity_reader import SeverityReader
+from framework.utils.os_utils import OSUtils
 # Modules that receive messages from this module
 from message_handlers.node_data_msg_handler import NodeDataMsgHandler
 from sensors.Iraid import IRAIDsensor
@@ -85,6 +85,7 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
         super(RAIDIntegritySensor, self).__init__(self.SENSOR_NAME,
                                          self.PRIORITY)
         self._cache_state = None
+        self.os_utils = OSUtils()
 
     def initialize(self, conf_reader, msgQlist, product):
         """initialize configuration reader and internal msg queues"""
@@ -362,7 +363,7 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
         severity_reader = SeverityReader()
         severity = severity_reader.map_severity(alert_type)
         self._alert_id = self._get_alert_id(epoch_time)
-        host_name = socket.getfqdn()
+        host_name = self.os_utils.get_fqdn()
 
         info = {
                 "resource_type": self.RESOURCE_TYPE,

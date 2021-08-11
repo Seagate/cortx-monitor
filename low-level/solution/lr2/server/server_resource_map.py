@@ -29,6 +29,33 @@ class ServerResourceMap(ResourceMap):
     """
 
     name = "server"
+    # Resources and their common key path.
+    resource_indexing_map = {
+        "health": {
+            "hw": {
+                "disk": "['health']['specifics'][0]['SMART']['serial_number']",
+                "psu": "['health']['specifics']['serial_number']",
+                "cpu": "['uid']",
+                "nw_port": "['health']['specifics'][0]['logical_name']"
+            },
+            "sw": {
+                "cortx_sw_services": "['uid']",
+                "external_sw_services": "['uid']"
+            }
+        },
+        "manifest":{
+            "hw": {
+                "disk": "['serial_number']",
+                "psu": "['serial_number']",
+                "cpu": "['uid']",
+                "nw_port": "['logical_name']"
+            },
+            "sw": {
+                "cortx_sw_services": "['uid']",
+                "external_sw_services": "['uid']"
+            }
+        }
+    }
 
     def __init__(self):
         """Initialize server."""

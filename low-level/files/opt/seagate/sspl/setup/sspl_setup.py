@@ -26,6 +26,7 @@ import shutil
 import os
 import syslog
 import time
+import pwd
 from urllib.parse import urlparse
 from cortx.utils.conf_store.error import ConfError
 
@@ -38,9 +39,8 @@ from cortx.utils.validator.error import VError
 from files.opt.seagate.sspl.setup.setup_error import SetupError
 from files.opt.seagate.sspl.setup.setup_logger import init_logging, logger
 from framework.base.sspl_constants import (
-    PRVSNR_CONFIG_INDEX, GLOBAL_CONFIG_INDEX, global_config_path,
-    file_store_config_path, SSPL_BASE_DIR, TEST_REQ_SERVICE_RESTART,
-    sspl_config_path)
+    PRVSNR_CONFIG_INDEX, GLOBAL_CONFIG_INDEX,
+    global_config_path, sspl_config_path, TEST_REQ_SERVICE_RESTART)
 from framework.base.conf_upgrade import ConfUpgrade
 
 
@@ -69,7 +69,7 @@ class Cmd:
             [ manifest_support_bundle [<id>] [<path>] ]
             [ support_bundle [<id>] [<path>] ]
             [ check ]
-            [ cleanup ]
+            [ cleanup [--pre-factory]]
             \n""")
 
     @staticmethod
@@ -500,14 +500,11 @@ class CleanupCmd(Cmd):
         logger.info("%s - Validation done" % self.name)
 
     def process(self):
-        try:
-            if os.path.exists(file_store_config_path):
-                os.remove(file_store_config_path)
-            shutil.copyfile("%s/conf/sspl.conf.%s.yaml" % (
-                SSPL_BASE_DIR, self.product), file_store_config_path)
-            logger.info("%s - Process done" % self.name)
-        except OSError as e:
-            logger.error(f"Failed in Cleanup. ERROR: {e}")
+        """Cleanup sspl config and log files."""
+        from files.opt.seagate.sspl.setup.sspl_cleanup import SSPLCleanup
+        sspl_cleanup = SSPLCleanup(self.args.args)
+        sspl_cleanup.process(self.product)
+        logger.info("%s - Process done" % self.name)
 
 
 class BackupCmd(Cmd):
@@ -549,6 +546,7 @@ class PreUpgradeCmd(Cmd):
 
     def __init__(self, args):
         super().__init__(args)
+        self.level = args.args[0]
 
     def validate(self):
         # Common validator classes to check Cortx/system wide validator
@@ -556,6 +554,12 @@ class PreUpgradeCmd(Cmd):
 
     def process(self):
         logger.info(f"Nothing to be done for {self.name}.")
+        if self.level == 'node':
+            # No action needed
+            pass
+        elif self.level == 'cluster':
+            # No action needed
+            pass
 
 
 class PostUpgradeCmd(Cmd):
@@ -565,29 +569,36 @@ class PostUpgradeCmd(Cmd):
 
     def __init__(self, args):
         super().__init__(args)
+        self.level = args.args[0]
 
     def validate(self):
         # Common validator classes to check Cortx/system wide validator
         pass
 
     def process(self):
-        new_conf_url = 'yaml:///opt/seagate/cortx/sspl/conf/sspl.conf.LR2.yaml'
-        merged_conf_url = 'yaml:///opt/seagate/cortx/sspl/tmp/merged.conf'
-        # Only proceed if both existing and new config path are present
-        for filepath in [sspl_config_path, new_conf_url]:
-            if not os.path.exists(filepath.split(":/")[1]):
-                logger.debug("Config not upgraded as existing or new config file is not present.")
-                return
-        conf_upgrade = ConfUpgrade(sspl_config_path, new_conf_url,
-                                   merged_conf_url)
-        try:
-            conf_upgrade.create_merged_config()
-        except ConfError as e:
-            logger.error("%s error seen while upgrading config, existing config retained" % e)
-        else:
-            conf_upgrade.upgrade_existing_config()
-        finally:
-            conf_upgrade.remove_merged_config()
+
+        if self.level == 'node':
+            new_conf_url = 'yaml:///opt/seagate/cortx/sspl/conf/sspl.conf.LR2.yaml'
+            merged_conf_url = 'yaml:///opt/seagate/cortx/sspl/tmp/merged.conf'
+            # Only proceed if both existing and new config path are present
+            for filepath in [sspl_config_path, new_conf_url]:
+                if not os.path.exists(filepath.split(":/")[1]):
+                    logger.debug("Config not upgraded as existing or new config file is not present.")
+                    return
+            conf_upgrade = ConfUpgrade(sspl_config_path, new_conf_url,
+                                       merged_conf_url)
+            try:
+                conf_upgrade.create_merged_config()
+            except ConfError as e:
+                logger.error("%s error seen while upgrading config, existing config retained" % e)
+            else:
+                conf_upgrade.upgrade_existing_config()
+            finally:
+                conf_upgrade.remove_merged_config()
+
+        elif self.level == 'cluster':
+            # No action needed
+            pass
 
 
 def main(argv: dict):

@@ -21,7 +21,6 @@
 import json
 import os
 import re
-import socket
 import time
 import uuid
 from threading import Event
@@ -37,6 +36,7 @@ from framework.utils.conf_utils import (POLLING_FREQUENCY_OVERRIDE, SSPL_CONF,
 from framework.utils.service_logging import logger
 from framework.utils.severity_reader import SeverityReader
 from framework.utils.store_factory import store
+from framework.utils.os_utils import OSUtils
 # Modules that receive messages from this module
 from message_handlers.real_stor_encl_msg_handler import RealStorEnclMsgHandler
 from sensors.Ifan import IFANsensor
@@ -48,7 +48,7 @@ class RealStorFanSensor(SensorThread, InternalMsgQ):
 
     SENSOR_NAME = "RealStorFanSensor"
     SENSOR_TYPE = "enclosure_fan_module_alert"
-    RESOURCE_TYPE = "enclosure:fru:fan"
+    RESOURCE_TYPE = "enclosure:hw:fan"
 
     PRIORITY = 1
 
@@ -96,6 +96,7 @@ class RealStorFanSensor(SensorThread, InternalMsgQ):
         self._suspended = False
 
         self._event = Event()
+        self.os_utils = OSUtils()
 
     def initialize(self, conf_reader, msgQlist, products):
         """initialize configuration reader and internal msg queues"""
@@ -288,11 +289,13 @@ class RealStorFanSensor(SensorThread, InternalMsgQ):
         epoch_time = str(int(time.time()))
 
         alert_id = self._get_alert_id(epoch_time)
+        fru = self.rssencl.is_storage_fru('FAN MODULE')
         resource_id = fan_module_info_dict.get("name", "")
-        host_name = socket.gethostname()
+        host_name = self.os_utils.get_fqdn()
 
         info = {
                 "resource_type": self.RESOURCE_TYPE,
+                "fru": fru,
                 "resource_id": resource_id,
                 "event_time": epoch_time
                 }

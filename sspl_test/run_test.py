@@ -92,6 +92,7 @@ def tmain(argp, argv):
             init(args)
         except Exception as e:
             print('FAILED: Error: %s #@#@#@' %e)
+            print(traceback.format_exc())
             fail_count += 1
             result.update({ts: {"Fail": 0}})
             continue
@@ -110,6 +111,7 @@ def tmain(argp, argv):
             except (TestFailed, Exception) as e:
                 print('%s:%s: FAILED #@#@#@' %(ts, test.__name__))
                 print('    %s\n' %e)
+                print(traceback.format_exc())
                 fail_count += 1
                 found_failed_test = True
         if not found_failed_test:

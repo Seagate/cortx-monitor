@@ -20,7 +20,6 @@
 """
 import json
 import os
-import socket
 import time
 import uuid
 from threading import Event
@@ -36,6 +35,7 @@ from framework.utils.conf_utils import (POLLING_FREQUENCY_OVERRIDE, SSPL_CONF,
 from framework.utils.service_logging import logger
 from framework.utils.severity_reader import SeverityReader
 from framework.utils.store_factory import store
+from framework.utils.os_utils import OSUtils
 # Modules that receive messages from this module
 from message_handlers.real_stor_encl_msg_handler import RealStorEnclMsgHandler
 from sensors.ISideplane_expander import ISideplaneExpandersensor
@@ -47,7 +47,7 @@ class RealStorSideplaneExpanderSensor(SensorThread, InternalMsgQ):
 
     SENSOR_NAME = "RealStorSideplaneExpanderSensor"
     SENSOR_TYPE = "enclosure_sideplane_expander_alert"
-    RESOURCE_TYPE = "enclosure:fru:sideplane"
+    RESOURCE_TYPE = "enclosure:hw:sideplane"
 
     PRIORITY = 1
 
@@ -88,6 +88,7 @@ class RealStorSideplaneExpanderSensor(SensorThread, InternalMsgQ):
         self._suspended = False
 
         self._event = Event()
+        self.os_utils = OSUtils()
 
     @staticmethod
     def dependencies():
@@ -296,11 +297,12 @@ class RealStorSideplaneExpanderSensor(SensorThread, InternalMsgQ):
         drawer_id = "drawer" + ' ' + str(sideplane_expander_info_dict.get("drawer-id"))
         name = sideplane_expander_info_dict.get("name", "")
         resource_id = drawer_id + ' ' + name
-        host_name = socket.gethostname()
-
+        host_name = self.os_utils.get_fqdn()
+        fru = self.rssencl.is_storage_fru('SIDEPLANE')
 
         info = {
                 "resource_type": self.RESOURCE_TYPE,
+                "fru": fru,
                 "resource_id": resource_id,
                 "event_time": epoch_time
                 }
