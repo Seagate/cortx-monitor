@@ -50,7 +50,8 @@ SYSTEMD_BUS = "org.freedesktop.systemd1"
 CACHE_PATH = f"/{DATA_PATH}/server/service_monitor/"
 
 Alert = namedtuple('Alert', 'alert_type description impact recommendation')
-FailedAlert = Alert("fault", "{} in {} state.", "{} service is unavailable.",
+FailedAlert = Alert("fault", "{} in {} state for more than {} seconds.",
+                    "{} service is unavailable.",
                     "Try to restart the service")
 InactiveAlert = Alert("fault", "{} in {} state for more than {} seconds.",
                       "{} service is unavailable.",
@@ -68,7 +69,7 @@ class ActiveState:
 
     @staticmethod
     def enter(service):
-        service.active_enter_timestamp = time.time()
+        service.state_enter_timestamp = time.time()
         Service.non_active.discard(service.name)
 
 
@@ -80,6 +81,7 @@ class FailedState:
 
     @staticmethod
     def enter(service):
+        service.state_enter_timestamp = time.time()
         Service.non_active.discard(service.name)
 
 
@@ -157,6 +159,9 @@ class Service:
     # once fault resolved detected for service, add service name
     # into the active_services list.
     active_services = set()
+    # if service state changed to Failed state add service name
+    # in failed_service list.
+    failed_services = set()
     monitoring_disabled = set()
 
     def __init__(self, unit):
@@ -174,13 +179,13 @@ class Service:
         self.previous_substate = "N/A"
         self.previous_pid = "N/A"
         self.nonactive_enter_timestamp = time.time()
-        self.active_enter_timestamp = time.time()
+        self.state_enter_timestamp = time.time()
         self.nonactive_threshold = int(
             Conf.get(SSPL_CONF,
                      f"{ServiceMonitor.name().upper()}>threshold_inactive_time",
                      '60'))
-        self.active_threshold = int(Conf.get(SSPL_CONF,
-                     f"{ServiceMonitor.name().upper()}>threshold_active_time",
+        self.threshold_waiting_time = int(Conf.get(SSPL_CONF,
+                     f"{ServiceMonitor.name().upper()}>threshold_waiting_time",
                      '30'))
         self.properties_changed_signal = None
         self._service_state = ActiveState
@@ -196,8 +201,8 @@ class Service:
     def is_nonactive_for_threshold_time(self):
         return time.time() - self.nonactive_enter_timestamp > self.nonactive_threshold
 
-    def is_active_for_threshold_time(self):
-        return time.time() - self.active_enter_timestamp > self.active_threshold
+    def in_same_state_for_threshold_time(self):
+        return time.time() - self.state_enter_timestamp > self.threshold_waiting_time
 
     def new_service_state(self, new_state):
         if self._service_state != new_state:
@@ -235,15 +240,22 @@ class Service:
                     Service.active_services.add(self.name)
                 if self._service_state is InactiveState:
                     self.new_service_state(ActiveState)
+                if self.name in Service.failed_services:
+                    Service.failed_services.discard(self.name)
             elif self.state == "failed":
                 if self._service_state is not FailedState:
-                    Service.alerts.put(
-                        ServiceMonitor.get_alert(self, FailedAlert))
-                self.new_service_state(FailedState)
+                    self.new_service_state(FailedState)
+                    Service.failed_services.add(self.name)
+                if self.name in Service.active_services:
+                    Service.active_services.discard(self.name)
             else:
                 # Avoid raising duplicate alerts
                 if self._service_state != FailedState:
                     self.new_service_state(InactiveState)
+                if self.name in Service.active_services:
+                    Service.active_services.discard(self.name)
+                elif self.name in Service.failed_services:
+                    Service.failed_services.discard(self.name)
                 self.dump_to_cache()
 
     def handle_unit_state_change(self):
@@ -263,7 +275,7 @@ class Service:
         service.new_service_state(data["service_monitor_state"])
         service.state = data["service_state"]
         service.nonactive_enter_timestamp = data["nonactive_enter_timestamp"]
-        service.active_enter_timestamp = data["active_enter_timestamp"]
+        service.state_enter_timestamp = data["state_enter_timestamp"]
         return service
 
     def dump_to_cache(self):
@@ -274,7 +286,7 @@ class Service:
             "service_state": self.state,
             "service_monitor_state": self._service_state,
             "nonactive_enter_timestamp": self.nonactive_enter_timestamp,
-            "active_enter_timestamp": self.active_enter_timestamp
+            "state_enter_timestamp": self.state_enter_timestamp
         }
         store.put(data, f"{CACHE_PATH}/{self.name}")
 
@@ -377,7 +389,7 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
                         self.services[service].new_unit_state(EnabledState)
                     # Check for services in intermediate state(not active)
                     self.check_nonactive_services()
-                    self.check_active_services()
+                    self.service_waiting_time()
                 time.sleep(self.thread_sleep)
                 iterations += 1
             logger.info("ServiceMonitor gracefully breaking out " +
@@ -464,18 +476,24 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
                 self.raise_alert(self.get_alert(self.services[service],
                                                 InactiveAlert))
 
-    def check_active_services(self):
+    def service_waiting_time(self):
         """
-            Monitor active services.
+            Monitor active and failed services.
 
-            Raise fault resolved alert for active services
-            if service stays in active state for threshhold time.
+            Raise alert for services
+            if service stays in same state for threshhold time.
         """
         for service in Service.active_services.copy():
-            if self.services[service].is_active_for_threshold_time():
+            if self.services[service].in_same_state_for_threshold_time():
                 self.raise_alert(
                     self.get_alert(self.services[service], ResolvedAlert))
                 Service.active_services.discard(service)
+
+        for service in Service.failed_services.copy():
+            if self.services[service].in_same_state_for_threshold_time():
+                self.raise_alert(
+                    self.get_alert(self.services[service], FailedAlert))
+                Service.failed_services.discard(service)
 
     def raise_iem(self, service, alert_type):
         """Raise iem alert for kafka service."""
@@ -490,9 +508,9 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
 
     @classmethod
     def get_alert(cls, service, alert):
-        if service.state == "active":
+        if service.state in ["active", "failed"]:
             description = alert.description.format(
-                service.name, service.state, service.active_threshold)
+                service.name, service.state, service.threshold_waiting_time)
         else:
             description = alert.description.format(
                 service.name, service.state, service.nonactive_threshold)
