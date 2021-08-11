@@ -27,7 +27,6 @@ import psutil
 import tarfile
 import logging
 import argparse
-import subprocess
 
 from datetime import datetime
 
@@ -37,7 +36,7 @@ from framework.utils.conf_utils import (
     Conf, SSPL_CONF, SYSTEM_INFORMATION, SSPL_STATE)
 from framework.utils.ipmi_client import IpmiFactory
 from framework.utils.drive_utils import DriveUtils
-from framework.utils.storage_encl import StorageEncl
+from framework.platforms.realstor.realstor_enclosure import RealStorEnclosure
 
 
 # Load bundle request status tracker
@@ -73,6 +72,7 @@ class BundleRequestHandler:
     SUCCESS = "Success"
     FAILED = "Failed"
 
+    @staticmethod
     def get_processing_status(req_id):
         """
         Returns "in-progress" if any request is being processed.
@@ -105,6 +105,7 @@ class BundleRequestHandler:
 
         return status
 
+    @staticmethod
     def _update_request_status(req_id, status):
         """Updates processed request information."""
         req_info = req_register.get(["%s" % req_id])[0]
@@ -136,8 +137,6 @@ class SupportBundle(object):
         self.IEM_SENSOR = "IEMSENSOR"
         self._tmp_dir = '/tmp/cortx'
         self._default_path = '%s/support_bundle/' % self._tmp_dir
-        self.sspl_log_default = f"/var/log/{sspl_const.PRODUCT_FAMILY}/sspl"
-        self.iem_log_default = f"/var/log/{sspl_const.PRODUCT_FAMILY}/iem"
         self.sspl_conf_dir = f"{sspl_const.SSPL_SB_TMP}/sspl_conf/"
         self.ipmi_sel_data = "{0}/ipmi_sel_data_{1}.txt".format(
             sspl_const.SSPL_SB_TMP, str(int(time.time())))
@@ -146,7 +145,7 @@ class SupportBundle(object):
         self.enclosure_log = f"{sspl_const.SSPL_SB_TMP}/enclosure_logs.zip"
         self.enclosure_wwn = "NA"
         self.sspl_log_dir = Conf.get(SSPL_CONF, "%s>sspl_log_file_path" %
-                                    (self.SYS_INFORMATION)).replace("/sspl.log", "")
+                                     (self.SYS_INFORMATION)).replace("/sspl.log", "")
         self.iem_log_dir = Conf.get(SSPL_CONF, "%s>log_file_path" %
                                     (self.IEM_SENSOR)).replace("/iem_messages", "")
 
@@ -183,7 +182,7 @@ class SupportBundle(object):
 
     def get_sspl_bundle_data(self, file_path, include_encl):
         """Collect SSPL data for support bundle."""
-        request_id = datetime.strftime(datetime.now(),'%Y%m%d%H%M%S%f')
+        request_id = datetime.strftime(datetime.now(), '%Y%m%d%H%M%S%f')
         BundleRequestHandler._add_bundle_request(request_id, file_path)
 
         if file_path:
@@ -221,7 +220,8 @@ class SupportBundle(object):
             self.get_config_data()
             self.get_drives_smart_data()
             if sspl_state == "active" and not include_encl:
-                StorageEncl().get_enclosure_logs(self.enclosure_log, logger)
+                RealStorEnclosure().get_enclosure_logs(
+                    self.enclosure_log, logger)
 
             if os.path.exists(self.enclosure_log) and sspl_state == 'active' \
                     and not include_encl:
@@ -315,7 +315,7 @@ class SupportBundle(object):
                                     exclude=lambda x: x in EXCLUDE_FILES)
                         except IOError as err:
                             logger.error("Unable to include {0} logs "
-                            "with an error {1}".format(key, err))
+                                         "with an error {1}".format(key, err))
             return tar_location
         except (OSError, tarfile.TarError) as err:
             msg = "Facing issues while creating sspl "
@@ -331,11 +331,12 @@ class SupportBundle(object):
     @staticmethod
     def parse_arguments():
         parser = argparse.ArgumentParser(description="SSPL Support Bundle")
+        parser.add_argument('action',
+                            help='Support bundle action [generate|status]')
         parser.add_argument('bundle_id',
                             help='Unique bundle id')
-        parser.add_argument('target_path',
+        parser.add_argument('-target_path',
                             help='Path to store the created bundle',
-                            nargs='?',
                             default="/var/seagate/cortx/support_bundle/")
         parser.add_argument('-noencl',
                             action='store_true',
@@ -344,7 +345,7 @@ class SupportBundle(object):
                             action='store_true',
                             help='Print logs on console')
         args = parser.parse_args()
-        return args
+        return args, parser
 
 
 def initialize_logging(parser):
@@ -374,8 +375,13 @@ logger = initialize_logging(sys.argv)
 
 def main():
     bundle = SupportBundle()
-    args = bundle.parse_arguments()
-    bundle.generate(args)
+    args, parser = bundle.parse_arguments()
+    if args.action == "generate":
+        bundle.generate(args)
+    elif args.action == "status":
+        bundle.get_status(args)
+    else:
+        parser.print_help()
 
 
 if __name__ == '__main__':

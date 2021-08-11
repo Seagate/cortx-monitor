@@ -99,7 +99,6 @@ SSPL_DIR=/opt/seagate/%{product_family}/sspl
     ln -sf $SSPL_DIR/low-level/framework $SSPL_DIR/low-level/solution/lr2/
     ln -sf $SSPL_DIR/low-level/solution $SSPL_DIR/extension/solution
     ln -sf $SSPL_DIR/low-level/sspl_support_bundle $SSPL_DIR/bin/sspl_support_bundle
-    ln -sf $SSPL_DIR/low-level/sspl_support_bundle /usr/bin/sspl_support_bundle
 }
 
 # restore of data & iem folder
