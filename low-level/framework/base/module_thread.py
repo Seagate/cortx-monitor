@@ -26,7 +26,7 @@ import threading
 import time
 from sched import scheduler
 from .debug import Debug
-from framework.utils.service_logging import logger
+from cortx.utils.log import Log as logger
 
 class DependencyState(object):
     DEPS_STARTING = 0

@@ -238,11 +238,14 @@ class SSPLPostInstall:
         if not os.path.exists(self.state_file):
             file = open(self.state_file, "w")
             file.close()
-        Utility.set_ownership_recursively(consts.SSPL_CONFIGURED_DIR,sspl_uid,sspl_gid)
 
         # Create SSPL log and bundle directories
         os.makedirs(consts.SSPL_LOG_PATH, exist_ok=True)
         os.makedirs(consts.SSPL_BUNDLE_PATH, exist_ok=True)
+        # set ownership for SSPL dirs
+        list_root_dir = [consts.SSPL_CONFIGURED_DIR, consts.SSPL_LOG_PATH]
+        Utility.set_ownership_recursively(list_root_dir, sspl_uid, sspl_gid)
+
         # Create /tmp/dcs/hpi if required. Not required for '<product>' role
         if self.setup != "cortx":
             os.makedirs(consts.HPI_PATH, mode=0o777, exist_ok=True)
@@ -276,14 +279,6 @@ class SSPLPostInstall:
         Utility.replace_expr(consts.RSYSLOG_IEM_CONF,
             'File.*[=,"]', 'File="%s"' % iem_log_file_path)
 
-        # SSPL rsys log configuration
-        if not os.path.exists(consts.RSYSLOG_SSPL_CONF):
-            shutil.copyfile("%s/%s" % (system_files_root, consts.RSYSLOG_SSPL_CONF),
-                consts.RSYSLOG_SSPL_CONF)
-        # Update log location as per sspl.conf
-        Utility.replace_expr(consts.RSYSLOG_SSPL_CONF, 'File.*[=,"]',
-            'File="%s"' % sspl_log_file_path)
-
         # Manifest Bundle log configuration
         if not os.path.exists(consts.RSYSLOG_MSB_CONF):
             shutil.copyfile("%s/%s" % (system_files_root, consts.RSYSLOG_MSB_CONF),
@@ -305,14 +300,10 @@ class SSPLPostInstall:
         os.makedirs(consts.LOGROTATE_DIR, exist_ok=True)
         Utility.replace_expr("%s/etc/logrotate.d/iem_messages" % system_files_root,
             0, iem_log_file_path)
-        Utility.replace_expr("%s/etc/logrotate.d/sspl_logs" % system_files_root,
-            0, sspl_log_file_path)
         Utility.replace_expr("%s/etc/logrotate.d/sspl_sb_logs" % system_files_root,
             0, sspl_sb_log_file_path)
         shutil.copy2("%s/etc/logrotate.d/iem_messages" % system_files_root,
             consts.IEM_LOGROTATE_CONF)
-        shutil.copy2("%s/etc/logrotate.d/sspl_logs" % system_files_root,
-            consts.SSPL_LOGROTATE_CONF)
         shutil.copy2("%s/etc/logrotate.d/manifest_logs" % system_files_root,
             consts.MSB_LOGROTATE_CONF)
         shutil.copy2("%s/etc/logrotate.d/sspl_sb_logs" % system_files_root,

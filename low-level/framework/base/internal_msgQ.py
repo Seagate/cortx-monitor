@@ -20,7 +20,7 @@
                     another.
  ****************************************************************************
 """
-from framework.utils.service_logging import logger
+from cortx.utils.log import Log as logger
 
 class InternalMsgQ(object):
     """Base Class for internal message queue communications between modules"""

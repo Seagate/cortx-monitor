@@ -43,7 +43,7 @@ from framework.actuator_state_manager import actuator_state_manager
 from framework.base.module_thread import SensorThread
 from framework.base.sspl_constants import (SSPL_SETTINGS, COMMON_CONFIGS, PRODUCT_FAMILY,
     OperatingSystem, enabled_products, SYSLOG_HOST, SYSLOG_PORT,
-    IEM_INIT_FAILED)
+    IEM_INIT_FAILED, SSPL_LOG_PATH)
 from framework.messaging.egress_accumulated_msgs_processor import \
     EgressAccumulatedMsgsProcessor
 # Modules for handling messages and manipulating internal threads
@@ -57,12 +57,12 @@ from framework.utils.conf_utils import (GLOBAL_CONF, HOST, MONITOR,
     SSPL_CONF, SYSTEM_INFORMATION, THREADED, Conf, LOG_LEVEL,
     PRODUCT_KEY, SETUP_KEY, SSPL_STATE)
 from framework.utils.config_reader import ConfigReader
-from framework.utils.service_logging import init_logging, logger
 from framework.utils.store_factory import store
 from framework.utils.utility import Utility
 from framework.utils.ipmi_client import IpmiFactory
 from framework.platforms.realstor.realstor_enclosure import singleton_realstorencl
 from cortx.utils.iem_framework.error import EventMessageError
+from cortx.utils.log import Log as logger
 # Message to send to HAlon upon critical thread errors
 from json_msgs.messages.actuators.thread_controller import ThreadControllerMsg
 from message_handlers.disk_msg_handler import DiskMsgHandler
@@ -780,8 +780,8 @@ if __name__ == "__main__":
     # Initialize logging
     try:
         logging_level = Conf.get(SSPL_CONF, f"{SYSTEM_INFORMATION}>{LOG_LEVEL}", "INFO")
-        init_logging("SSPL-LL", logging_level, SYSLOG_HOST, SYSLOG_PORT)
-
+        logger.init(service_name="sspl", log_path=SSPL_LOG_PATH, level=logging_level)
+        logger.info("Logging has been initialized for sspl")
     except Exception as err:
         # We don't have logger since it threw an exception, use generic 'print'
         print("[ Error ] when initializing logging :")
