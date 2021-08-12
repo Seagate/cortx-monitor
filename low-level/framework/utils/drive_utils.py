@@ -24,7 +24,8 @@ import subprocess
 class DriveUtils:
     """Base class for drive related utility functions."""
 
-    def extract_smart_data(self):
+    @staticmethod
+    def extract_smart_data():
         """Extract drive data using smartctl."""
         response = []
         lsscsi_cmd = " ".join(["lsscsi", "|", "grep", "disk"])
@@ -32,7 +33,7 @@ class DriveUtils:
         lsscsi_response = subprocess.run(
                     lsscsi_cmd,
                     stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE, shell=True)  # pylint: disable=B604
+                    stderr=subprocess.PIPE, shell=True)  # pylint: disable=B606
         lsscsi_response = (lsscsi_response.stdout).decode("utf-8")
         for res in lsscsi_response.split("\n"):
             drive_path = res.strip().split(' ')[-1]
