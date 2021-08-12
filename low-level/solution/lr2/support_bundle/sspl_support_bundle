@@ -117,15 +117,16 @@ class BundleRequestHandler:
         req_register.set(["%s" % req_id], [req_info])
 
     @staticmethod
-    def _add_bundle_request(req_id, url):
+    def _add_bundle_request(bundle_id, req_id, target_path):
         """Updates new request information."""
         req_info = {
+            "request_id": req_id,
+            "target_path": target_path,
             "status": BundleRequestHandler.IN_PROGRESS,
-            "url": url,
             "time": datetime.strftime(
                 datetime.now(), '%Y-%m-%d %H:%M:%S')
         }
-        req_register.set(["%s" % req_id], [req_info])
+        req_register.set(["%s" % bundle_id], [req_info])
 
 
 class SupportBundle(object):
@@ -135,6 +136,7 @@ class SupportBundle(object):
 
         self.SYS_INFORMATION = "SYSTEM_INFORMATION"
         self.IEM_SENSOR = "IEMSENSOR"
+        self.bundle_prefix = "sb_"
         self._tmp_dir = '/tmp/cortx'
         self._default_path = '%s/support_bundle/' % self._tmp_dir
         self.sspl_conf_dir = f"{sspl_const.SSPL_SB_TMP}/sspl_conf/"
@@ -161,10 +163,9 @@ class SupportBundle(object):
     def get_status(bundle_id: str):
         """Get status of support bundle."""
         status = None
-        req_id = "sb_%s" % bundle_id
-        sspl_sb_id = req_register.get(["%s>sspl_sb_id" % req_id])
-        request_status = BundleRequestHandler.get_processing_status(
-            sspl_sb_id[0])
+        # req_id = "sb_%s" % bundle_id
+        # sspl_sb_id = req_register.get(["%s>sspl_sb_id" % req_id])
+        request_status = BundleRequestHandler.get_processing_status(bundle_id)
         # Extract sspl sb request status from the message.
         # Example : "Failed - error(22): Invalid request"
         status = request_status.split(" ")[0]
@@ -175,15 +176,22 @@ class SupportBundle(object):
     def prepare_bundle(self, bundle_id: str, target_path: str, include_encl):
         """Collect sspl support bundle data."""
         bundle_name = "sspl_" + bundle_id
-        sspl_sb_id = self.get_sspl_bundle_data(target_path, include_encl)
-        bundle_location = self._generate_tar(bundle_name)
-        SupportBundle._update_bundle_request_info(
-            bundle_id, sspl_sb_id, bundle_location)
-
-    def get_sspl_bundle_data(self, file_path, include_encl):
-        """Collect SSPL data for support bundle."""
         request_id = datetime.strftime(datetime.now(), '%Y%m%d%H%M%S%f')
-        BundleRequestHandler._add_bundle_request(request_id, file_path)
+        try:
+            self.get_sspl_bundle_data(bundle_id, request_id, target_path, include_encl)
+            bundle_location = self._generate_tar(bundle_name)
+            SupportBundle._update_bundle_request_info(
+                bundle_id, request_id, bundle_location)
+            BundleRequestHandler._update_request_status(
+                bundle_id, BundleRequestHandler.SUCCESS)
+        except Exception as err:
+            status = BundleRequestHandler.FAILED + f" - {err}"
+            BundleRequestHandler._update_request_status(
+                bundle_id, status)
+
+    def get_sspl_bundle_data(self, bundle_id, request_id, file_path, include_encl):
+        """Collect SSPL data for support bundle."""
+        BundleRequestHandler._add_bundle_request(bundle_id, request_id, file_path)
 
         if file_path:
             if os.path.exists(file_path):
@@ -195,57 +203,25 @@ class SupportBundle(object):
                 raise SupportBundleError(1, msg)
         os.makedirs(self.tmp_bundle_path, exist_ok=True)
         try:
-            DEFAULT_STATE = Conf.get(
-                SSPL_CONF, f"{SYSTEM_INFORMATION}>{SSPL_STATE}", "active")
-            try:
-                sspl_state = open(
-                    f"/var/{sspl_const.PRODUCT_FAMILY}/sspl/data/state.txt")
-                sspl_state = sspl_state.readline().rstrip().split("=")
-                # Capturing enclosure logs only when sspl state is active
-                sspl_state = sspl_state[1] if len(
-                    sspl_state) == 2 else DEFAULT_STATE
-                if not sspl_state == 'active':
-                    logger.info("SSPL is in 'degraded' mode,"
-                                "so enclosure data not collected "
-                                "as part of this node support bundle.")
-
-            except (FileNotFoundError, OSError) as err:
-                logger.error("Failed to open the SSPL 'state.txt' "
-                             "file with an error '{0}',Can't determine "
-                             "the SSPL state, So enclosure logs also "
-                             "being collected.".format(err))
-                sspl_state = 'active'
-
             self.get_ipmi_sel_data()
             self.get_config_data()
             self.get_drives_smart_data()
-            if sspl_state == "active" and not include_encl:
+            if not include_encl:
                 RealStorEnclosure().get_enclosure_logs(
                     self.enclosure_log, logger)
 
-            if os.path.exists(self.enclosure_log) and sspl_state == 'active' \
-                    and not include_encl:
+            if os.path.exists(self.enclosure_log) and not include_encl:
                 enclosure_zip_file = "enclosure-wwn-{0}-logs-{1}.zip".format(
                     self.enclosure_wwn, str(int(time.time())))
                 shutil.copy(self.enclosure_log,
                             self.tmp_bundle_path+enclosure_zip_file)
                 logger.info("Enclosure Log File Location: %s" %
                             self.tmp_bundle_path+enclosure_zip_file)
-
         except OSError as err:
             msg = "Facing problem while creating sspl "
             "support bundle: {0}".format(err)
             self.__clear_tmp_files()
             raise SupportBundleError(1, msg)
-        try:
-            # Process request
-            BundleRequestHandler._update_request_status(
-                request_id, BundleRequestHandler.SUCCESS)
-        except Exception as err:
-            status = BundleRequestHandler.FAILED + f" - {err}"
-            BundleRequestHandler._update_request_status(
-                request_id, status)
-        return request_id
 
     def get_ipmi_sel_data(self):
         ipmitool = IpmiFactory().get_implementor('ipmitool')
@@ -282,16 +258,15 @@ class SupportBundle(object):
 
     @staticmethod
     def _update_bundle_request_info(bundle_id: str,
-                                    sspl_sb_id: str, tar_file: str):
+                                    request_id: str, tar_file: str):
         """Updates new request information with bundle specific attributes."""
-        req_id = "sb_%s" % bundle_id
         req_info = {
-            "sspl_sb_id": sspl_sb_id,
+            "request_id": request_id,
             "tar_file": tar_file,
             "time": datetime.strftime(
                 datetime.now(), '%Y-%m-%d %H:%M:%S')
         }
-        req_register.set(["%s" % req_id], [req_info])
+        req_register.set(["%s" % bundle_id], [req_info])
 
     def _generate_tar(self, file_dir: str):
         """Generate tar.gz file at given path."""
