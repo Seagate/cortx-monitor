@@ -60,7 +60,7 @@ chmod 440 /etc/sudoers.d/sspl
 # removed by puppet-agent (Ref: LRL-495)
 PUPPET_CONF="/etc/puppetlabs/puppet/puppet.conf"
 [ -f $PUPPET_CONF ] && {
-    grep -q "noop" $PUPPET_CONF
+    grep -q "noop\s*=.*" $PUPPET_CONF
     if [ $? -eq 0 ]
     then
         sed -i -E 's/noop\ *=\ *false/noop = true/g' $PUPPET_CONF
