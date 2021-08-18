@@ -20,8 +20,6 @@
 """
 import json
 import time
-import psutil
-import os
 
 from cortx.utils.message_bus import MessageProducer
 from cortx.utils.message_bus.error import MessageBusError
@@ -34,6 +32,7 @@ from framework.base.sspl_constants import IEM_INIT_FAILED
 from framework.utils.conf_utils import SSPL_CONF, Conf
 from framework.utils.service_logging import logger
 from framework.utils.store_queue import StoreQueue
+from framework.utils.iem import Iem
 from . import producer_initialized
 
 
@@ -127,22 +126,12 @@ class EgressAccumulatedMsgsProcessor(ScheduledModuleThread, InternalMsgQ):
                     dict_msg = json.loads(message)
                     if dict_msg.get("iem"):
                         try:
-                            # check if IEM Framework initialized,
-                            # if not, retry initializing the IEM Frameowork
-                            if os.path.exists(IEM_INIT_FAILED):
-                                with open(IEM_INIT_FAILED, 'r') as f:
-                                    sspl_pid = f.read()
-                                if sspl_pid and psutil.pid_exists(int(sspl_pid)):
-                                    EventMessage.init(component='sspl', source='S')
-                                    logger.info(
-                                        "IEM framework initialization completed!!")
-                                os.remove(IEM_INIT_FAILED)
-                            EventMessage.send(
+                            Iem.raise_iem_event(
                                 module=dict_msg["iem"]["module"],
-                                event_id=dict_msg["iem"]["event_code"],
+                                event_code=dict_msg["iem"]["event_code"],
                                 severity=dict_msg["iem"]["severity"],
-                                message_blob=dict_msg["iem"]["description"])
-                            logger.info("Accumulated IEM sent.")
+                                description=dict_msg["iem"]["description"])
+                            logger.info("Accumulated IEM sent. %s" % dict_msg)
                             self.store_queue.delete()
                         except (EventMessageError, Exception) as e:
                             logger.error(f"Failed to send IEM. ERROR: {e}")
