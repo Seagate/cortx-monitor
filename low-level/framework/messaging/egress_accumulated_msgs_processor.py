@@ -20,6 +20,8 @@
 """
 import json
 import time
+import psutil
+import os
 
 from cortx.utils.message_bus import MessageProducer
 from cortx.utils.message_bus.error import MessageBusError
@@ -28,6 +30,7 @@ from cortx.utils.iem_framework.error import EventMessageError
 
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.base.module_thread import ScheduledModuleThread
+from framework.base.sspl_constants import IEM_INIT_FAILED
 from framework.utils.conf_utils import SSPL_CONF, Conf
 from framework.utils.service_logging import logger
 from framework.utils.store_queue import StoreQueue
@@ -124,6 +127,16 @@ class EgressAccumulatedMsgsProcessor(ScheduledModuleThread, InternalMsgQ):
                     dict_msg = json.loads(message)
                     if dict_msg.get("iem"):
                         try:
+                            # check if IEM Framework initialized,
+                            # if not, retry initializing the IEM Frameowork
+                            if os.path.exists(IEM_INIT_FAILED):
+                                with open(IEM_INIT_FAILED, 'r') as f:
+                                    sspl_pid = f.read()
+                                if sspl_pid and psutil.pid_exists(int(sspl_pid)):
+                                    EventMessage.init(component='sspl', source='S')
+                                    logger.info(
+                                        "IEM framework initialization completed!!")
+                                os.remove(IEM_INIT_FAILED)
                             EventMessage.send(
                                 module=dict_msg["iem"]["module"],
                                 event_id=dict_msg["iem"]["event_code"],
@@ -131,7 +144,7 @@ class EgressAccumulatedMsgsProcessor(ScheduledModuleThread, InternalMsgQ):
                                 message_blob=dict_msg["iem"]["description"])
                             logger.info("Accumulated IEM sent.")
                             self.store_queue.delete()
-                        except EventMessageError as e:
+                        except (EventMessageError, Exception) as e:
                             logger.error(f"Failed to send IEM. ERROR: {e}")
                     else:
                         if "actuator_response_type" in dict_msg["message"]:
