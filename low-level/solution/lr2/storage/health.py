@@ -19,7 +19,8 @@ import errno
 import time
 
 from cortx.utils.discovery.error import ResourceMapError
-from framework.utils.conf_utils import (GLOBAL_CONF, Conf, STORAGE_TYPE_KEY)
+from framework.utils.conf_utils import (GLOBAL_CONF, Conf, STORAGE_TYPE_KEY,
+    CLUSTER_CONF, CVG_INFO_KEY)
 from framework.base import sspl_constants as const
 from framework.utils.service_logging import CustomLog, logger
 from framework.utils.mon_utils import MonUtils
@@ -396,6 +397,11 @@ class StorageHealth():
         diskgroups = enclosure.get_realstor_encl_data("disk-groups")
         # Mapping logical volumes with disk group.
         logicalvolumes = enclosure.get_realstor_encl_data("volumes")
+        cvg_info = Conf.get(CLUSTER_CONF, CVG_INFO_KEY)
+        cvg_dict = {}
+        if cvg_info:
+            cvg_dict = {cvg['name']: idx for idx, cvg in enumerate(cvg_info) \
+                if 'name' in cvg}
         if logicalvolumes:
             for logicalvolume in logicalvolumes:
                 volume_pool_sr_no = logicalvolume.get("container-serial", "NA")
@@ -418,6 +424,8 @@ class StorageHealth():
                 recommendation = diskgroup.get("health-recommendation", "NA")
                 specifics = [
                     {
+                        "cvg_name": uid if uid in cvg_dict else "NA",
+                        "cvg_id": cvg_dict.get(uid, "NA"),
                         "class": diskgroup.get("storage-type", "NA"),
                         "disks": diskgroup.get("diskcount", "NA"),
                         "size": diskgroup.get("size", "NA"),
