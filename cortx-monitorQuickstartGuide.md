@@ -24,38 +24,8 @@ This guide provides a step-by-step walkthrough for getting you CORTX-Monitor Ser
    
    :page_with_curl:**Note:** We recommended that you install Git Version 2.x.x.
 
-5. Setup yum repos.
-    
-     1. Run the command:
-            
-            `$ curl https://raw.githubusercontent.com/Seagate/cortx-prvsnr/dev/cli/src/cortx-prereqs.sh?token=APA75GY34Y2F5DJSOKDCZAK7ITSZC -o cortx-prereqs.sh; chmod a+x cortx-prereqs.sh`
-        
-            1. For Cent-OS VMs, run the command:
-        
-                `$ sh cortx-prereqs.sh` 
-        
-            2. For Rhel VMs, run the command: 
-        
-                `$ sh cortx-prereqs.sh --disable-sub-mgr`
-
-      2. Run the following commands if you are using a Seagate Internal VM:
-
-            ```shell
-            
-            $ BUILD_URL="http://cortx-storage.colo.seagate.com/releases/cortx/github/dev/rhel-7.7.1908/provisioner_last_successful"`
-            $ yum-config-manager --add-repo  $BUILD_URL
-            $ rpm --import  $BUILD_URL/RPM-GPG-KEY-Seagate
-            ```
-
-        :page_with_curl: **Notes:** 
-        
-      - If the https://raw.githubusercontent.com/Seagate/cortx-prvsnr/dev/cli/src/cortx-prereqs.sh?token=APA75GY34Y2F5DJSOKDCZAK7ITSZC link is not accessible, generate new one.
-      - Visit https://github.com/Seagate/cortx-prvsnr/blob/dev/cli/src/cortx-prereqs.sh and naviagte to RAW > Copy URL > Use the URL for deployment.
-      
-    3. Follow these instructions to [install dependencies](https://github.com/Seagate/cortx/blob/main/doc/InstallingDependencies.md) if you are using an external VM.
-
-    </p>
-    </details>
+</p>
+</details>
 
 
 ## 1.2 Clone the cortx-monitor repository
@@ -63,8 +33,7 @@ This guide provides a step-by-step walkthrough for getting you CORTX-Monitor Ser
 1. Run the following commands to clone the cortx-monitor repository to your local VM:
 
     ```shell
-    $ git clone --recursive https://github.com/Seagate/cortx-monitor.git -b main
-    $ cd cortx-monitor
+    $ cd /root && git clone https://github.com/Seagate/cortx --recursive --depth=1
     ```
 
 ## 1.3 Build the cortx-monitor source code
@@ -75,7 +44,7 @@ This guide provides a step-by-step walkthrough for getting you CORTX-Monitor Ser
 
 - cortx-monitor service named as sspl-ll.
 
-1. Before you build the RPM, you'll need to install the dependecies using:
+1. Before you build the RPM, you'll need to install the dependencies using:
 
     ```shell
     
@@ -103,57 +72,119 @@ This guide provides a step-by-step walkthrough for getting you CORTX-Monitor Ser
 
 2. Build RPMs
     
-   1. Switch to the directory where you've cloned cortx-monitor and run the command:
+   1. Checkout the main branch
    
-        `$ jenkins/build.sh`  
+        `docker run --rm -v /root/cortx:/cortx-workspace ghcr.io/seagate/cortx-build:centos-7.8.2003 make checkout BRANCH=main`  
     
     :page_with_curl: **Notes:** 
     
-    - It takes 2-3 minutes to generate RPMs.
-    - Once the RPMs are successfully generated, you can view it from:
+    - If you get below error it may be because that your git version may be more thatn 2.x. Cortx requires 1.8.3.1. In that case
+      if go to `/root/cortx/cortx-monitor/` and run `git checkout main` 
+        ```
+        error: pathspec 'main' did not match any file(s) known to git.
+        make: *** [checkout] Error 1
+        ```
+
+   2. Build cortx-monitor RPMs
+        ```
+        docker run --rm -v /var/artifacts:/var/artifacts -v /root/cortx:/cortx-workspace ghcr.io/seagate/cortx-build:centos-7.8.2003 make clean cortx-prvsnr cortx-monitor cortx-prereq release_build
+        ```
+        
+        If you check the location `/var/artifacts/0/`, you will see that Cortx RPMs and 3rd party packages are generated.
+
+        ```shell
+        ll /var/artifacts/0/
+        The system output displays as follows:
+
+        [root@ssc-vm-2699 ~]# ll /var/artifacts/0/
+        total 1608308
+        drwxr-xr-x  13 root root       4096 Aug 19 05:16 3rd_party
+        drwxr-xr-x   3 root root       4096 Aug 19 05:16 cortx_iso
+        -rw-r--r--   1 root root      19416 Aug 19 05:16 install-2.0.0-0.sh
+        drwxr-xr-x 198 root root       4096 Aug 19 05:16 python_deps
+        -rw-r--r--   1 root root  241635505 Jun 15 08:45 python-deps-1.0.0-0.tar.gz
+        -rw-r--r--   1 root root 1405229297 Jul  1 22:45 third-party-1.0.0-0.tar.gz
+        ```
     
-        `/root/rpmbuild/RPMS/noarch/` and,
-     
-        `/root/rpmbuild/RPMS/x86_64/`
-
-    **Sample Output:**
-    
-    ```shell
-
-    [local_host cortx-monitor]# ls -lrt /root/rpmbuild/RPMS/noarch/
-    total 59056
-    -rw-r--r-- 1 root root 34025516 Aug 18 07:26 cortx-sspl-1.0.0-1_git8907300.el7.noarch.rpm
-    -rw-r--r-- 1 root root 16795340 Aug 18 07:27 cortx-sspl-cli-1.0.0-1_git8907300.el7.noarch.rpm
-    -rw-r--r-- 1 root root  9643028 Aug 18 07:27 cortx-sspl-test-1.0.0-1_git8907300.el7.noarch.rpm
-
-
-    [local_host cortx-monitor]# ls -lrt /root/rpmbuild/RPMS/x86_64/
-    total 284
-    -rw-r--r-- 1 root root  65968 Aug 18 07:23 systemd-python36-1.0.0-1_git8907300.el7.x86_64.rpm
-    -rw-r--r-- 1 root root  60904 Aug 18 07:23 systemd-python36-debuginfo-1.0.0-1_git8907300.el7.x86_64.rpm
-    -rw-r--r-- 1 root root   6552 Aug 18 07:27 cortx-libsspl_sec-1.0.0-1_git8907300.el7.x86_64.rpm
-    -rw-r--r-- 1 root root  28448 Aug 18 07:27 cortx-libsspl_sec-debuginfo-1.0.0-1_git8907300.el7.x86_64.rpm
-    -rw-r--r-- 1 root root   5760 Aug 18 07:27 cortx-libsspl_sec-method_none-1.0.0-1_git8907300.el7.x86_64.rpm
-    -rw-r--r-- 1 root root   9592 Aug 18 07:27 cortx-libsspl_sec-method_pki-1.0.0-1_git8907300.el7.x86_64.rpm
-    -rw-r--r-- 1 root root 101004 Aug 18 07:27 cortx-libsspl_sec-devel-1.0.0-1_git8907300.el7.x86_64.rpm
-    ```
-
 3. Install CORTX-Monitor RPMs
 
-   You'll need to create a repository and copy all the required RPMs to it. Run the commands:
+   SSPL has a `sspl_dev_deploy` script. We need to download and use it to deploy SSPL. Go to the home directory and run following commands.
 
     ```shell
+    $ curl https://raw.githubusercontent.com/Seagate/cortx-monitor/main/low-level/files/opt/seagate/sspl/setup/sspl_dev_deploy -o sspl_dev_deploy
+    $ chmod a+x sspl_dev_deploy
+    ```
+    **sspl_dev_deploy is only meant for dev purpose and to install SSPL independently along with its dependencies.**
+
+4. Deploy SSPL RPMs.
+    ```
+    $ ./sspl_dev_deploy --cleanup
+    $ ./sspl_dev_deploy --prereq -T file:///var/artifacts/0
+    ```
+    :page_with_curl: **Note:** 
+    --cleanup includes removing cortx-py-utils RPM. Any other component RPMS installed on the setup will also get removed while removing cortx-py-utils.
+   
+   Create a template file with the name `~/template_values.1-node.txt`
+    ```
+    # 1-node config variable
+    TMPL_CLUSTER_ID=CC01
+    TMPL_NODE_ID=SN01
+    TMPL_RACK_ID=RC01
+    TMPL_SITE_ID=DC01
+    TMPL_MACHINE_ID=0449364d92b2ba3915fcd8416014cff7
+    TMPL_HOSTNAME=ssc-vm-4778.colo.seagate.com
+    TMPL_NODE_NAME=srvnode-1
+    TMPL_SERVER_NODE_TYPE=VM
+    TMPL_MGMT_INTERFACE=eth0
+    TMPL_MGMT_PUBLIC_FQDN=localhost
+    TMPL_DATA_PRIVATE_FQDN=localhost
+    TMPL_DATA_PRIVATE_INTERFACE=
+    TMPL_DATA_PUBLIC_FQDN=localhost
+    TMPL_DATA_PUBLIC_INTERFACE=
+    TMPL_BMC_IP=
+    TMPL_BMC_USER=
+    TMPL_BMC_SECRET=""
+
+    TMPL_ENCLOSURE_ID=enc_0449364d92b2ba3915fcd8416014cff7
+    TMPL_ENCLOSURE_NAME=enclosure-1
+    TMPL_ENCLOSURE_TYPE=VM
+    TMPL_PRIMARY_CONTROLLER_IP=127.0.0.1
+    TMPL_PRIMARY_CONTROLLER_PORT=28200
+    TMPL_SECONDARY_CONTROLLER_IP=127.0.0.1
+    TMPL_SECONDARY_CONTROLLER_PORT=28200
+    TMPL_CONTROLLER_USER=manage
+    TMPL_CONTROLLER_SECRET=""
+    TMPL_CONTROLLER_TYPE=Gallium
+    ```
+    Make sure to update TMPL_MACHINE_ID, TMPL_HOSTNAME, TMPL_ENCLOSURE_ID, TMPL_BMC_SECRET, TMPL_CONTROLLER_SECRET with actual values.
     
-    $ mkdir MYRPMS
-    $ cp -R /root/rpmbuild/RPMS/x86_64/cortx-libsspl_sec-* /root/rpmbuild/RPMS/noarch/cortx-sspl-* MYRPMS
-    $ find MYRPMS -name \*.rpm -print0 | sudo xargs -0 yum install -y
+    To generate passwords you can use below steps. The encryption keys are generated based on machine id and enclosure id. Feel free to use any sample machine id
+    and enclosure id if actual IDs are not available.
+  
+    ```
+    machine_id="xyz"
+    enclosure_id="enc_xyz"
+    bmc_pass='samplexxxx'
+    encl_pass='samplexxxx'
+
+    bmc_key=$(python3 -c 'from cortx.utils.security.cipher import Cipher; print(Cipher.generate_key('"'$machine_id'"', "server_node"))')
+    encl_key=$(python3 -c 'from cortx.utils.security.cipher import Cipher; print(Cipher.generate_key('"'$enclosure_id'"', "storage_enclosure"))')
+
+    #Encryption
+    encl_encrypt_pass=$(python3 -c 'from cortx.utils.security.cipher import Cipher; print(Cipher.encrypt('$encl_key', '"'$encl_pass'"'.encode()).decode("utf-8"))')
+    bmc_encrypt_pass=$(python3 -c 'from cortx.utils.security.cipher import Cipher; print(Cipher.encrypt('$bmc_key', '"'$bmc_pass'"'.encode()).decode("utf-8"))')
+
+    echo “BMC_SECRET: “$bmc_encrypt_pass
+    echo “ENCL_SECRET:” $encl_encrypt_pass
+    ```
+    Finally run the deployment script
+    ```
+    $ ./sspl_dev_deploy --deploy -T file:///var/artifacts/0 --variable_file /root/template_values.1-node.txt --storage_type RBOD --server_type HW
     ```
 
 4. To start the CORTX-Monitor service, run the commands:
 
     ```shell
-    
-    $ /opt/seagate/cortx/sspl/sspl_init
     $ systemctl start sspl-ll
     $ systemctl status sspl-ll
     ```
@@ -185,8 +216,7 @@ This guide provides a step-by-step walkthrough for getting you CORTX-Monitor Ser
 
   2. Run sanity test using:
 
-      `$ /opt/seagate/cortx/sspl/bin/sspl_test sanity` or,
-      `/opt/seagate/cortx/sspl/sspl_test/run_tests.sh`
+      `$ /opt/seagate/cortx/sspl/bin/sspl_setup test --config yaml:///etc/sspl_global_config_copy.yaml --plan dev_sanity`
 
       **Sample Output:**
     

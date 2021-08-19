@@ -35,6 +35,9 @@ import site
 import importlib
 import tarfile
 import time
+import textwrap
+
+from pathlib import Path
 
 localhost_fqdn = socket.getfqdn()
 SSPL_BASE_DIR = "/opt/seagate/cortx/sspl"
@@ -69,16 +72,10 @@ class SSPLDevDeploy:
             self.build_url = ("http://cortx-storage.colo.seagate.com/releases"
                           "/cortx/github/main/centos-7.9.2009"
                           "/last_successful_prod/")
-            self.cortx_utils_build_url = ("http://cortx-storage.colo.seagate.com/releases/"
-                     "cortx/components/github/main/centos-7.9.2009/"
-                     "dev/cortx-utils/last_successful/")
         elif "CentOS Linux release 7.8" in content:
             self.build_url = ("http://cortx-storage.colo.seagate.com/releases"
                           "/cortx/github/main/centos-7.8.2003"
                           "/last_successful_prod/")
-            self.cortx_utils_build_url = ("http://cortx-storage.colo.seagate.com/releases/"
-                     "cortx/components/github/main/centos-7.8.2003/"
-                     "dev/cortx-utils/last_successful/")
         else:
             raise DeployError(1, "%s is not supported", content)
 
@@ -164,6 +161,15 @@ class SSPLDevDeploy:
         if rc != 0:
             raise DeployError(rc, "%s - %s CMD: %s",
                 out, "Unable to remove cortx-prereq RPMS. Cleanup failed.", cmd)
+        print('Cleaning up local repos...')
+        for p in Path('/etc/yum.repos.d').glob('var_artifacts_*'):
+            p.unlink()
+        for p in Path('/etc/yum.repos.d').glob('cortx-storage.colo.seagate.com_*'):
+            p.unlink()
+        if os.path.exists('/etc/pip.conf'):
+            Path('/etc/pip.conf').unlink()
+        self._execute_cmd('yum clean all')
+        shutil.rmtree('/var/cache/yum/')
 
     def setup_yum_repos(self):
         """Setup common, 3rd_party and build specific repos."""
@@ -171,34 +177,20 @@ class SSPLDevDeploy:
             raise DeployError(1, "Target build or RPMS path is not given.")
         pkg_name = "cortx-prereq"
         print("INFO: INSTALLING %s..." % pkg_name)
-        prereq_url = ("http://cortx-storage.colo.seagate.com/releases/cortx/"
-            "third-party-deps/rpm/install-cortx-prereq.sh")
-        with urllib.request.urlopen(prereq_url) as response, open(
-                "install-cortx-prereq.sh", 'wb') as out_file:
-            shutil.copyfileobj(response, out_file)
-        os.chmod("install-cortx-prereq.sh", 0o775)
-        cmd = "sh install-cortx-prereq.sh"
 
-        if self.target_build:
-            cmd = cmd + " -b " + self.target_build
-            out, rc = self._execute_cmd(cmd)
-            if rc != 0:
-                raise DeployError(rc, "%s - %s CMD: %s",
-                    out, "Failed to install %s." % (pkg_name), cmd)
-            # Add repos to yum.repos.d
-            cmd1 = "yum-config-manager --add-repo %s/cortx_iso/" % self.target_build
-            cmd2 = "yum-config-manager --add-repo %s/3rd_party/" % self.target_build
-            for repo_cmd in [cmd1, cmd2]:
-                out, rc = self._execute_cmd(repo_cmd)
-                if rc != 0:
-                    raise DeployError(rc, "%s - %s CMD: %s",
-                        out, "Setup repo failed", repo_cmd)
-        else:
-            out, rc = self._execute_cmd(cmd)
-            if rc != 0:
-                raise DeployError(rc, "%s - %s CMD: %s",
-                    out, "Failed to install %s." % (pkg_name), cmd)
-            repo_cmd = "yum-config-manager --add-repo %s/3rd_party/" % self.build_url
+        repo_url = self.target_build if self.target_build else self.build_url
+
+        cmd1 = "yum-config-manager --add-repo %s/cortx_iso/" % repo_url
+        cmd2 = "yum-config-manager --add-repo %s/3rd_party/" % repo_url
+        with open('/etc/pip.conf', 'w') as pw:
+            cont = textwrap.dedent("""
+                [global]
+                timeout: 60
+                index-url: {}/python_deps/
+                trusted-host: localhost\n""").format(self.target_build)
+            pw.write(cont)
+        install_prereq_command = "yum install --nogpgcheck -y python3 cortx-prereq"
+        for repo_cmd in [cmd1, cmd2, install_prereq_command]:
             out, rc = self._execute_cmd(repo_cmd)
             if rc != 0:
                 raise DeployError(rc, "%s - %s CMD: %s",
@@ -208,13 +200,7 @@ class SSPLDevDeploy:
         """Install dependencies."""
         pkg_name = "cortx-py-utils"
         print("INFO: INSTALLING cortx-py-utils...")
-        print("Downloading pyutils from %s" % self.build_url)
-        pkg = [re.findall("<a .*>(.*?)</a>", str(line))[0]
-               for line in urllib.request.urlopen(self.cortx_utils_build_url).readlines()
-               if pkg_name in str(line)]
-        if not pkg:
-            print(f"ERROR: Unable to download {pkg_name}.")
-        cmd = "yum install -y %s%s" % (self.cortx_utils_build_url, pkg[0])
+        cmd = "yum install -y --nogpgcheck cortx-py-utils"
         out, rc = self._execute_cmd(cmd)
         if rc != 0:
             raise DeployError(rc, "%s - %s CMD: %s",
@@ -273,13 +259,7 @@ class SSPLDevDeploy:
 
     def setup_kafka(self):
         """Setup kafka"""
-        build_url = f"{self.build_url}/3rd_party/commons/kafka/"
-
-        pkg = [re.findall("<a .*>(.*?)</a>", str(line))[0] for line in 
-               urllib.request.urlopen(build_url).readlines()
-               if re.search(r"kafka.*\.rpm", str(line))][0]
-
-        cmd = f"yum install -y {build_url}{pkg}"
+        cmd = f"yum install -y --nogpgcheck kafka"
         self._execute_cmd(cmd)
         cmd = "chown -R kafka:kafka /tmp/zookeeper/"
         self._execute_cmd(cmd)
