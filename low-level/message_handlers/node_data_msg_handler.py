@@ -766,12 +766,16 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
 
                     # if yes, then mark the flag detection True for the respective interface
                     self.interface_fault_state[nw_cable_resource_id] = self.INTERFACE_FAULT_DETECTED
-                    event_field = f'Network interface: {nw_cable_resource_id}' + ' ' \
+                    event_field = f'Network interface: {nw_cable_resource_id} ' +\
                                    'is also down because of cable fault'
                 else:
-                    event_field = f'Network interface: {nw_cable_resource_id}' + ' ' \
+                    event_field = f'Network interface: {nw_cable_resource_id} ' +\
                                    'is also up after cable insertion'
-
+            
+            if not event_field:
+                status = "DISCONNECTED" if state == self.FAULT else "CONNECTED"
+                event_field = (f"Network Interface {nw_cable_resource_id}: "
+                               f"Network Cable is {status}.")
             # Send the cable alert
             self._send_ifdata_json_msg("nw", nw_cable_resource_id, self.NW_CABLE_RESOURCE_TYPE, state, severity, event_field)
 
@@ -852,15 +856,15 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             interface_name = interface.get("ifId")
             phy_link_status = interface.get("nwCableConnStatus")
 
-            # fault detected (Down, Up to Down)
-            if phy_link_status == 'DOWN':
+            # fault detected (Disconnected, Connected to Disconnected)
+            if phy_link_status == "DISCONNECTED":
                 if self.prev_cable_cnxns.get(interface_name) != phy_link_status:
                     if self.prev_cable_cnxns.get(interface_name):
                         logger.warning(f"Cable connection fault is detected with '{interface_name}'")
                         identified_cables[interface_name] = self.FAULT
                     self.prev_cable_cnxns[interface_name] = phy_link_status
-            # fault resolved (Down to Up)
-            elif phy_link_status == 'UP':
+            # fault resolved (Disconnected to Connected)
+            elif phy_link_status == "CONNECTED":
                 if self.prev_cable_cnxns.get(interface_name) != phy_link_status:
                     if self.prev_cable_cnxns.get(interface_name):
                         logger.info(f"Cable connection fault is resolved with '{interface_name}'")
