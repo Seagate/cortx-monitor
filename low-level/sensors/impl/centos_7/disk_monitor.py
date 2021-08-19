@@ -266,7 +266,7 @@ class DiskMonitor(SensorThread, InternalMsgQ):
                         "resource_id": resource_id,
                         "resource_type": resource_type,
                         "specific_info": specific_info,
-                        "is_faulty": False
+                        "faulty": False
                     }
 
                 for drive_path in removed_drives:
@@ -731,7 +731,7 @@ class DiskMonitor(SensorThread, InternalMsgQ):
                         "resource_id": resource_id,
                         "resource_type": resource_type,
                         "specific_info": specific_info,
-                        "is_faulty": False
+                        "faulty": False
                     }
                     self._update_drive_faults()
                     store.put(self._existing_drive, self.disk_cache_path)
@@ -1104,14 +1104,14 @@ class DiskMonitor(SensorThread, InternalMsgQ):
             # If smratctl command is not failing there will be no ["smartctl"]["message"][0]["string"] in response
             except (KeyError, IndexError):
                 try:
-                    is_drive_faulty = not response['smart_status']['passed']
+                    fault_detected = not response['smart_status']['passed']
                 # If ['smart_status']['passed'] not present in response, consider it as fault
                 except KeyError:
-                    is_drive_faulty = True
+                    fault_detected = True
 
-            if not self._existing_drive[object_path]['is_faulty'] and \
-                is_drive_faulty:
-                self._existing_drive[object_path]['is_faulty'] = True
+            if not self._existing_drive[object_path]['faulty'] and \
+                fault_detected:
+                self._existing_drive[object_path]['faulty'] = True
                 self._drives[object_path][self.DRIVE_FAULT_ATTR] = self._get_drive_fault_info(object_path)
                 resource_type = self._get_resource_type(object_path)
                 specific_info = self._get_specific_info(object_path, self.DISK_FAULT_ALERT_TYPE)
@@ -1121,9 +1121,9 @@ class DiskMonitor(SensorThread, InternalMsgQ):
                                resource_type,
                                resource_id,
                                specific_info)
-            elif self._existing_drive[object_path]['is_faulty'] and \
-                not is_drive_faulty:
-                self._existing_drive[object_path]['is_faulty'] = False
+            elif self._existing_drive[object_path]['faulty'] and \
+                not fault_detected:
+                self._existing_drive[object_path]['faulty'] = False
                 self._drives[object_path][self.DRIVE_FAULT_ATTR] = self._get_drive_fault_info(object_path)
                 resource_type = self._get_resource_type(object_path)
                 specific_info = self._get_specific_info(object_path, self.DISK_FAULT_RESOLVED_ALERT_TYPE)
