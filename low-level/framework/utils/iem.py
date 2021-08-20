@@ -168,23 +168,30 @@ class Iem:
             if Iem.iem_store_queue.is_empty():
                 logger.info(f"Sending IEM alert for module:{module}"
                             f" and event_code:{event_code}")
-                # check if IEM Framework initialized,
-                # if not, retry initializing the IEM Frameowork
-                if os.path.exists(IEM_INIT_FAILED):
-                    with open(IEM_INIT_FAILED, 'r') as f:
-                        sspl_pid = f.read()
-                    if sspl_pid and psutil.pid_exists(int(sspl_pid)):
-                        EventMessage.init(component='sspl', source='S')
-                        logger.info("IEM framework initialization completed!!")
-                    os.remove(IEM_INIT_FAILED)
-                EventMessage.send(module=module, event_id=event_code,
-                                severity=severity, message_blob=description)
+                Iem.raise_iem_event(module, event_code, severity, description)
             else:
                 logger.info(
                     "'Accumulated iem queue' is not Empty."
-                        " Adding IEM to the end of the queue")
+                    " Adding IEM to the end of the queue")
                 Iem.iem_store_queue.put(IEM_msg)
         except (EventMessageError, Exception) as e:
-            logger.error(f"Failed to send IEM alert. Error:{e}."
-                "Adding IEM in accumulated queue.")
+            logger.error(
+                f"Failed to send IEM alert. Error:{e}."
+                f" Adding IEM in accumulated queue. {IEM_msg}")
             Iem.iem_store_queue.put(IEM_msg)
+
+    @staticmethod
+    def raise_iem_event(module, event_code, severity, description):
+        """Send IEM message."""
+        # check if IEM Framework initialized,
+        # if not, retry initializing the IEM Framework
+        if os.path.exists(IEM_INIT_FAILED):
+            with open(IEM_INIT_FAILED, 'r') as f:
+                sspl_pid = f.read()
+            if sspl_pid and psutil.pid_exists(int(sspl_pid)):
+                EventMessage.init(component='sspl', source='S')
+                logger.info("IEM framework initialization completed!!")
+            os.remove(IEM_INIT_FAILED)
+        EventMessage.send(
+            module=module, event_id=event_code,
+            severity=severity, message_blob=description)
