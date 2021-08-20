@@ -725,7 +725,7 @@ def initialize_iem():
             os.remove(IEM_INIT_FAILED)
         EventMessage.init(component='sspl', source='S')
         logger.info("IEM framework initiated successfully!!!")
-    except EventMessageError as e:
+    except (EventMessageError, Exception) as e:
         # create IEM_INIT_FAILED file and log current sspl pid.
         Utility().create_file(IEM_INIT_FAILED)
         with open(IEM_INIT_FAILED, 'w') as f:
