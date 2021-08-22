@@ -1,0 +1,28 @@
+Sensor ID              : Fan Redundancy (0xc)
+ Entity ID             : 30.1 (Cooling Unit)
+ Sensor Type (Discrete): Fan (0x04)
+ Sensor Reading        : 0h
+ Event Message Control : Per-threshold
+ States Asserted       : Fan
+                         [Fully Redundant]
+ Assertion Events      : Fan
+                         [Fully Redundant]
+ Assertions Enabled    : Fan
+                         [Fully Redundant]
+                         [Redundancy Lost]
+                         [Redundancy Degraded]
+                         [Non-Redundant: Sufficient from Redundant]
+                         [Non-Redundant: Sufficient from Insufficient]
+                         [Non-Redundant: Insufficient Resources]
+                         [Redundancy Degraded from Fully Redundant]
+                         [Redundancy Degraded from Non-Redundant]
+ Deassertions Enabled  : Fan
+                         [Fully Redundant]
+                         [Redundancy Lost]
+                         [Redundancy Degraded]
+                         [Non-Redundant: Sufficient from Redundant]
+                         [Non-Redundant: Sufficient from Insufficient]
+                         [Non-Redundant: Insufficient Resources]
+                         [Redundancy Degraded from Fully Redundant]
+                         [Redundancy Degraded from Non-Redundant]
+ OEM                   : 0

@@ -27,10 +27,10 @@ from framework.utils.utility import Utility
 from framework.base.sspl_constants import (
     PRODUCT_FAMILY, sspl_config_path, sspl_test_file_path,
     sspl_test_config_path, global_config_path, SSPL_CONFIG_INDEX,
-    SSPL_TEST_CONFIG_INDEX, IVT_TEST_PLANS, NOT_IMPLEMENTED_TEST_PLANS)
+    SSPL_TEST_CONFIG_INDEX, IVT_TEST_PLANS, NOT_IMPLEMENTED_TEST_PLANS,
+    sspl_newtest_config_path, sspl_newtest_file_path)
 
 
-TEST_DIR = f"/opt/seagate/{PRODUCT_FAMILY}/sspl/sspl_test"
 SSPL_TEST_GLOBAL_CONFIG = "sspl_test_gc"
 
 
@@ -42,6 +42,9 @@ class SSPLTestCmd:
         self.name = "sspl_test"
         self.plan = "sanity"
         self.coverage_enabled = self.args.coverage
+        self.test_dir = f"/opt/seagate/{PRODUCT_FAMILY}/sspl/sspl_test"
+        if self.args.newtest:
+            self.test_dir = f"/opt/seagate/{PRODUCT_FAMILY}/sspl/sspl_test/functional_tests"
 
         self.dbus_service = DbusServiceHandler()
         if args.config and args.config[0]:
@@ -99,7 +102,10 @@ class SSPLTestCmd:
             host=socket.getfqdn(), pkgs=rpm_deps, skip_version_check=True)
         # Load global, sspl and test configs
         Conf.load(SSPL_CONFIG_INDEX, sspl_config_path)
-        Conf.load(SSPL_TEST_CONFIG_INDEX, sspl_test_config_path)
+        if self.args.newtest:
+            Conf.load(SSPL_TEST_CONFIG_INDEX, sspl_newtest_config_path)
+        else:
+            Conf.load(SSPL_TEST_CONFIG_INDEX, sspl_test_config_path)
         # Take copy of supplied config passed to sspl_test and load it
         with open(self.sspl_test_gc_copy_file, "w") as f:
             f.write("")
@@ -125,7 +131,10 @@ class SSPLTestCmd:
         if self.plan not in IVT_TEST_PLANS:
             # Take back up of sspl test config
             sspl_test_backup = '/etc/sspl_tests.conf.back'
-            shutil.copyfile(sspl_test_file_path, sspl_test_backup)
+            if self.args.newtest:
+                shutil.copyfile(sspl_newtest_file_path, sspl_test_backup)    
+            else:
+                shutil.copyfile(sspl_test_file_path, sspl_test_backup)
 
             # Add global config in sspl_test config and revert the changes once
             # test completes. Global config path in sspl_tests.conf will be
@@ -145,9 +154,9 @@ class SSPLTestCmd:
             # Create dummy service and add service name in /etc/sspl.conf
             service_name = "dummy_service.service"
             service_file_path_src = \
-                f"{TEST_DIR}/alerts/os/dummy_service_files/dummy_service.service"
+                f"{self.test_dir}/alerts/os/dummy_service_files/dummy_service.service"
             service_executable_code_src = \
-                f"{TEST_DIR}/alerts/os/dummy_service_files/dummy_service.py"
+                f"{self.test_dir}/alerts/os/dummy_service_files/dummy_service.py"
             service_file_path_des = "/etc/systemd/system"
             service_executable_code_des = "/var/cortx/sspl/test"
 
@@ -219,7 +228,10 @@ class SSPLTestCmd:
             # from cortx.sspl.sspl_test.run_qa_test import RunQATest
             # RunQATest(self.plan, self.coverage_enabled).run()
             CMD = "%s/run_qa_test.sh --plan %s --coverage %s"\
-                   %(TEST_DIR, self.plan, self.coverage_enabled)
+                % (self.test_dir, self.plan, self.coverage_enabled)
+            if self.args.newtest:
+                CMD = "%s/run_tests.sh --plan %s --coverage %s"\
+                   % (self.test_dir, self.plan, self.coverage_enabled)
             try:
                 _, error, rc = SimpleProcess(CMD).run(
                     realtime_output=True)
@@ -248,7 +260,10 @@ class SSPLTestCmd:
                      "NODEDATAMSGHANDLER>high_memory_usage_wait_threshold",
                      memory_usage_alert_wait)
             Conf.save(SSPL_CONFIG_INDEX)
-            shutil.copyfile(sspl_test_backup, sspl_test_file_path)
+            if self.args.newtest:
+                shutil.copyfile(sspl_test_backup, sspl_newtest_file_path)
+            else:
+                shutil.copyfile(sspl_test_backup, sspl_test_file_path)
             if rc != 0:
                 raise TestException(
                     "%s - ERROR: %s - CMD %s" % (self.name, error, CMD))
@@ -269,7 +284,9 @@ class SSPLTestCmd:
             # from cortx.sspl.sspl_test.run_qa_test import RunQATest
             # RunQATest(self.plan).run()
             try:
-                CMD = "%s/run_qa_test.sh --plan %s" % (TEST_DIR, self.plan)
+                CMD = "%s/run_qa_test.sh --plan %s" % (self.test_dir, self.plan)
+                if self.args.newtest:
+                    CMD = "%s/run_tests.sh --plan %s" % (self.test_dir, self.plan)
                 _, error, returncode = SimpleProcess(CMD).run(
                     realtime_output=True)
             except KeyboardInterrupt:

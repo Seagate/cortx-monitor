@@ -1,0 +1,7 @@
+Locating sensor record...
+Sensor ID              : PS2 Status (0x51)
+ Entity ID             : 10.2
+ Sensor Type (Discrete): Power Supply
+ States Asserted       : Power Supply
+                         [Presence detected]
+                         [Power Supply AC lost]

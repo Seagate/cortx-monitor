@@ -1,0 +1,1 @@
+Fan Redundancy   | 0Ch | ok  | 30.1 | Fully Redundant

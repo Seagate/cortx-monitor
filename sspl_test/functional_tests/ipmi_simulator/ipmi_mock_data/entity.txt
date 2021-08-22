@@ -1,0 +1,11 @@
+System Fan 1A    | 30h | ok  | 29.1 | 11020 RPM
+System Fan 1B    | 31h | ok  | 29.2 | 10396 RPM
+System Fan 2A    | 32h | ok  | 29.3 | 10925 RPM
+System Fan 2B    | 33h | ok  | 29.4 | 10396 RPM
+Fan Redundancy   | 0Ch | ok  | 30.1 | Fully Redundant
+PS1 Status       | 50h | ok  | 10.1 | Presence detected
+PS2 Status       | 51h | cr  | 10.2 | Presence detected, Power Supply AC lost
+Pwr Unit Redund  | 02h | ok  | 21.1 | Redundancy Lost
+NVMe 1 Crit Warn | 94h | ok  | 15.1 |
+HDD 0 Status     | F0h | cr  |  4.1 | Drive Present
+HDD 1 Status     | F1h | ok  |  4.2 | Drive Present
