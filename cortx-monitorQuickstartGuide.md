@@ -23,6 +23,21 @@ This guide provides a step-by-step walkthrough for getting you CORTX-Monitor Ser
    * To check your Git Version, use the command: `$ git --version`
    
    :page_with_curl:**Note:** We recommended that you install Git Version 2.x.x.
+5. You'll need docker to build third-party dependency RPMs. Please follow guidelines from [Docker](https://docs.docker.com/engine/install/centos/)
+   Quick steps are given below.
+   ```shell
+   sudo yum remove docker \
+                  docker-client \
+                  docker-client-latest \
+                  docker-common \
+                  docker-latest \
+                  docker-latest-logrotate \
+                  docker-logrotate \
+                  docker-engine
+   yum install -y yum-utils
+   yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+   yum install docker-ce docker-ce-cli containerd.io
+   ```
 
 </p>
 </details>
@@ -33,7 +48,7 @@ This guide provides a step-by-step walkthrough for getting you CORTX-Monitor Ser
 1. Run the following commands to clone the cortx-monitor repository to your local VM:
 
     ```shell
-    $ cd /root && git clone https://github.com/Seagate/cortx --recursive --depth=1
+    $ cd ~ && git clone https://github.com/Seagate/cortx --recursive --depth=1
     ```
 
 ## 1.3 Build the cortx-monitor source code
@@ -124,7 +139,7 @@ This guide provides a step-by-step walkthrough for getting you CORTX-Monitor Ser
     :page_with_curl: **Note:** 
     --cleanup includes removing cortx-py-utils RPM. Any other component RPMS installed on the setup will also get removed while removing cortx-py-utils.
    
-   Create a template file with the name `~/template_values.1-node.txt`
+   Create a template file with the name `~/sspl_deploy.conf`
     ```
     # 1-node config variable
     TMPL_CLUSTER_ID=CC01
@@ -174,12 +189,12 @@ This guide provides a step-by-step walkthrough for getting you CORTX-Monitor Ser
     encl_encrypt_pass=$(python3 -c 'from cortx.utils.security.cipher import Cipher; print(Cipher.encrypt('$encl_key', '"'$encl_pass'"'.encode()).decode("utf-8"))')
     bmc_encrypt_pass=$(python3 -c 'from cortx.utils.security.cipher import Cipher; print(Cipher.encrypt('$bmc_key', '"'$bmc_pass'"'.encode()).decode("utf-8"))')
 
-    echo “BMC_SECRET: “$bmc_encrypt_pass
-    echo “ENCL_SECRET:” $encl_encrypt_pass
+    echo "BMC_SECRET: "$bmc_encrypt_pass
+    echo "ENCL_SECRET: "$encl_encrypt_pass
     ```
     Finally run the deployment script
     ```
-    $ ./sspl_dev_deploy --deploy -T file:///var/artifacts/0 --variable_file /root/template_values.1-node.txt --storage_type RBOD --server_type HW
+    $ ./sspl_dev_deploy --deploy -T file:///var/artifacts/0 --variable_file /root/sspl_deploy.conf --storage_type RBOD --server_type HW
     ```
 
 4. To start the CORTX-Monitor service, run the commands:
@@ -245,6 +260,27 @@ This guide provides a step-by-step walkthrough for getting you CORTX-Monitor Ser
     TestSuite:15 Tests:17 Passed:17 Failed:0 TimeTaken:108s
     ******************************************************
  ```
+
+## 1.5 Development and Building Again.
+There are two option to build again after editing the code.
+    1. You can go the checkout location `~/cortx/cortx-monitor` and checkout branch and edit the code and follow the steps.
+    ```
+        $ ./sspl_dev_deploy --cleanup
+        $ ./sspl_dev_deploy --prereq -T file:///var/artifacts/0
+        $ ./sspl_dev_deploy --deploy -T file:///var/artifacts/0 --variable_file /root/sspl_deploy.conf --storage_type RBOD --server_type HW
+    ```
+    2. To build only SSPL, you can also below steps.
+        1. Go to sspl repo root directory.
+        2. Edit the code.
+        3. Build SSPL using `./jenkins/build.sh`
+        4. Copy from `~/rpmbuild/RPMS/` to `~/MYRPMS`
+        5. And then build deploy using belew steps.
+        ```
+        $ ./sspl_dev_deploy --cleanup
+        $ ./sspl_dev_deploy --prereq -L /root/MYRPMS
+        $ ./sspl_dev_deploy --deploy -L /root/MYRPMS --variable_file /root/sspl_deploy.conf --storage_type RBOD --server_type HW
+        ```
+        6. Repeat the same cycle.
 
 ## You're All Set & You're Awesome!
 
