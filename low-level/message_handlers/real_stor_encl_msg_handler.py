@@ -32,6 +32,8 @@ from json_msgs.messages.sensors.realstor_sideplane_expander_data import \
     RealStorSideplaneExpanderDataMsg
 from json_msgs.messages.sensors.realstor_logical_volume_data import \
     RealStorLogicalVolumeDataMsg
+from json_msgs.messages.sensors.realstor_disk_group_data import \
+    RealStorDiskGroupDataMsg
 from json_msgs.messages.sensors.realstor_encl_data_msg import RealStorEnclDataMsg
 from framework.messaging.egress_processor import EgressProcessor
 
@@ -84,6 +86,7 @@ class RealStorEnclMsgHandler(ScheduledModuleThread, InternalMsgQ):
         self._controller_sensor_message = None
         self._expander_sensor_message = None
         self._logical_volume_sensor_message = None
+        self._disk_group_sensor_message = None
         self._enclosure_message = None
 
         # threading.Event object for waiting till msg is sent to message bus
@@ -96,6 +99,7 @@ class RealStorEnclMsgHandler(ScheduledModuleThread, InternalMsgQ):
             "controller": self._generate_controller_alert,
             "disk": self._generate_disk_alert,
             "logical_volume": self._generate_logical_volume_alert,
+            "disk_group": self._generate_disk_group_alert,
             "enclosure": self._generate_enclosure_alert
         }
         self._fru_type = {
@@ -105,6 +109,7 @@ class RealStorEnclMsgHandler(ScheduledModuleThread, InternalMsgQ):
             "controller": self._controller_sensor_message,
             "disk": self._disk_sensor_message,
             "logical_volume": self._logical_volume_sensor_message,
+            "disk_group": self._disk_group_sensor_message,
             "enclosure": self._enclosure_message
         }
 
@@ -306,6 +311,25 @@ class RealStorEnclMsgHandler(ScheduledModuleThread, InternalMsgQ):
         self._logical_volume_sensor_message = json_msg
         self._fru_type[sensor_type] = \
             self._logical_volume_sensor_message
+        self._write_internal_msgQ(EgressProcessor.name(), json_msg, self._event)
+    
+    def _generate_disk_group_alert(self, json_msg, host_name, alert_type, alert_id,
+                                                   severity, info, specific_info, sensor_type):
+        """Parses the json message, also validates it and then send it to the
+           egress processor"""
+
+        self._log_debug(f"RealStorEnclMsgHandler, _generate_disk_group_alert,\
+            json_msg {json_msg}")
+
+        real_stor_disk_group_data_msg = \
+            RealStorDiskGroupDataMsg(host_name, alert_type, alert_id, severity, info,
+                                      specific_info)
+        json_msg = real_stor_disk_group_data_msg.getJson()
+
+        # save the json message in memory to serve sspl CLI sensor request
+        self._disk_group_sensor_message = json_msg
+        self._fru_type[sensor_type] = \
+            self._disk_group_sensor_message
         self._write_internal_msgQ(EgressProcessor.name(), json_msg, self._event)
 
     def _generate_enclosure_alert(self, json_msg, host_name, alert_type, alert_id,
