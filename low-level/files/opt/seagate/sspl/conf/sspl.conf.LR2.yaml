@@ -186,7 +186,7 @@ MEMFAULTSENSOR:
 CPUFAULTSENSOR:
    monitor: true
    threaded: true
-   probe: sysfs
+   probe: dmidecode
 
 STORAGE_ENCLOSURE:
    mgmt_interface: cliapi

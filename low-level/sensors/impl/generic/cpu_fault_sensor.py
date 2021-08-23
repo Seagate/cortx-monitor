@@ -52,8 +52,6 @@ class CPUFaultSensor(SensorThread, InternalMsgQ):
     SYSTEM_INFORMATION_KEY = "SYSTEM_INFORMATION"
     CACHE_DIR_NAME  = "server"
 
-    RESOURCE_ID = "CPU-"
-
     PROBE = "probe"
 
     # Dependency list
@@ -92,7 +90,7 @@ class CPUFaultSensor(SensorThread, InternalMsgQ):
 
         # get the cpu fault implementor from configuration
         cpu_fault_utility = Conf.get(SSPL_CONF, f"{self.name().capitalize()}>{self.PROBE}",
-                                    'sysfs')
+                                    'dmidecode')
 
         # Creating the instance of ToolFactory class
         self.tool_factory = ToolFactory()
@@ -201,7 +199,7 @@ class CPUFaultSensor(SensorThread, InternalMsgQ):
             # Iterate through the set
             for cpu in cpu_list:
                 item = {}
-                item['resource_id'] = self.RESOURCE_ID + str(cpu)
+                item['resource_id'] = str(cpu)
                 # Keep default state online
                 item['state'] = "online"
                 if cpu in self.alerts_for.keys():
@@ -224,7 +222,7 @@ class CPUFaultSensor(SensorThread, InternalMsgQ):
         # Populate specific info
         self.fill_specific_info()
         alert_specific_info = self.specific_info
-        res_id = self.RESOURCE_ID + str(cpu)
+        res_id = str(cpu)
 
         for item in alert_specific_info:
             if item['resource_id'] == res_id:
@@ -235,7 +233,7 @@ class CPUFaultSensor(SensorThread, InternalMsgQ):
 
         info = {
                 "resource_type": self.RESOURCE_TYPE,
-                "resource_id": self.RESOURCE_ID + str(cpu),
+                "resource_id": str(cpu),
                 "event_time": epoch_time,
                 "description": description
                 }
