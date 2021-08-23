@@ -261,14 +261,16 @@ This guide provides a step-by-step walkthrough for getting you CORTX-Monitor Ser
     ******************************************************
  ```
 
-## 1.5 Development and Building Again.
+## 1.5 Development Cycle.
 There are two option to build again after editing the code.
+
     1. You can go the checkout location `~/cortx/cortx-monitor` and checkout branch and edit the code and follow the steps.
-    ```
+        ```
         $ ./sspl_dev_deploy --cleanup
         $ ./sspl_dev_deploy --prereq -T file:///var/artifacts/0
         $ ./sspl_dev_deploy --deploy -T file:///var/artifacts/0 --variable_file /root/sspl_deploy.conf --storage_type RBOD --server_type HW
-    ```
+        ```
+        
     2. To build only SSPL, you can also below steps.
         1. Go to sspl repo root directory.
         2. Edit the code.
