@@ -21,7 +21,8 @@ import time
 from cortx.utils.discovery.error import ResourceMapError
 from framework.utils.conf_utils import GLOBAL_CONF, Conf, STORAGE_TYPE_KEY
 from framework.base.sspl_constants import MANIFEST_SVC_NAME, HEALTH_UNDESIRED_VALS
-from framework.utils.service_logging import CustomLog, logger
+from framework.utils.service_logging import CustomLog
+from cortx.utils.log import Log as logger
 from framework.utils.mon_utils import MonUtils
 from framework.platforms.realstor.realstor_enclosure import (
     singleton_realstorencl as ENCL)

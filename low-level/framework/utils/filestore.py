@@ -26,7 +26,7 @@ import pickle
 import shutil
 from configparser import ConfigParser
 from framework.utils.store import Store
-from framework.utils.service_logging import logger
+from cortx.utils.log import Log as logger
 from cortx.utils.process import SimpleProcess
 
 class FileStore(Store):

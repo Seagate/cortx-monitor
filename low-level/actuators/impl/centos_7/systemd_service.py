@@ -27,7 +27,7 @@ from zope.interface import implementer
 from actuators.IService import IService
 
 from framework.base.debug import Debug
-from framework.utils.service_logging import logger
+from cortx.utils.log import Log as logger
 from cortx.utils.service import DbusServiceHandler
 from cortx.utils.process import SimpleProcess
 from dbus import SystemBus, Interface, exceptions as debus_exceptions

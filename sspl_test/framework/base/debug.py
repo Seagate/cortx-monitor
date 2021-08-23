@@ -20,7 +20,8 @@
 """
 
 import json
-from framework.utils.service_logging import logger
+from cortx.utils.log import Log as logger
+
 try:
    from systemd import journal
    use_journal=True

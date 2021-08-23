@@ -29,7 +29,7 @@ from zope.interface import implementer
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.base.module_thread import SensorThread
 from framework.utils.conf_utils import SSPL_CONF, Conf
-from framework.utils.service_logging import logger
+from cortx.utils.log import Log as logger
 # Modules that receive messages from this module
 from message_handlers.disk_msg_handler import DiskMsgHandler
 from sensors.IHpi_monitor import IHPIMonitor

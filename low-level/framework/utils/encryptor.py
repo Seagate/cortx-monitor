@@ -20,7 +20,7 @@
 """
 
 from cortx.utils.security.cipher import Cipher, CipherInvalidToken
-from framework.utils.service_logging import logger
+from cortx.utils.log import Log as logger
 
 
 def gen_key(unique_seed, root_node):

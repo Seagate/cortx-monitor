@@ -187,7 +187,6 @@ class SSPLPostInstall:
 
         self.create_user()
         self.create_directories_and_ownership()
-        self.configure_sspl_syslog()
         self.install_sspl_service_files()
         self.enable_sspl_service()
 
@@ -243,7 +242,8 @@ class SSPLPostInstall:
         os.makedirs(consts.SSPL_LOG_PATH, exist_ok=True)
         os.makedirs(consts.SSPL_BUNDLE_PATH, exist_ok=True)
         # set ownership for SSPL dirs
-        list_root_dir = [consts.SSPL_CONFIGURED_DIR, consts.SSPL_LOG_PATH]
+        list_root_dir = [consts.SSPL_CONFIGURED_DIR, consts.SSPL_LOG_PATH,
+                         consts.MANIFEST_SB_LOG_PATH]
         Utility.set_ownership_recursively(list_root_dir, sspl_uid, sspl_gid)
 
         # Create /tmp/dcs/hpi if required. Not required for '<product>' role
@@ -257,76 +257,6 @@ class SSPLPostInstall:
             os.utime(consts.MDADM_PATH)
         os.chmod(consts.MDADM_PATH, mode=0o666)
         os.chown(consts.MDADM_PATH, sspl_uid, -1)
-
-    def configure_sspl_syslog(self):
-        """Configure log file path in rsyslog and update logrotate config file."""
-        system_files_root = "%s/low-level/files" % consts.SSPL_BASE_DIR
-        sspl_log_file_path = Utility.get_config_value(consts.SSPL_CONFIG_INDEX,
-            "SYSTEM_INFORMATION>sspl_log_file_path")
-        sspl_sb_log_file_path = sspl_log_file_path.replace("/sspl.log","/sspl_support_bundle.log")
-        iem_log_file_path = Utility.get_config_value(consts.SSPL_CONFIG_INDEX,
-            "IEMSENSOR>log_file_path")
-        manifest_log_file_path = sspl_log_file_path.replace("/sspl.log","/manifest.log")
-
-        # IEM configuration
-        os.makedirs("%s/iem/iec_mapping" % consts.PRODUCT_BASE_DIR, exist_ok=True)
-        distutils.dir_util.copy_tree("%s/iec_mapping/" % system_files_root,
-            "%s/iem/iec_mapping" % consts.PRODUCT_BASE_DIR)
-        if not os.path.exists(consts.RSYSLOG_IEM_CONF):
-            shutil.copyfile("%s/%s" % (system_files_root, consts.RSYSLOG_IEM_CONF),
-                consts.RSYSLOG_IEM_CONF)
-        # Update log location as per sspl.conf
-        Utility.replace_expr(consts.RSYSLOG_IEM_CONF,
-            'File.*[=,"]', 'File="%s"' % iem_log_file_path)
-
-        # Manifest Bundle log configuration
-        if not os.path.exists(consts.RSYSLOG_MSB_CONF):
-            shutil.copyfile("%s/%s" % (system_files_root, consts.RSYSLOG_MSB_CONF),
-                consts.RSYSLOG_MSB_CONF)
-        # Update log location as per sspl.conf
-        Utility.replace_expr(consts.RSYSLOG_MSB_CONF, 'File.*[=,"]',
-            'File="%s"' % manifest_log_file_path)
-
-        # Support Bundle log configuration
-        if not os.path.exists(consts.RSYSLOG_SB_CONF):
-            shutil.copyfile("%s/%s" % (system_files_root, consts.RSYSLOG_SB_CONF),
-                consts.RSYSLOG_SB_CONF)
-        # Update log location as per sspl.conf
-        Utility.replace_expr(consts.RSYSLOG_SB_CONF, 'File.*[=,"]',
-            'File="%s"' % sspl_sb_log_file_path)
-
-        # Configure logrotate
-        # Create logrotate dir in case it's not present
-        os.makedirs(consts.LOGROTATE_DIR, exist_ok=True)
-        Utility.replace_expr("%s/etc/logrotate.d/iem_messages" % system_files_root,
-            0, iem_log_file_path)
-        Utility.replace_expr("%s/etc/logrotate.d/sspl_sb_logs" % system_files_root,
-            0, sspl_sb_log_file_path)
-        shutil.copy2("%s/etc/logrotate.d/iem_messages" % system_files_root,
-            consts.IEM_LOGROTATE_CONF)
-        shutil.copy2("%s/etc/logrotate.d/manifest_logs" % system_files_root,
-            consts.MSB_LOGROTATE_CONF)
-        shutil.copy2("%s/etc/logrotate.d/sspl_sb_logs" % system_files_root,
-            consts.SB_LOGROTATE_CONF)
-
-        # This rsyslog restart will happen after successful updation of rsyslog
-        # conf file and before sspl starts. If at all this will be removed from
-        # here, there will be a chance that SSPL intial logs will not be present in
-        # "/var/log/<product>/sspl/sspl.log" file. So, initial logs needs to be collected from
-        # "/var/log/messages"
-        attempt = 0
-        while attempt < 3:
-            attempt += 1
-            try:
-                self.dbus_service.restart('rsyslog.service')
-                break
-            except ServiceError as err:
-                if not attempt < 3:
-                    logger.critical("Restarting rsyslog.service failed " \
-                        "due to error, %s" % err)
-                    raise
-                logger.debug("Waiting for rsyslog service to become active..")
-                time.sleep(2)
 
     def install_sspl_service_files(self):
         """Copy service file to systemd location based on product."""

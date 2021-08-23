@@ -18,7 +18,7 @@ import os
 import shlex
 
 from framework.utils.ipmi import IPMI
-from framework.utils.service_logging import logger
+from cortx.utils.log import Log as logger
 from cortx.utils.process import SimpleProcess
 from framework.utils.conf_utils import (Conf, SSPL_CONF, GLOBAL_CONF,
                                         BMC_CHANNEL_IF, BMC_INTERFACE,

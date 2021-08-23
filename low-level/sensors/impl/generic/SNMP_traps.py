@@ -30,7 +30,7 @@ from framework.base.module_thread import SensorThread
 from framework.messaging.egress_processor import \
     EgressProcessor
 from framework.utils.conf_utils import SSPL_CONF, Conf
-from framework.utils.service_logging import logger
+from cortx.utils.log import Log as logger
 from json_msgs.messages.sensors.snmp_trap import SNMPtrapMsg
 from pysnmp.carrier.asynsock.dgram import udp, udp6
 from pysnmp.carrier.asynsock.dispatch import AsynsockDispatcher

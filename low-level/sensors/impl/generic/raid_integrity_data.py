@@ -34,7 +34,7 @@ from framework.base.sspl_constants import (PRODUCT_FAMILY, WAIT_BEFORE_RETRY,
                                            BLOCK_DIR)
 from framework.utils.conf_utils import (SSPL_CONF, Conf, SYSTEM_INFORMATION,
                                         SYSFS_PATH)
-from framework.utils.service_logging import logger
+from cortx.utils.log import Log as logger
 from framework.utils.severity_reader import SeverityReader
 from framework.utils.os_utils import OSUtils
 # Modules that receive messages from this module

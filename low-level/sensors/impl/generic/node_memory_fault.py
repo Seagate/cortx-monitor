@@ -29,7 +29,7 @@ from framework.base.sspl_constants import DATA_PATH
 from framework.utils.conf_utils import (GLOBAL_CONF, SSPL_CONF, 
         Conf, NODE_ID_KEY)
 from framework.utils.procfs_interface import ProcFS
-from framework.utils.service_logging import logger
+from cortx.utils.log import Log as logger
 from framework.utils.severity_reader import SeverityReader
 from framework.utils.store_factory import file_store
 from framework.utils.tool_factory import ToolFactory

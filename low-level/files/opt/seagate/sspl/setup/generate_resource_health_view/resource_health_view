@@ -31,7 +31,7 @@ from dbus import SystemBus, Interface, Array
 import warnings
 warnings.filterwarnings(action='ignore',module='cryptography')
 
-from framework.utils.service_logging import logger
+from cortx.utils.log import Log as logger
 from framework.utils.store_factory import store, file_store
 from framework.utils.ipmi_client import IpmiFactory
 from framework.utils.sysfs_interface import SysFS

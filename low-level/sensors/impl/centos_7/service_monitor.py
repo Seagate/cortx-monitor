@@ -36,7 +36,7 @@ from framework.platforms.server.platform import Platform
 from framework.utils.conf_utils import (SSPL_CONF, Conf)
 from framework.utils.iem import Iem
 from framework.utils.mon_utils import MonUtils
-from framework.utils.service_logging import logger
+from cortx.utils.log import Log as logger
 from framework.utils.severity_reader import SeverityReader
 from framework.utils.store_factory import store
 from framework.utils.os_utils import OSUtils

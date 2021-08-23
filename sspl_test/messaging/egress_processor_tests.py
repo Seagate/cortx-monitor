@@ -25,7 +25,7 @@ from cortx.utils.message_bus import MessageProducer
 
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
-from framework.utils.service_logging import logger
+from cortx.utils.log import Log as logger
 from framework.utils.conf_utils import Conf, SSPL_TEST_CONF
 from . import producer_initialized
 

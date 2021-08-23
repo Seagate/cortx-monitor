@@ -22,7 +22,7 @@
 
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
-from framework.utils.service_logging import logger
+from cortx.utils.log import Log as logger
 from json_msgs.messages.sensors.realstor_disk_data import RealStorDiskDataMsg
 from json_msgs.messages.sensors.realstor_psu_data import RealStorPSUDataMsg
 from json_msgs.messages.sensors.realstor_fan_data import RealStorFanDataMsg

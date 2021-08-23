@@ -40,7 +40,7 @@ from framework.utils.conf_utils import (
     USER, Conf, NODE_ID_KEY, BMC_IP_KEY, BMC_USER_KEY, BMC_SECRET_KEY,
     MACHINE_ID, NODEHWSENSOR, IPMI_CLIENT)
 from framework.utils.config_reader import ConfigReader
-from framework.utils.service_logging import logger
+from cortx.utils.log import Log as logger
 from framework.utils.severity_reader import SeverityReader
 from framework.utils.store_factory import file_store
 from framework.utils.iem import Iem

@@ -43,7 +43,7 @@ from framework.base.sspl_constants import cs_products
 from framework.messaging.egress_processor import \
     EgressProcessor
 from framework.utils.conf_utils import DATA_PATH_KEY, SSPL_CONF, Conf
-from framework.utils.service_logging import logger
+from cortx.utils.log import Log as logger
 from framework.utils.severity_reader import SeverityReader
 from framework.utils.store_factory import file_store
 from json_msgs.messages.actuators.ack_response import AckResponseMsg

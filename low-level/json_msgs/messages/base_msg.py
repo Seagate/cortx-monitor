@@ -21,7 +21,7 @@
 """
 
 import abc
-from framework.utils.service_logging import logger
+from cortx.utils.log import Log as logger
 from framework.utils.conf_utils import (GLOBAL_CONF, SITE_ID_KEY,
         RACK_ID_KEY, NODE_ID_KEY, CLUSTER_ID_KEY, Conf)
 from framework.base.sspl_constants import (DEFAULT_DC, DEFAULT_RACK,

@@ -26,7 +26,7 @@ from zope.interface import implementer
 from actuators.Ipdu import IPDU
 
 from framework.base.debug import Debug
-from framework.utils.service_logging import logger
+from cortx.utils.log import Log as logger
 from framework.utils.conf_utils import Conf, SSPL_CONF
 
 @implementer(IPDU)

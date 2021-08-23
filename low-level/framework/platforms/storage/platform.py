@@ -16,7 +16,7 @@
 # please email opensource@seagate.com or cortx-questions@seagate.com
 
 import errno
-from framework.utils.service_logging import logger
+from cortx.utils.log import Log as logger
 from framework.base import sspl_constants as const
 
 

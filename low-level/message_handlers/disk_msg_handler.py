@@ -30,7 +30,7 @@ from framework.base.module_thread import ScheduledModuleThread
 from framework.messaging.egress_processor import \
     EgressProcessor
 from framework.utils.conf_utils import SSPL_CONF, Conf
-from framework.utils.service_logging import logger
+from cortx.utils.log import Log as logger
 from json_msgs.messages.actuators.ack_response import AckResponseMsg
 from json_msgs.messages.sensors.drive_mngr import DriveMngrMsg
 from json_msgs.messages.sensors.expander_reset import ExpanderResetMsg

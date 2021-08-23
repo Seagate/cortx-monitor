@@ -31,7 +31,7 @@ import subprocess
 from zope.interface import implementer
 
 from framework.base.debug import Debug
-from framework.utils.service_logging import logger
+from cortx.utils.log import Log as logger
 from actuators.Ismartctl import ISmartctl
 
 

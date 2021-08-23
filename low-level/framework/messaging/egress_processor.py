@@ -29,7 +29,7 @@ from cortx.utils.message_bus.error import MessageBusError
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.base.module_thread import ScheduledModuleThread
 from framework.utils.conf_utils import SSPL_CONF, Conf
-from framework.utils.service_logging import logger
+from cortx.utils.log import Log as logger
 from framework.utils.store_queue import StoreQueue
 from . import producer_initialized
 

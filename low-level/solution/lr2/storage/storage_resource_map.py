@@ -17,7 +17,6 @@
 
 import re
 from cortx.utils.discovery.resource_map import ResourceMap
-from framework.utils.service_logging import init_logging
 from framework.utils.conf_utils import (SSPL_CONF, Conf, SYSTEM_INFORMATION,
     LOG_LEVEL)
 
@@ -53,9 +52,6 @@ class StorageResourceMap(ResourceMap):
     def __init__(self):
         """Initialize storage."""
         super().__init__()
-        logging_level = Conf.get(SSPL_CONF,
-            f"{SYSTEM_INFORMATION}>{LOG_LEVEL}", "INFO")
-        init_logging('resource', logging_level)
 
     @staticmethod
     def get_health_info(rpath):

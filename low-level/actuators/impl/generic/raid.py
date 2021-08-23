@@ -24,7 +24,7 @@ from zope.interface import implementer
 from actuators.Iraid import IRAIDactuator
 
 from framework.base.debug import Debug
-from framework.utils.service_logging import logger
+from cortx.utils.log import Log as logger
 
 @implementer(IRAIDactuator)
 class RAIDactuator(Debug):

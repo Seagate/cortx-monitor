@@ -27,7 +27,7 @@ import socket
 from framework.actuator_state_manager import actuator_state_manager
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
-from framework.utils.service_logging import logger
+from cortx.utils.log import Log as logger
 from framework.base.sspl_constants import enabled_products
 from json_msgs.messages.actuators.service_controller import ServiceControllerMsg
 from json_msgs.messages.sensors.service_monitor_msg import ServiceMonitorMsg

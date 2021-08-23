@@ -31,7 +31,7 @@ from framework.base.sspl_constants import DATA_PATH, SAS_RESOURCE_ID
 from framework.utils.conf_utils import (GLOBAL_CONF, SSPL_CONF, Conf,
     NODE_ID_KEY)
 from framework.utils.config_reader import ConfigReader
-from framework.utils.service_logging import logger
+from cortx.utils.log import Log as logger
 from framework.utils.severity_reader import SeverityReader
 from framework.utils.store_factory import file_store
 from framework.utils.sysfs_interface import SysFS

@@ -35,7 +35,7 @@ from framework.platforms.realstor.realstor_enclosure import \
     singleton_realstorencl
 from framework.utils.conf_utils import (POLLING_FREQUENCY_OVERRIDE, SSPL_CONF,
                                         Conf)
-from framework.utils.service_logging import logger
+from cortx.utils.log import Log as logger
 from framework.utils.severity_reader import SeverityReader
 from framework.utils.store_factory import store
 from framework.utils.os_utils import OSUtils

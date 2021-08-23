@@ -25,7 +25,7 @@ import socket
 from actuators.impl.actuator import Actuator
 
 from framework.base.debug import Debug
-from framework.utils.service_logging import logger
+from cortx.utils.log import Log as logger
 from framework.utils.mon_utils import MonUtils
 from framework.platforms.realstor.realstor_enclosure import singleton_realstorencl
 from framework.base.sspl_constants import AlertTypes, SeverityTypes, ResourceTypes

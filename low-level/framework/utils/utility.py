@@ -27,7 +27,7 @@ import socket
 import time
 from cortx.utils.conf_store import Conf
 from cortx.utils.conf_store.error import ConfError
-from framework.utils.service_logging import logger
+from cortx.utils.log import Log as logger
 
 
 class Utility(object):

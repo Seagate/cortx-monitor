@@ -37,7 +37,7 @@ from framework.messaging.egress_processor import \
 from framework.messaging.ingress_processor import \
     IngressProcessor
 from framework.utils.conf_utils import SSPL_CONF, Conf
-from framework.utils.service_logging import logger
+from cortx.utils.log import Log as logger
 from json_msgs.messages.actuators.thread_controller import ThreadControllerMsg
 from message_handlers.disk_msg_handler import DiskMsgHandler
 # Note that all threaded message handlers must have an import here to be controlled

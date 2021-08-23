@@ -33,7 +33,7 @@ from framework.utils.conf_utils import (GLOBAL_CONF, MGMT_INTERFACE,
                                         CNTRLR_PRIMARY_IP_KEY, CNTRLR_PRIMARY_PORT_KEY,
                                         CNTRLR_SECONDARY_IP_KEY, CNTRLR_SECONDARY_PORT_KEY,
                                         ENCLOSURE, CNTRLR_USER_KEY, CNTRLR_SECRET_KEY)
-from framework.utils.service_logging import logger
+from cortx.utils.log import Log as logger
 from framework.utils.store_factory import store
 from framework.utils.webservices import WebServices
 

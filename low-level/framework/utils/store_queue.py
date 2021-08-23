@@ -25,7 +25,7 @@ import sys
 from framework.base.sspl_constants import DATA_PATH
 from framework.utils.conf_utils import SSPL_CONF, Conf
 from framework.utils.config_reader import ConfigReader
-from framework.utils.service_logging import logger
+from cortx.utils.log import Log as logger
 from framework.utils.store_factory import store
 
 

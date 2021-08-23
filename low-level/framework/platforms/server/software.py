@@ -26,7 +26,7 @@ from framework.utils.conf_utils import SSPL_CONF, Conf
 from framework.base.sspl_constants import (CORTX_RELEASE_FACTORY_INFO,
     CONFIG_SPEC_TYPE, SYSTEMD_BUS, SERVICE_IFACE, UNIT_IFACE,
     DEFAULT_RECOMMENDATION)
-from framework.utils.service_logging import logger
+from cortx.utils.log import Log as logger
 from dbus import PROPERTIES_IFACE, DBusException, Interface
 
 

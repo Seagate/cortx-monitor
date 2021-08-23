@@ -34,7 +34,7 @@ from framework.messaging.egress_processor import \
     EgressProcessor
 from framework.utils.conf_utils import (
     SSPL_CONF, Conf, GLOBAL_CONF, NODE_ID_KEY)
-from framework.utils.service_logging import logger
+from cortx.utils.log import Log as logger
 from json_msgs.messages.actuators.ack_response import AckResponseMsg
 from . import producer_initialized
 

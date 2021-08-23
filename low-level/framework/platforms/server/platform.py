@@ -20,7 +20,7 @@ import errno
 
 from cortx.utils.process import SimpleProcess
 from framework.utils.ipmi_client import IpmiFactory
-from framework.utils.service_logging import logger
+from cortx.utils.log import Log as logger
 from framework.base import sspl_constants as const
 from framework.utils.conf_utils import (
     Conf, GLOBAL_CONF, SSPL_CONF, SERVICEMONITOR,

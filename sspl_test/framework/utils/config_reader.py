@@ -24,7 +24,7 @@ import sys
 import configparser
 from framework.base.sspl_constants import (component, file_store_config_path,
     SSPL_STORE_TYPE, StoreTypes, CONSUL_HOST, CONSUL_PORT)
-from framework.utils.service_logging import logger
+from cortx.utils.log import Log as logger
 
 
 # Onward LDR_R2, consul will be abstracted out and won't exist as hard dependency for SSPL

@@ -22,7 +22,7 @@
 """
 import copy
 import json
-from framework.utils.service_logging import logger
+from cortx.utils.log import Log as logger
 
 
 class InternalMsgQ(object):

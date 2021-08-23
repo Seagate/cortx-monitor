@@ -31,7 +31,7 @@ from cortx.utils.message_bus import MessageConsumer
 
 from framework.base.module_thread import ScheduledModuleThread
 from framework.base.internal_msgQ import InternalMsgQ
-from framework.utils.service_logging import logger
+from cortx.utils.log import Log as logger
 from framework.base.sspl_constants import RESOURCE_PATH, DEFAULT_NODE_ID
 from framework.utils.conf_utils import (
     Conf, SSPL_TEST_CONF, NODE_ID_KEY, GLOBAL_CONF)

@@ -28,7 +28,7 @@ from framework.base.module_thread import ScheduledModuleThread
 from framework.base.sspl_constants import enabled_products, DATA_PATH
 from framework.utils.conf_utils import (GLOBAL_CONF, SSPL_CONF, Conf,
                                         NODE_ID_KEY)
-from framework.utils.service_logging import logger
+from cortx.utils.log import Log as logger
 from framework.utils.severity_reader import SeverityReader
 from json_msgs.messages.sensors.cpu_data import CPUdataMsg
 from json_msgs.messages.sensors.disk_space_alert import DiskSpaceAlertMsg

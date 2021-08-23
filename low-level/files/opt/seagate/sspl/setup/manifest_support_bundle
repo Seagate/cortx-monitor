@@ -23,11 +23,12 @@ import sys
 import socket
 import json
 import subprocess
-import logging
 from framework.utils.conf_utils import (GLOBAL_CONF, Conf,
     STORAGE_TYPE_KEY, SITE_ID_KEY, RACK_ID_KEY, SYSTEM_INFORMATION,
     NODE_ID_KEY, CLUSTER_ID_KEY, SSPL_CONF, SSPL_STATE, LOG_LEVEL)
-from framework.base.sspl_constants import DATA_PATH, SYSLOG_HOST, SYSLOG_PORT
+from framework.base.sspl_constants import (DATA_PATH, SYSLOG_HOST,
+    SYSLOG_PORT, MANIFEST_SB_LOG_PATH)
+from cortx.utils.log import Log as logger
 
 ManifestData = f"{DATA_PATH}support_bundle/manifest_data"
 if not os.path.exists(ManifestData):
@@ -385,33 +386,14 @@ def manifest_bundle_cleanup():
     except OSError as ex:
         print(f"Failed in manifest bundle cleanup. Error:{str(ex)}")
 
-def initialize_logging(parser):
-    # set Logging Handlers
-    _logger = logging.getLogger('manifest_sb')
-    logging_level = Conf.get(SSPL_CONF, f"{SYSTEM_INFORMATION}>{LOG_LEVEL}",
-                                            "INFO")
-    _logger.setLevel(logging_level)
-    handler = logging.handlers.SysLogHandler(
-                    address=(SYSLOG_HOST, SYSLOG_PORT))
-    syslog_format = "%(name)s[%(process)d]: " \
-                    "%(levelname)s %(message)s (%(filename)s:%(lineno)d)"
-    formatter = logging.Formatter(syslog_format)
-    handler.setFormatter(formatter)
-    _logger.addHandler(handler)
-
-    # Add console handler
-    if "console" in parser:
-        console = logging.StreamHandler(sys.stdout)
-        console.setFormatter(formatter)
-        _logger.addHandler(console)
-    return _logger
 
 if __name__ == "__main__":
     if not os.path.isfile(sspl_msb_req):
         if len(sys.argv) >= 3:
             try:
                 # Initialize logging
-                logger = initialize_logging(sys.argv)
+                logger.init(service_name="manifest_sb", log_path=MANIFEST_SB_LOG_PATH)
+                logger.info("Logging has been initialized for Manifest Support bundle.")
                 DEFAULT_STATE = Conf.get(SSPL_CONF, f"{SYSTEM_INFORMATION}>{SSPL_STATE}", "active")
                 sspl_state=open(sspl_state_file).readline().rstrip().split("=")
                 sspl_state = sspl_state[1] if len(sspl_state)==2 else DEFAULT_STATE

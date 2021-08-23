@@ -36,7 +36,7 @@ from framework.base.sspl_constants import (PRODUCT_FAMILY,
                                            iem_severity_types,
                                            iem_source_types)
 from framework.utils.conf_utils import SSPL_CONF, Conf
-from framework.utils.service_logging import logger
+from cortx.utils.log import Log as logger
 from json_msgs.messages.sensors.iem_data import IEMDataMsg
 from framework.messaging.egress_processor import EgressProcessor
 from framework.utils.iem import Iem

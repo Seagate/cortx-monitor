@@ -32,8 +32,7 @@ import psutil
 import subprocess
 from threading import Thread
 from default import world
-from framework.utils.service_logging import init_logging
-from framework.utils.service_logging import logger
+from cortx.utils.log import Log as logger
 from messaging.ingress_processor_tests import IngressProcessorTests
 from messaging.egress_processor_tests import EgressProcessorTests
 from framework.base.sspl_constants import DEFAULT_NODE_ID
@@ -69,16 +68,6 @@ def get_current_node_id():
 
 def init_messaging_msg_processors():
     """The main bootstrap for sspl automated tests"""
-
-    # Initialize logging
-    try:
-        init_logging("SSPL-Tests", "DEBUG")
-    except Exception as err:
-        # We don't have logger since it threw an exception, use generic 'print'
-        print("[ Error ] when initializing logging :")
-        print(err)
-        print("Exiting ...")
-        exit(os.EX_USAGE)
 
     # Modules to be used for testing
     conf_modules = Conf.get(SSPL_TEST_CONF, f"{SSPL_SETTING}>{MODULES}")

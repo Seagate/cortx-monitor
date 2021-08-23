@@ -32,7 +32,7 @@ from framework.base.module_thread import SensorThread
 from framework.base.sspl_constants import COMMON_CONFIGS, DATA_PATH
 from framework.utils.conf_utils import (GLOBAL_CONF, SSPL_CONF, Conf,
     NODE_ID_KEY)
-from framework.utils.service_logging import logger
+from cortx.utils.log import Log as logger
 from framework.utils.severity_reader import SeverityReader
 from framework.utils.os_utils import OSUtils
 # Modules that receive messages from this module

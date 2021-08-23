@@ -25,7 +25,7 @@ import socket
 import json
 from actuators.impl.actuator import Actuator
 from framework.base.debug import Debug
-from framework.utils.service_logging import logger
+from cortx.utils.log import Log as logger
 from framework.base.sspl_constants import AlertTypes, SensorTypes, SeverityTypes
 from framework.utils.ipmi_client import IpmiFactory
 

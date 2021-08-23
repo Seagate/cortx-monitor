@@ -26,7 +26,8 @@ from cortx.utils.discovery.error import ResourceMapError
 from framework.utils.conf_utils import GLOBAL_CONF, Conf, NODE_TYPE_KEY
 from framework.base.sspl_constants import (MANIFEST_SVC_NAME, LSHW_FILE,
     MANIFEST_OUTPUT_FILE, HEALTH_UNDESIRED_VALS)
-from framework.utils.service_logging import CustomLog, logger
+from framework.utils.service_logging import CustomLog
+from cortx.utils.log import Log as logger
 from framework.utils.mon_utils import MonUtils
 from framework.platforms.server.software import Service
 from framework.platforms.server.platform import Platform

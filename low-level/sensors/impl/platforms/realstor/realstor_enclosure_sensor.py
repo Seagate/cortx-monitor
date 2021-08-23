@@ -27,7 +27,7 @@ from zope.interface import implementer
 
 from framework.base.module_thread import SensorThread
 from framework.base.internal_msgQ import InternalMsgQ
-from framework.utils.service_logging import logger
+from cortx.utils.log import Log as logger
 from framework.utils.severity_reader import SeverityReader
 from framework.platforms.realstor.realstor_enclosure import singleton_realstorencl
 from framework.utils.store_factory import store

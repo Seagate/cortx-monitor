@@ -17,7 +17,7 @@
 import os
 
 from framework.base.sspl_constants import IEM_DATA_PATH
-from framework.utils.service_logging import logger
+from cortx.utils.log import Log as logger
 from cortx.utils.iem_framework import EventMessage
 from cortx.utils.iem_framework.error import EventMessageError
 

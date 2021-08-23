@@ -27,7 +27,7 @@ from zope.interface import implementer
 from actuators.Ireset_drive import IResetDrive
 
 from framework.base.debug import Debug
-from framework.utils.service_logging import logger
+from cortx.utils.log import Log as logger
 
 @implementer(IResetDrive)
 class WbcliResetDrive(Debug):

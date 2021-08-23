@@ -18,7 +18,7 @@ import os
 import psutil
 
 from framework.base.sspl_constants import IEM_DATA_PATH, IEM_INIT_FAILED
-from framework.utils.service_logging import logger
+from cortx.utils.log import Log as logger
 from framework.utils.store_queue import StoreQueue
 from cortx.utils.iem_framework import EventMessage
 from cortx.utils.iem_framework.error import EventMessageError

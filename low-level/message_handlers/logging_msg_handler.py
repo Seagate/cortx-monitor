@@ -28,7 +28,7 @@ from framework.base.sspl_constants import enabled_products
 from framework.messaging.egress_processor import \
     EgressProcessor
 from framework.utils.conf_utils import SSPL_CONF, Conf
-from framework.utils.service_logging import logger
+from cortx.utils.log import Log as logger
 from json_msgs.messages.actuators.ack_response import AckResponseMsg
 
 
@@ -66,13 +66,6 @@ class LoggingMsgHandler(ScheduledModuleThread, InternalMsgQ):
         # Read in configuration values
         self._conf_reader = conf_reader
         self._read_config()
-        self._import_products(product)
-
-    def _import_products(self, product):
-        """Import classes based on which product is being used"""
-        if product.lower() in [x.lower() for x in enabled_products]:
-            from loggers.impl.iem_logger import IEMlogger
-            self._iem_logger = IEMlogger(self._conf_reader)
 
     def run(self):
         """Run the module periodically on its own thread."""

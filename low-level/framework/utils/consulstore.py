@@ -22,7 +22,7 @@
 import os
 import consul
 from framework.utils.store import Store
-from framework.utils.service_logging import logger
+from cortx.utils.log import Log as logger
 import pickle
 from framework.base.sspl_constants import MAX_CONSUL_RETRY, WAIT_BEFORE_RETRY, CONSUL_ERR_STRING
 import time

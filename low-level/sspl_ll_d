@@ -502,7 +502,6 @@ def _sensors_actuators_factory(sspl_threaded_modules, msgQlist, operating_system
         from zope.interface import implementedBy
 
         from zope.component import queryUtility
-        from loggers.impl.iem_logger import IEMlogger
 
         # The Zope Global Site Manager containing objects that implement the desired interfaces
         gsm = getGlobalSiteManager()
@@ -781,7 +780,7 @@ if __name__ == "__main__":
     try:
         logging_level = Conf.get(SSPL_CONF, f"{SYSTEM_INFORMATION}>{LOG_LEVEL}", "INFO")
         logger.init(service_name="sspl", log_path=SSPL_LOG_PATH, level=logging_level)
-        logger.info("Logging has been initialized for sspl")
+        logger.info("Logging has been initialized for SSPL !!!")
     except Exception as err:
         # We don't have logger since it threw an exception, use generic 'print'
         print("[ Error ] when initializing logging :")

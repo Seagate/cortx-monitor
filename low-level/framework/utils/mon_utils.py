@@ -20,7 +20,7 @@
 """
 
 import uuid
-from framework.utils.service_logging import logger
+from cortx.utils.log import Log as logger
 
 
 class MonUtils():
