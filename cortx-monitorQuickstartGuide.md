@@ -261,22 +261,22 @@ This guide provides a step-by-step walkthrough for getting you CORTX-Monitor Ser
     ******************************************************
  ```
 
-## 1.5 Development Cycle.
-There are two option to build again after editing the code
+## 1.5 Development Cycle
+There are two options to build again after editing the code.
 
-1. You can go the checkout location `~/cortx/cortx-monitor` and checkout branch and edit the code and follow the steps.
+1. You can go the checkout location `~/cortx/cortx-monitor`, checkout any branch, edit the code, and follow below steps.
     ```
     $ ./sspl_dev_deploy --cleanup
     $ ./sspl_dev_deploy --prereq -T file:///var/artifacts/0
     $ ./sspl_dev_deploy --deploy -T file:///var/artifacts/0 --variable_file /root/sspl_deploy.conf --storage_type RBOD --server_type HW
     ```
 
-2. To build only SSPL, you can also below steps.
+2. To build only SSPL, you can follow below steps.
     1. Go to sspl repo root directory.
     2. Edit the code.
     3. Build SSPL using `./jenkins/build.sh`
-    4. Copy from `~/rpmbuild/RPMS/` to `~/MYRPMS`
-    5. And then build deploy using belew steps.
+    4. Copy RPMs from `~/rpmbuild/RPMS/` to `~/MYRPMS`
+    5. Build deploy RPMs from local using belew steps.
     ```
     $ ./sspl_dev_deploy --cleanup
     $ ./sspl_dev_deploy --prereq -L /root/MYRPMS
