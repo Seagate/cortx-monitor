@@ -94,7 +94,7 @@ This guide provides a step-by-step walkthrough for getting you CORTX-Monitor Ser
     :page_with_curl: **Notes:** 
     
     - If you get below error it may be because that your git version may be more thatn 2.x. Cortx requires 1.8.3.1. In that case
-      if go to `/root/cortx/cortx-monitor/` and run `git checkout main` 
+      if go to `~/cortx/cortx-monitor/` and run `git checkout main`
         ```
         error: pathspec 'main' did not match any file(s) known to git.
         make: *** [checkout] Error 1
@@ -144,7 +144,7 @@ This guide provides a step-by-step walkthrough for getting you CORTX-Monitor Ser
     TMPL_RACK_ID=RC01
     TMPL_SITE_ID=DC01
     TMPL_MACHINE_ID=0449364d92b2ba3915fcd8416014cff7
-    TMPL_HOSTNAME=ssc-vm-4778.colo.seagate.com
+    TMPL_HOSTNAME=<your vm hostname>
     TMPL_NODE_NAME=srvnode-1
     TMPL_SERVER_NODE_TYPE=VM
     TMPL_MGMT_INTERFACE=eth0
