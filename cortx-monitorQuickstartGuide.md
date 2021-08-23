@@ -102,16 +102,13 @@ This guide provides a step-by-step walkthrough for getting you CORTX-Monitor Ser
 
    2. Build cortx-monitor RPMs
         ```
-        docker run --rm -v /var/artifacts:/var/artifacts -v /root/cortx:/cortx-workspace ghcr.io/seagate/cortx-build:centos-7.8.2003 make clean cortx-prvsnr cortx-monitor cortx-prereq release_build
+        docker run --rm -v /var/artifacts:/var/artifacts -v ~/cortx:/cortx-workspace ghcr.io/seagate/cortx-build:centos-7.8.2003 make clean cortx-prvsnr cortx-monitor cortx-prereq release_build
         ```
         
         If you check the location `/var/artifacts/0/`, you will see that Cortx RPMs and 3rd party packages are generated.
 
         ```shell
-        ll /var/artifacts/0/
-        The system output displays as follows:
-
-        [root@ssc-vm-2699 ~]# ll /var/artifacts/0/
+        $ ll /var/artifacts/0/
         total 1608308
         drwxr-xr-x  13 root root       4096 Aug 19 05:16 3rd_party
         drwxr-xr-x   3 root root       4096 Aug 19 05:16 cortx_iso
