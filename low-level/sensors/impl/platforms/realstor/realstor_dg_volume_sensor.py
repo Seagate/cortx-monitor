@@ -31,7 +31,7 @@ from framework.base.module_thread import SensorThread
 from framework.platforms.realstor.realstor_enclosure import \
     singleton_realstorencl
 from framework.utils.conf_utils import (POLLING_FREQUENCY_OVERRIDE, SSPL_CONF,
-                                        Conf)
+    Conf, CLUSTER_CONF, CVG_INFO_KEY)
 from framework.utils.service_logging import logger
 from framework.utils.severity_reader import SeverityReader
 from framework.utils.store_factory import store
@@ -146,6 +146,11 @@ class RealStorLogicalVolumeSensor(SensorThread, InternalMsgQ):
 
         self._event = Event()
         self.os_utils = OSUtils()
+        cvg_info = Conf.get(CLUSTER_CONF, CVG_INFO_KEY)
+        self.cvg_info_dict = {}
+        if cvg_info:
+            self.cvg_info_dict = {cvg['name']: idx for idx, cvg in \
+                enumerate(cvg_info) if 'name' in cvg}
 
     def initialize(self, conf_reader, msgQlist, products):
         """initialize configuration reader and internal msg queues"""
@@ -491,6 +496,11 @@ class RealStorLogicalVolumeSensor(SensorThread, InternalMsgQ):
                 extended_info.update({key : value})
 
         generic_info.update(extended_info)
+        cvg_info = {
+            "cvg_name": resource_id if resource_id in self.cvg_info_dict else "NA",
+            "cvg_id": self.cvg_info_dict.get(resource_id, "NA")
+        }
+        generic_info.update(cvg_info)
 
         info = {
                 "resource_type": self.RESOURCE_TYPE_DG,
