@@ -1,5 +1,5 @@
 pika==1.1.0
-python-daemon==2.2.4
+python-daemon==2.3.0
 zope.component==4.6.2
 zope.event==4.5
 zope.interface==5.2.0
