@@ -14,11 +14,32 @@
 # For any questions about this software or licensing,
 # please email opensource@seagate.com or cortx-questions@seagate.com.
 
+# support framework format
+# bundle:
+#    create:
+#      # url is the command one need to invoke. This can be shell script, python script, REST interface.
+#      # following arguments will be passed in.
+#      # args: --id $bundle_id --path $path_to_store --duration $duration --core $flag --modules $list_of_modules    
+#      url: $create_interface_url 
+#
+#    status:
+#      # following arguments will be passed in.
+#      # args: --id $bundle_id 
+#      url: $status_interface_url 
+#
+#    delete:
+#      # following arguments will be passed in.
+#      # args: --id $bundle_id 
+#      url: $delete_interface_url 
+#
+#    cancel:
+#      # following arguments will be passed in.
+#      # args: --id $bundle_id 
+#      url: $delete_interface_url 
+
 bundle: 
     create:
-      url: /opt/seagate/cortx/sspl/bin/sspl_support_bundle
-      args: create $BUNDLE_ID $PATH
+      url: /opt/seagate/cortx/sspl/bin/sspl_support_bundle create
 
     status:
-      url: /opt/seagate/cortx/sspl/bin/sspl_support_bundle
-      args: status $BUNDLE_ID
+      url: /opt/seagate/cortx/sspl/bin/sspl_support_bundle status

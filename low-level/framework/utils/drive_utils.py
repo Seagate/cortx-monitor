@@ -18,34 +18,27 @@
 
 import json
 import shlex
-import subprocess
+from cortx.utils.process import PipedProcess, SimpleProcess
 
 
 class DriveUtils:
     """Base class for drive related utility functions."""
 
     @staticmethod
-    def extract_smart_data():
-        """Extract drive data using smartctl."""
+    def get_smart_data():
+        """Extract drive SMART test data using smartctl."""
         response = []
-        lsscsi_cmd = " ".join(["lsscsi", "|", "grep", "disk"])
-        lsscsi_cmd = shlex.split(lsscsi_cmd)
-        lsscsi_response = subprocess.run(
-                    lsscsi_cmd,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE, shell=True)  # pylint: disable=B606
-        lsscsi_response = (lsscsi_response.stdout).decode("utf-8")
+        lsscsi_cmd = "lsscsi | grep disk"
+        lsscsi_response, _, _ = PipedProcess(lsscsi_cmd).run()
+        lsscsi_response = lsscsi_response.decode()
         for res in lsscsi_response.split("\n"):
             drive_path = res.strip().split(' ')[-1]
-            if drive_path != "":
+            if drive_path not in ["", "-"]:
                 smartctl_cmd = " ".join(
                         ["smartctl", "-a", drive_path, "--json"])
                 smartctl_cmd = shlex.split(smartctl_cmd)
-                smartctl_response = subprocess.run(
-                            smartctl_cmd,
-                            stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE)
-                smartctl_response = json.loads(smartctl_response.stdout)
+                smartctl_response, _, _ = SimpleProcess(smartctl_cmd).run()
+                smartctl_response = json.loads(smartctl_response)
                 smartctl_response["drive_path"] = drive_path
                 response.append(smartctl_response)
         return response

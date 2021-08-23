@@ -107,8 +107,7 @@ REPLACEMENT_NODE_ENV_VAR_FILE = "/etc/profile.d/set_replacement_env.sh"
 SB_DATA_PATH = DATA_PATH + 'support_bundle'
 SSPL_SB_TMP = f"{SB_DATA_PATH}/sspl_support_bundle_tmp"
 SSPL_SB_REQUEST = f"{SB_DATA_PATH}/sspl-sb-req.txt"
-SB_REQUEST_TIMEOUT = 1800
-SB_REQUEST_TRACKER_DIR = "/var/cortx/resources/"
+SB_REQUEST_TIMEOUT = 1200
 
 # required only for system health
 HEALTH_UNDESIRED_VALS = ["NA", "N/A", ""]

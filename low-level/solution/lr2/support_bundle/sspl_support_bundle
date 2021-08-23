@@ -32,8 +32,7 @@ from datetime import datetime
 
 from cortx.utils.kv_store import KvStoreFactory
 from framework.base import sspl_constants as sspl_const
-from framework.utils.conf_utils import (
-    Conf, SSPL_CONF, SYSTEM_INFORMATION, SSPL_STATE)
+from framework.utils.conf_utils import Conf, SSPL_CONF, CORTX_CONF
 from framework.utils.ipmi_client import IpmiFactory
 from framework.utils.drive_utils import DriveUtils
 from framework.platforms.realstor.realstor_enclosure import RealStorEnclosure
@@ -41,12 +40,14 @@ from framework.platforms.realstor.realstor_enclosure import RealStorEnclosure
 
 # Load bundle request status tracker
 store_type = "json"
+SB_REQUEST_TRACKER_DIR = Conf.get(CORTX_CONF,
+    "discovery>resource_map>location")
 try:
-    os.makedirs(sspl_const.SB_REQUEST_TRACKER_DIR, exist_ok=True)
+    os.makedirs(SB_REQUEST_TRACKER_DIR, exist_ok=True)
 except PermissionError as err:
     print("Failed to create default store directory. %s" % err)
 requests_url = "{0}://{1}".format(store_type, os.path.join(
-    sspl_const.SB_REQUEST_TRACKER_DIR, "bundle_requests.json"))
+    SB_REQUEST_TRACKER_DIR, "bundle_requests.json"))
 req_register = KvStoreFactory.get_instance(requests_url)
 req_register.load()
 
@@ -140,24 +141,24 @@ class SupportBundle(object):
         self._tmp_dir = '/tmp/cortx'
         self._default_path = '%s/support_bundle/' % self._tmp_dir
         self.sspl_conf_dir = f"{sspl_const.SSPL_SB_TMP}/sspl_conf/"
-        self.ipmi_sel_data = "{0}/ipmi_sel_data_{1}.txt".format(
-            sspl_const.SSPL_SB_TMP, str(int(time.time())))
-        self.boot_drvs_dta = "{0}/Server_OS_boot_drives_SMART_data_{1}".format(
-            sspl_const.SSPL_SB_TMP, str(int(time.time())))
+        self.ipmi_sel_data = "{0}/ipmi_sel_data.txt".format(
+            sspl_const.SSPL_SB_TMP)
+        self.boot_drvs_dta = "{0}/Server_OS_boot_drives_SMART_data".format(
+            sspl_const.SSPL_SB_TMP)
         self.enclosure_log = f"{sspl_const.SSPL_SB_TMP}/enclosure_logs.zip"
         self.enclosure_wwn = "NA"
         self.sspl_log_dir = Conf.get(SSPL_CONF, "%s>sspl_log_file_path" %
                                      (self.SYS_INFORMATION)).replace("/sspl.log", "")
+        #TODO: Remove IEM log collection once the SSPL IEM sensor is disabled.
         self.iem_log_dir = Conf.get(SSPL_CONF, "%s>log_file_path" %
                                     (self.IEM_SENSOR)).replace("/iem_messages", "")
+        os.makedirs(sspl_const.SSPL_SB_TMP, exist_ok=True)
 
-    def generate(self, args):
-        """Generate support bundle."""
+    def create(self, args):
+        """create support bundle."""
         logger.info("Starting SSPL bundle generation")
-        self.prepare_bundle(args.bundle_id, args.target_path, args.noencl)
+        self.prepare_bundle(args.id, args.path, args.noencl)
         self.__clear_tmp_files()
-        status = SupportBundle().get_status(args.bundle_id)
-        print(status)
 
     @staticmethod
     def get_status(bundle_id: str):
@@ -173,12 +174,12 @@ class SupportBundle(object):
             return status
         return None
 
-    def prepare_bundle(self, bundle_id: str, target_path: str, include_encl):
+    def prepare_bundle(self, bundle_id: str, target_path: str, exclude_encl):
         """Collect sspl support bundle data."""
         bundle_name = "sspl_" + bundle_id
         request_id = datetime.strftime(datetime.now(), '%Y%m%d%H%M%S%f')
         try:
-            self.get_sspl_bundle_data(bundle_id, request_id, target_path, include_encl)
+            self.get_sspl_bundle_data(bundle_id, request_id, target_path, exclude_encl)
             bundle_location = self._generate_tar(bundle_name)
             SupportBundle._update_bundle_request_info(
                 bundle_id, request_id, bundle_location)
@@ -189,41 +190,38 @@ class SupportBundle(object):
             BundleRequestHandler._update_request_status(
                 bundle_id, status)
 
-    def get_sspl_bundle_data(self, bundle_id, request_id, file_path, include_encl):
+    def get_sspl_bundle_data(self, bundle_id, request_id, file_path, exclude_encl):
         """Collect SSPL data for support bundle."""
         BundleRequestHandler._add_bundle_request(bundle_id, request_id, file_path)
 
         if file_path:
             if os.path.exists(file_path):
-                file_path = file_path+"/sspl/"
                 self.tmp_bundle_path = os.path.normpath(file_path)
             else:
                 msg = "Given path %s doesn't exist" % (file_path)
                 self.__clear_tmp_files()
                 raise SupportBundleError(1, msg)
         os.makedirs(self.tmp_bundle_path, exist_ok=True)
+        self.get_ipmi_sel_data_in_file()
+        self.get_config_data()
+        self.get_drives_smart_data_in_file()
         try:
-            self.get_ipmi_sel_data()
-            self.get_config_data()
-            self.get_drives_smart_data()
-            if not include_encl:
+            if not exclude_encl:
                 RealStorEnclosure().get_enclosure_logs(
                     self.enclosure_log, logger)
-
-            if os.path.exists(self.enclosure_log) and not include_encl:
+            if os.path.exists(self.enclosure_log) and not exclude_encl:
                 enclosure_zip_file = "enclosure-wwn-{0}-logs-{1}.zip".format(
                     self.enclosure_wwn, str(int(time.time())))
                 shutil.copy(self.enclosure_log,
-                            self.tmp_bundle_path+enclosure_zip_file)
+                            self.tmp_bundle_path+'/'+enclosure_zip_file)
                 logger.info("Enclosure Log File Location: %s" %
                             self.tmp_bundle_path+enclosure_zip_file)
         except OSError as err:
-            msg = "Facing problem while creating sspl "
-            "support bundle: {0}".format(err)
+            msg = "Facing problem while collecting enclosure logs: {0}".format(err)
             self.__clear_tmp_files()
             raise SupportBundleError(1, msg)
 
-    def get_ipmi_sel_data(self):
+    def get_ipmi_sel_data_in_file(self):
         ipmitool = IpmiFactory().get_implementor('ipmitool')
         res, err, retcode = ipmitool._run_ipmitool_subcommand("sel list")
         if retcode != 0:
@@ -233,18 +231,22 @@ class SupportBundle(object):
             logger.warn(
                 f"Unable to fetch SEL list data with an error : {err}")
         else:
-            with open(self.ipmi_sel_data, 'w+') as sel_list:
-                sel_list.write(res)
+            try:
+                with open(self.ipmi_sel_data, 'w+') as sel_list:
+                    sel_list.write(res)
+            except Exception as e:
+                logger.error(
+                    "Error in writing {0} file: {1}".format(self.ipmi_sel_data, e))
 
     def get_config_data(self):
         os.makedirs(self.sspl_conf_dir, exist_ok=True)
         for conf_file in glob.glob('/etc/sspl*.*'):
             shutil.copy(conf_file, self.sspl_conf_dir)
 
-    def get_drives_smart_data(self):
+    def get_drives_smart_data_in_file(self):
         """Get drives data using smartctl."""
         os.makedirs(self.boot_drvs_dta, exist_ok=True)
-        response = DriveUtils().extract_smart_data()
+        response = DriveUtils().get_smart_data()
         for res in response:
             try:
                 if 'device' in res \
@@ -308,9 +310,9 @@ class SupportBundle(object):
         parser = argparse.ArgumentParser(description="SSPL Support Bundle")
         parser.add_argument('action',
                             help='Support bundle action [generate|status]')
-        parser.add_argument('bundle_id',
+        parser.add_argument('--id',
                             help='Unique bundle id')
-        parser.add_argument('-target_path',
+        parser.add_argument('--path',
                             help='Path to store the created bundle',
                             default="/var/seagate/cortx/support_bundle/")
         parser.add_argument('-noencl',
@@ -351,10 +353,11 @@ logger = initialize_logging(sys.argv)
 def main():
     bundle = SupportBundle()
     args, parser = bundle.parse_arguments()
-    if args.action == "generate":
-        bundle.generate(args)
-    elif args.action == "status":
-        bundle.get_status(args)
+    action = sys.argv[1]
+    if action == "create":
+        bundle.create(args)
+    elif action == "status":
+        bundle.get_status(args.id)
     else:
         parser.print_help()
 
