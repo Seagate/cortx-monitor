@@ -191,7 +191,7 @@ This guide provides a step-by-step walkthrough for getting you CORTX-Monitor Ser
     ```
     Finally run the deployment script
     ```
-    $ ./sspl_dev_deploy --deploy -T file:///var/artifacts/0 --variable_file /root/sspl_deploy.conf --storage_type RBOD --server_type HW
+    $ ./sspl_dev_deploy --deploy -T file:///var/artifacts/0 --variable_file ~/sspl_deploy.conf --storage_type RBOD --server_type HW
     ```
 
 4. To start the CORTX-Monitor service, run the commands:
@@ -265,7 +265,7 @@ There are two options to build again after editing the code.
     ```
     $ ./sspl_dev_deploy --cleanup
     $ ./sspl_dev_deploy --prereq -T file:///var/artifacts/0
-    $ ./sspl_dev_deploy --deploy -T file:///var/artifacts/0 --variable_file /root/sspl_deploy.conf --storage_type RBOD --server_type HW
+    $ ./sspl_dev_deploy --deploy -T file:///var/artifacts/0 --variable_file ~/sspl_deploy.conf --storage_type RBOD --server_type HW
     ```
 
 2. To build only SSPL, you can follow below steps.
@@ -276,8 +276,8 @@ There are two options to build again after editing the code.
     5. Build deploy RPMs from local using belew steps.
     ```
     $ ./sspl_dev_deploy --cleanup
-    $ ./sspl_dev_deploy --prereq -L /root/MYRPMS
-    $ ./sspl_dev_deploy --deploy -L /root/MYRPMS --variable_file /root/sspl_deploy.conf --storage_type RBOD --server_type HW
+    $ ./sspl_dev_deploy --prereq -L ~/MYRPMS
+    $ ./sspl_dev_deploy --deploy -L ~/MYRPMS --variable_file ~/sspl_deploy.conf --storage_type RBOD --server_type HW
     ```
     6. Repeat the same cycle.
 
