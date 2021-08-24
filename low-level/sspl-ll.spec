@@ -69,11 +69,9 @@ cp -rp . $SSPL_BASE/low-level
 
 # Coping independent executable script inside sspl/low-level to easier access core code access.
 SSPL_SETUP=$SSPL_BASE/low-level/files/opt/seagate/sspl/setup
-cp -p $SSPL_SETUP/generate_resource_health_view/resource_health_view $SSPL_BASE/low-level/
-cp -p $SSPL_SETUP/generate_sspl_bundle/sspl_bundle_generate $SSPL_BASE/low-level/
-cp -p $SSPL_SETUP/manifest_support_bundle $SSPL_BASE/low-level/
 cp -p $SSPL_SETUP/sspl_setup.py $SSPL_BASE/low-level/sspl_setup
 cp -p $SSPL_SETUP/consuldump.py $SSPL_BASE/low-level/
+cp -p $SSPL_BASE/low-level/solution/lr2/support_bundle/sspl_support_bundle $SSPL_BASE/low-level/
 
 %pre
 # take backup of cache folder if exists
@@ -87,16 +85,11 @@ fi
 SSPL_DIR=/opt/seagate/%{product_family}/sspl
 
 [ -d "${SSPL_DIR}" ] && {
-    ln -sf $SSPL_DIR/low-level/resource_health_view $SSPL_DIR/bin/resource_health_view
-    ln -sf $SSPL_DIR/low-level/sspl_bundle_generate $SSPL_DIR/bin/sspl_bundle_generate
-    ln -sf $SSPL_DIR/low-level/manifest_support_bundle $SSPL_DIR/bin/manifest_support_bundle
     ln -sf $SSPL_DIR/low-level/sspl_setup $SSPL_DIR/bin/sspl_setup
     ln -sf $SSPL_DIR/low-level/consuldump.py $SSPL_DIR/bin/consuldump.py
-    ln -sf $SSPL_DIR/low-level/resource_health_view /usr/bin/resource_health_view
-    ln -sf $SSPL_DIR/low-level/sspl_bundle_generate /usr/bin/sspl_bundle_generate
-    ln -sf $SSPL_DIR/low-level/manifest_support_bundle /usr/bin/manifest_support_bundle
     ln -sf $SSPL_DIR/low-level/framework $SSPL_DIR/low-level/solution/lr2/
     ln -sf $SSPL_DIR/low-level/solution $SSPL_DIR/extension/solution
+    ln -sf $SSPL_DIR/low-level/sspl_support_bundle $SSPL_DIR/bin/sspl_support_bundle
 }
 
 # restore of data & iem folder
@@ -127,7 +120,7 @@ systemctl stop sspl-ll.service 2> /dev/null || true
 SSPL_DIR=/opt/seagate/%{product_family}/sspl
 rm -f /etc/polkit-1/rules.d/sspl-ll_dbus_policy.rules
 rm -f /etc/dbus-1/system.d/sspl-ll_dbus_policy.conf
-rm -f /usr/bin/resource_health_view /usr/bin/sspl_bundle_generate /usr/bin/manifest_support_bundle
+rm -f $SSPL_DIR/bin/sspl_support_bundle
 rm -f $SSPL_DIR/extension/solution
 
 %files

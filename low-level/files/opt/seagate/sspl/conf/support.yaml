@@ -1,0 +1,45 @@
+# CORTX Python common library.
+# Copyright (c) 2021 Seagate Technology LLC and/or its Affiliates
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU Affero General Public License for more details.
+# You should have received a copy of the GNU Affero General Public License
+# along with this program. If not, see <https://www.gnu.org/licenses/>.
+# For any questions about this software or licensing,
+# please email opensource@seagate.com or cortx-questions@seagate.com.
+
+# support framework format
+# bundle:
+#    create:
+#      # url is the command one need to invoke. This can be shell script, python script, REST interface.
+#      # following arguments will be passed in.
+#      # args: --id $bundle_id --path $path_to_store --duration $duration --core $flag --modules $list_of_modules    
+#      url: $create_interface_url 
+#
+#    status:
+#      # following arguments will be passed in.
+#      # args: --id $bundle_id 
+#      url: $status_interface_url 
+#
+#    delete:
+#      # following arguments will be passed in.
+#      # args: --id $bundle_id 
+#      url: $delete_interface_url 
+#
+#    cancel:
+#      # following arguments will be passed in.
+#      # args: --id $bundle_id 
+#      url: $delete_interface_url 
+
+bundle: 
+    create:
+      url: /opt/seagate/cortx/sspl/bin/sspl_support_bundle create
+
+    status:
+      url: /opt/seagate/cortx/sspl/bin/sspl_support_bundle status

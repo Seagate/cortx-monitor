@@ -19,12 +19,11 @@
  ****************************************************************************
 """
 
-import errno
 import hashlib
 import json
 import time
 
-from framework.base.sspl_constants import ServiceTypes
+from framework.base import sspl_constants as sspl_const
 from framework.target.enclosure import StorageEnclosure
 from framework.utils import encryptor
 from framework.utils.conf_utils import (GLOBAL_CONF, MGMT_INTERFACE,
@@ -151,11 +150,11 @@ class RealStorEnclosure(StorageEnclosure):
 
         # Decrypt MC secret
         decryption_key = encryptor.gen_key(ENCLOSURE,
-            ServiceTypes.STORAGE_ENCLOSURE.value)
+                    sspl_const.ServiceTypes.STORAGE_ENCLOSURE.value)
         self.__passwd = encryptor.decrypt(decryption_key, _secret, "RealStoreEncl")
 
         if self.mc_interface not in self.realstor_supported_interfaces:
-            logger.error("Unspported Realstor interface configured,"
+            logger.error("Unsupported Realstor interface configured,"
                 " monitoring and alerts generation may hamper")
             return
 
@@ -174,10 +173,10 @@ class RealStorEnclosure(StorageEnclosure):
         wsport = ""
 
         if self.active_wsport.isdigit():
-           wsport = ":" + self.active_wsport
+            wsport = ":" + self.active_wsport
         else:
-           logger.warn("Non-numeric webservice port configured [%s], ignoring",\
-               self.active_wsport)
+            logger.warn("Non-numeric webservice port configured [%s], ignoring",
+                       self.active_wsport)
 
         url = "http://" + self.active_ip + wsport + "/api" + uri
 
@@ -540,6 +539,121 @@ class RealStorEnclosure(StorageEnclosure):
                 fru_str = str(is_fru).lower() + ":" + "cold_swappable"
         return fru_str
 
+    def get_enclosure_logs(self, file_name, logger):
+        """Accumulate enclosure logs & write to supplied file."""
+        url = self.build_url(self.URI_CLIAPI_BASE)
+        COLLECTING_DEBUG_LOG_STARTED = False
+        for encl_trigger_log_retry_index in range(0,
+                            sspl_const.ENCL_TRIGGER_LOG_MAX_RETRY):
+            post_data_string = '{0}/"{1}"{2}"{3}'.format(
+                self.URL_ENCLLOGS_POSTDATA,
+                sspl_const.SUPPORT_REQUESTOR_NAME,
+                sspl_const.SUPPORT_EMAIL_ID,
+                sspl_const.SUPPORT_CONTACT_NUMBER)
+            response = self.ws_request(
+                            url,
+                            self.ws.HTTP_POST,
+                            post_data=post_data_string)
+
+            if not response:
+                logger.error("{0} status unavailable as ws request {1}"
+                             " failed".format(
+                                 self.LDR_R1_ENCL,
+                                 url))
+                break
+
+            elif response.status_code != self.ws.HTTP_OK:
+                logger.error("{0} http request {1} to get {3} failed "
+                             "with error {2} enclosure trigger log retry "
+                             "index {4}".format(
+                                 self.LDR_R1_ENCL,
+                                 url,
+                                 response.status_code,
+                                 "Debug log",
+                                 encl_trigger_log_retry_index))
+
+            else:
+                response_data = response.json()
+                if response_data["status"][0]["response-type"] == "Success" \
+                        and response_data["status"][0]["response"] == "Collecting debug logs.":
+                    logger.info("Collecting enclosure debug logs in progress")
+                    COLLECTING_DEBUG_LOG_STARTED = True
+                    break
+                else:
+                    logger.error("{0}:: http request {1} to get {3} failed with "
+                                 "response-type {2}".format(
+                                     self.LDR_R1_ENCL,
+                                     url,
+                                     response_data["status"][0]["response-type"],
+                                     "Debug log"))
+
+        if COLLECTING_DEBUG_LOG_STARTED is True:
+            self.enclosure_wwn = self.get_enclosure_wwn(logger)
+            url = self.build_url(
+                self.URI_CLIAPI_DOWNLOADDEBUGDATA)
+            for encl_download_retry_index in range(0,
+                                    sspl_const.ENCL_DOWNLOAD_LOG_MAX_RETRY):
+                response = self.ws_request(
+                    url, self.ws.HTTP_GET)
+                if not response:
+                    logger.error("{0}:: {2} status unavailable as ws request {1}"
+                                 " failed".format(
+                                     self.LDR_R1_ENCL,
+                                     url,
+                                     "Debug log"))
+                elif response.status_code != self.ws.HTTP_OK:
+                    logger.error("{0}:: http request {1} to get {3} failed "
+                                 "with error {2}".format(
+                                     self.LDR_R1_ENCL,
+                                     url,
+                                     response.status_code,
+                                     "Debug log"))
+                else:
+                    if response.headers.get('Content-Type') == 'application/json; charset="utf-8"':
+                        response_data = response.json()
+                        if response_data["status"][0]["response-type"] == "Error":
+                            time.sleep(
+                                sspl_const.ENCL_DOWNLOAD_LOG_WAIT_BEFORE_RETRY)
+                        else:
+                            logger.error("ERR: Unexpected response-type {0} URL {1}".format(
+                                response_data["status"][0]["response-type"], url))
+                            break
+                    elif response.headers.get('Content-Type') == 'IntentionallyUnknownMimeType; charset="utf-8"':
+                        if response.headers.get('content-disposition') == 'attachment; filename="store.zip"':
+                            with open(file_name, 'wb') as enclosure_resp:
+                                enclosure_resp.write(response.content)
+                                enclosure_resp.close()
+                                logger.info(
+                                    "Enclosure debug logs saved successfully")
+                        else:
+                            logger.error(
+                                "ERR: No attachment found::{0}".format(url))
+                        break
+                    else:
+                        logger.error(
+                            "ERR: Unknown Content-Type::{0}".format(url))
+                        break
+                if encl_download_retry_index == (sspl_const.ENCL_DOWNLOAD_LOG_MAX_RETRY - 1):
+                    logger.error("ERR: Enclosure debug logs retry count "
+                                 "exceeded::{0}".format(url))
+
+    def get_enclosure_wwn(self, logger):
+        """Get enclosure wwn."""
+        url = self.build_url(self.URI_CLIAPI_SHOWENCLOSURE)
+        response = self.ws_request(url, self.ws.HTTP_GET)
+        if not response:
+            logger.error("{0}:: {2} status unavailable as ws request {1}"
+                         " failed".format(self.EES_ENCL, url, fru))
+            return
+        if response.status_code != self.ws.HTTP_OK:
+            if url.find(self.ws.LOOPBACK) == -1:
+                logger.error("{0}:: http request {1} to get {3} failed with"
+                             " err {2}".format(self.EES_ENCL, url, response.status_code, fru))
+            return
+
+        response_data = json.loads(response.text)
+        enclosure_wwn = response_data.get("enclosures")[0]["enclosure-wwn"]
+        return enclosure_wwn
 
 # Object to use as singleton instance
 singleton_realstorencl = RealStorEnclosure()

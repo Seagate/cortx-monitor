@@ -1,0 +1,372 @@
+#!/usr/bin/env python3
+
+# CORTX Python common library.
+# Copyright (c) 2021 Seagate Technology LLC and/or its Affiliates
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU Affero General Public License for more details.
+# You should have received a copy of the GNU Affero General Public License
+# along with this program. If not, see <https://www.gnu.org/licenses/>.
+# For any questions about this software or licensing,
+# please email opensource@seagate.com or cortx-questions@seagate.com.
+
+import os
+import sys
+import glob
+import time
+import json
+import errno
+import shutil
+import psutil
+import tarfile
+import logging
+import argparse
+
+from datetime import datetime
+
+from cortx.utils.kv_store import KvStoreFactory
+from framework.base import sspl_constants as sspl_const
+from framework.utils.conf_utils import Conf, SSPL_CONF, CORTX_CONF
+from framework.utils.ipmi_client import IpmiFactory
+from framework.utils.drive_utils import DriveUtils
+from framework.platforms.realstor.realstor_enclosure import RealStorEnclosure
+
+
+# Load bundle request status tracker
+store_type = "json"
+SB_REQUEST_TRACKER_DIR = Conf.get(CORTX_CONF,
+    "discovery>resource_map>location")
+try:
+    os.makedirs(SB_REQUEST_TRACKER_DIR, exist_ok=True)
+except PermissionError as err:
+    print("Failed to create default store directory. %s" % err)
+requests_url = "{0}://{1}".format(store_type, os.path.join(
+    SB_REQUEST_TRACKER_DIR, "bundle_requests.json"))
+req_register = KvStoreFactory.get_instance(requests_url)
+req_register.load()
+
+
+class SupportBundleError(Exception):
+    """Generic Exception with error code and output."""
+
+    def __init__(self, rc, message, *args):
+        """Initialize with custom error message and return code."""
+        self._rc = rc
+        self._desc = message % (args)
+
+    def __str__(self):
+        """Format error string."""
+        if self._rc == 0:
+            return self._desc
+        return "SupportBundleError(%d): %s" % (self._rc, self._desc)
+
+
+class BundleRequestHandler:
+    """Handles SSPL support bundle requests."""
+    IN_PROGRESS = "In-progress"
+    SUCCESS = "Success"
+    FAILED = "Failed"
+
+    @staticmethod
+    def get_processing_status(req_id):
+        """
+        Returns "in-progress" if any request is being processed.
+        Otherwise returns "Success" or "Failed (with reason)" status.
+        """
+        if not req_id:
+            raise SupportBundleError(errno.EINVAL, "Invalid request ID.")
+        status_list = req_register.get(["%s>status" % req_id])
+        status = status_list[0] if status_list else None
+
+        if not status:
+            raise SupportBundleError(
+                errno.EINVAL, "Request ID '%s' not found." % req_id)
+        else:
+            # Set failed status to stale request ID
+            expiry_sec = sspl_const.SB_REQUEST_TIMEOUT
+            last_reboot = int(psutil.boot_time())
+            # Set request is expired if processing time exceeds
+            req_start_time = int(time.mktime(time.strptime(
+                req_register.get(["%s>time" % req_id])[0],
+                '%Y-%m-%d %H:%M:%S')))
+            current_time = int(time.time())
+            is_req_expired = (current_time - req_start_time) > expiry_sec
+            if is_req_expired or (last_reboot > req_start_time and
+                                  status is BundleRequestHandler.IN_PROGRESS):
+                # Set request state as failed
+                BundleRequestHandler._update_request_status(
+                    req_id, "Failed - request is expired.")
+            status = req_register.get(["%s>status" % req_id])[0]
+
+        return status
+
+    @staticmethod
+    def _update_request_status(req_id, status):
+        """Updates processed request information."""
+        req_info = req_register.get(["%s" % req_id])[0]
+        req_info.update({
+            "status": status,
+            "time": datetime.strftime(
+                datetime.now(), '%Y-%m-%d %H:%M:%S')
+        })
+        req_register.set(["%s" % req_id], [req_info])
+
+    @staticmethod
+    def _add_bundle_request(bundle_id, req_id, target_path):
+        """Updates new request information."""
+        req_info = {
+            "request_id": req_id,
+            "target_path": target_path,
+            "status": BundleRequestHandler.IN_PROGRESS,
+            "time": datetime.strftime(
+                datetime.now(), '%Y-%m-%d %H:%M:%S')
+        }
+        req_register.set(["%s" % bundle_id], [req_info])
+
+
+class SupportBundle(object):
+    """SSPL support bundle class"""
+
+    def __init__(self):
+
+        self.SYS_INFORMATION = "SYSTEM_INFORMATION"
+        self.IEM_SENSOR = "IEMSENSOR"
+        self.bundle_prefix = "sb_"
+        self._tmp_dir = '/tmp/cortx'
+        self._default_path = '%s/support_bundle/' % self._tmp_dir
+        self.sspl_conf_dir = f"{sspl_const.SSPL_SB_TMP}/sspl_conf/"
+        self.ipmi_sel_data = "{0}/ipmi_sel_data.txt".format(
+            sspl_const.SSPL_SB_TMP)
+        self.boot_drvs_dta = "{0}/Server_OS_boot_drives_SMART_data".format(
+            sspl_const.SSPL_SB_TMP)
+        self.enclosure_log = f"{sspl_const.SSPL_SB_TMP}/enclosure_logs.zip"
+        self.enclosure_wwn = "NA"
+        self.sspl_log_dir = Conf.get(SSPL_CONF, "%s>sspl_log_file_path" %
+                                     (self.SYS_INFORMATION)).replace("/sspl.log", "")
+        #TODO: Remove IEM log collection once the SSPL IEM sensor is disabled.
+        self.iem_log_dir = Conf.get(SSPL_CONF, "%s>log_file_path" %
+                                    (self.IEM_SENSOR)).replace("/iem_messages", "")
+        os.makedirs(sspl_const.SSPL_SB_TMP, exist_ok=True)
+
+    def create(self, args):
+        """create support bundle."""
+        logger.info("Starting SSPL bundle generation")
+        self.prepare_bundle(args.id, args.path, args.noencl)
+        self.__clear_tmp_files()
+
+    @staticmethod
+    def get_status(bundle_id: str):
+        """Get status of support bundle."""
+        status = None
+        # req_id = "sb_%s" % bundle_id
+        # sspl_sb_id = req_register.get(["%s>sspl_sb_id" % req_id])
+        request_status = BundleRequestHandler.get_processing_status(bundle_id)
+        # Extract sspl sb request status from the message.
+        # Example : "Failed - error(22): Invalid request"
+        status = request_status.split(" ")[0]
+        if status != "In-progress":
+            return status
+        return None
+
+    def prepare_bundle(self, bundle_id: str, target_path: str, exclude_encl):
+        """Collect sspl support bundle data."""
+        bundle_name = "sspl_" + bundle_id
+        request_id = datetime.strftime(datetime.now(), '%Y%m%d%H%M%S%f')
+        try:
+            self.get_sspl_bundle_data(bundle_id, request_id, target_path, exclude_encl)
+            bundle_location = self._generate_tar(bundle_name)
+            SupportBundle._update_bundle_request_info(
+                bundle_id, request_id, bundle_location)
+            BundleRequestHandler._update_request_status(
+                bundle_id, BundleRequestHandler.SUCCESS)
+        except Exception as err:
+            status = BundleRequestHandler.FAILED + f" - {err}"
+            BundleRequestHandler._update_request_status(
+                bundle_id, status)
+
+    def get_sspl_bundle_data(self, bundle_id, request_id, file_path, exclude_encl):
+        """Collect SSPL data for support bundle."""
+        BundleRequestHandler._add_bundle_request(bundle_id, request_id, file_path)
+
+        if file_path:
+            if os.path.exists(file_path):
+                self.tmp_bundle_path = os.path.normpath(file_path)
+            else:
+                msg = "Given path %s doesn't exist" % (file_path)
+                self.__clear_tmp_files()
+                raise SupportBundleError(1, msg)
+        os.makedirs(self.tmp_bundle_path, exist_ok=True)
+        self.get_ipmi_sel_data_in_file()
+        self.get_config_data()
+        self.get_drives_smart_data_in_file()
+        try:
+            if not exclude_encl:
+                RealStorEnclosure().get_enclosure_logs(
+                    self.enclosure_log, logger)
+            if os.path.exists(self.enclosure_log) and not exclude_encl:
+                enclosure_zip_file = "enclosure-wwn-{0}-logs-{1}.zip".format(
+                    self.enclosure_wwn, str(int(time.time())))
+                shutil.copy(self.enclosure_log,
+                            self.tmp_bundle_path+'/'+enclosure_zip_file)
+                logger.info("Enclosure Log File Location: %s" %
+                            self.tmp_bundle_path+enclosure_zip_file)
+        except OSError as err:
+            msg = "Facing problem while collecting enclosure logs: {0}".format(err)
+            self.__clear_tmp_files()
+            raise SupportBundleError(1, msg)
+
+    def get_ipmi_sel_data_in_file(self):
+        ipmitool = IpmiFactory().get_implementor('ipmitool')
+        res, err, retcode = ipmitool._run_ipmitool_subcommand("sel list")
+        if retcode != 0:
+            if err.find(ipmitool.VM_ERROR) != -1:
+                err = ("Detected VM environment, can't reach BMC over inband"
+                       "KCS channel, avoiding BMC data collection using IPMI.")
+            logger.warn(
+                f"Unable to fetch SEL list data with an error : {err}")
+        else:
+            try:
+                with open(self.ipmi_sel_data, 'w+') as sel_list:
+                    sel_list.write(res)
+            except Exception as e:
+                logger.error(
+                    "Error in writing {0} file: {1}".format(self.ipmi_sel_data, e))
+
+    def get_config_data(self):
+        os.makedirs(self.sspl_conf_dir, exist_ok=True)
+        for conf_file in glob.glob('/etc/sspl*.*'):
+            shutil.copy(conf_file, self.sspl_conf_dir)
+
+    def get_drives_smart_data_in_file(self):
+        """Get drives data using smartctl."""
+        os.makedirs(self.boot_drvs_dta, exist_ok=True)
+        response = DriveUtils().get_smart_data()
+        for res in response:
+            try:
+                if 'device' in res \
+                        and res['device']['protocol'] == 'ATA':
+                    file_name = res["drive_path"].replace('/', '_')[1:]
+                    with open(f"{self.boot_drvs_dta}/{file_name}.json", "w+") as fp:
+                        json.dump(res, fp,  indent=4)
+            except Exception as e:
+                logger.error(
+                    "Error in writing {0} file: {1}".format(response, e))
+
+    @staticmethod
+    def _update_bundle_request_info(bundle_id: str,
+                                    request_id: str, tar_file: str):
+        """Updates new request information with bundle specific attributes."""
+        req_info = {
+            "request_id": request_id,
+            "tar_file": tar_file,
+            "time": datetime.strftime(
+                datetime.now(), '%Y-%m-%d %H:%M:%S')
+        }
+        req_register.set(["%s" % bundle_id], [req_info])
+
+    def _generate_tar(self, file_dir: str):
+        """Generate tar.gz file at given path."""
+        file_name = file_dir + '.tar.gz'
+        tarfile_data = {
+            self.sspl_log_dir: os.path.join(file_dir, "sspl/logs/"),
+            self.sspl_conf_dir: os.path.join(file_dir, "sspl/config/"),
+            self.boot_drvs_dta: os.path.join(file_dir, "drives_SMART_data/"),
+            self.ipmi_sel_data: os.path.join(file_dir, "ipmi/ipmi_sel_data.txt"),
+            sspl_const.DATA_PATH: os.path.join(file_dir, "sspl/data/"),
+            self.iem_log_dir: os.path.join(file_dir, "iems/")
+        }
+        EXCLUDE_FILES = [sspl_const.SB_DATA_PATH]
+        tar_location = os.path.normpath(self.tmp_bundle_path+"/"+file_name)
+        try:
+            with tarfile.open(tar_location, "w:gz") as tar:
+                for key, value in tarfile_data.items():
+                    if os.path.exists(key):
+                        try:
+                            tar.add(key, arcname=value,
+                                    exclude=lambda x: x in EXCLUDE_FILES)
+                        except IOError as err:
+                            logger.error("Unable to include {0} logs "
+                                         "with an error {1}".format(key, err))
+            return tar_location
+        except (OSError, tarfile.TarError) as err:
+            msg = "Facing issues while creating sspl "
+            "support bundle: {0}".format(err)
+            self.__clear_tmp_files()
+            raise SupportBundleError(1, msg)
+
+    def __clear_tmp_files(self):
+        """Clean temporary files created by the support bundle."""
+        if os.path.exists(sspl_const.SSPL_SB_TMP):
+            shutil.rmtree(sspl_const.SSPL_SB_TMP)
+
+    @staticmethod
+    def parse_arguments():
+        parser = argparse.ArgumentParser(description="SSPL Support Bundle")
+        parser.add_argument('action',
+                            help='Support bundle action [generate|status]')
+        parser.add_argument('--id',
+                            help='Unique bundle id')
+        parser.add_argument('--path',
+                            help='Path to store the created bundle',
+                            default="/var/seagate/cortx/support_bundle/")
+        parser.add_argument('-noencl',
+                            action='store_true',
+                            help='Exclude enclosure logs')
+        parser.add_argument('-console',
+                            action='store_true',
+                            help='Print logs on console')
+        args = parser.parse_args()
+        return args, parser
+
+
+def initialize_logging(parser):
+    # set Logging Handlers
+    _logger = logging.getLogger('sspl_sb')
+    logging_level = Conf.get(
+        SSPL_CONF, f"{'SYSTEM_INFORMATION'}>{'log_level'}", "INFO")
+    _logger.setLevel(logging_level)
+    handler = logging.handlers.SysLogHandler(
+        address=(sspl_const.SYSLOG_HOST, sspl_const.SYSLOG_PORT))
+    syslog_format = "%(name)s[%(process)d]: " \
+                    "%(levelname)s %(message)s (%(filename)s:%(lineno)d)"
+    formatter = logging.Formatter(syslog_format)
+    handler.setFormatter(formatter)
+    _logger.addHandler(handler)
+
+    # Add console handler
+    if "-console" in parser:
+        console = logging.StreamHandler(sys.stdout)
+        console.setFormatter(formatter)
+        _logger.addHandler(console)
+    return _logger
+
+
+logger = initialize_logging(sys.argv)
+
+
+def main():
+    bundle = SupportBundle()
+    args, parser = bundle.parse_arguments()
+    action = sys.argv[1]
+    if action == "create":
+        bundle.create(args)
+    elif action == "status":
+        bundle.get_status(args.id)
+    else:
+        parser.print_help()
+
+
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt as e:
+        print(f"\n\nWARNING: User aborted command. Partial data "
+              f"save/corruption might occur. It is advised to re-run the"
+              f"command. {e}")
+        sys.exit(1)
