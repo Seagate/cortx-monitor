@@ -260,7 +260,7 @@ class SSPLDevDeploy:
 
     def setup_kafka(self):
         """Setup kafka"""
-        cmd = f"yum install -y --nogpgcheck kafka"
+        cmd = "yum install -y --nogpgcheck kafka"
         self._execute_cmd(cmd)
         cmd = "chown -R kafka:kafka /tmp/zookeeper/"
         self._execute_cmd(cmd)
