@@ -27,7 +27,7 @@ URL:        https://github.com/Seagate/cortx-sspl
 Source0:    %{name}-%{version}.tgz
 Requires:   %{product_family}-sspl = %{version}-%{release}
 BuildRoot:  %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
-Requires:  python36-psutil
+Requires:  (python36-psutil or python3-psutil)
 
 
 %description
