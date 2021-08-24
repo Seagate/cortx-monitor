@@ -39,6 +39,7 @@ from framework.utils.ipmi_client import IpmiFactory
 from framework.utils.service_logging import CustomLog, logger
 from framework.utils.tool_factory import ToolFactory
 from server.server_resource_map import ServerResourceMap
+from framework.utils.os_utils import OSUtils
 
 
 class ServerHealth():
@@ -232,27 +233,18 @@ class ServerHealth():
         server.append(info)
         return server
 
-    @staticmethod
-    def get_cpu_usage(index=2, percpu=False):
-        """Get CPU usage list."""
-        i = 0
-        cpu_usage = None
-        while i < index:
-            cpu_usage = psutil.cpu_percent(interval=None, percpu=percpu)
-            time.sleep(1)
-            i = i + 1
-        return cpu_usage
-
     def get_cpu_info(self, add_overall_usage=False):
         """Update and return CPU information in specific format."""
         per_cpu_data = []
-        cpu_present, cpu_online = self.dmidecode.get_cpu_info()
-        cpu_usage = self.dmidecode.get_per_cpu_usage()
+        cpu_info_dict = self.dmidecode.get_cpu_info()
+        cpu_present = cpu_info_dict["cpu_present"]
+        cpu_online =  cpu_info_dict["online_cpus"]
+        cpu_usage = cpu_info_dict["cpu_usage"]
         cpu_usage_dict = dict(zip(cpu_online, cpu_usage))
         overall_cpu_usage = list(psutil.getloadavg())
         cpu_count = len(cpu_present)
         overall_usage = {
-            "current": self.get_cpu_usage(percpu=False),
+            "current": OSUtils().get_cpu_usage(percpu=False),
             "1_min_avg": overall_cpu_usage[0],
             "5_min_avg": overall_cpu_usage[1],
             "15_min_avg": overall_cpu_usage[2]

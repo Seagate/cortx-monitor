@@ -125,7 +125,8 @@ class CPUFaultSensor(SensorThread, InternalMsgQ):
     def read_current_cpu_info(self):
         """Read current cpu info"""
         try:
-            _, self.current_cpu_info = self._utility_instance.get_cpu_info()
+            cpu_dict = self._utility_instance.get_cpu_info()
+            self.current_cpu_info = cpu_dict["online_cpus"]
         except Exception as e:
             logger.error(f"Error while reading current cpu info, shutting down CPUFaultSensor : {e}")
             self.shutdown()

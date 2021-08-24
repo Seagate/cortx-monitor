@@ -19,12 +19,11 @@ Module which provides system information using 'dmidecode' command
 
 import re
 import psutil
-
-from pathlib import Path
 from statistics import mean
 from framework.utils.utility import Utility
 from framework.utils.service_logging import logger
 from cortx.utils.process import SimpleProcess
+
 
 class Dmidecode(Utility):
     """
@@ -34,11 +33,11 @@ class Dmidecode(Utility):
     DMIDECODE = "sudo /sbin/dmidecode"
 
     def __init__(self):
-        """init method"""
+        """init method."""
         super(Dmidecode, self).__init__()
 
     def get_cpu_info(self):
-        """Returns online cpus list"""
+        """Returns a dict having CPU information."""
         try:
             cmd = self.DMIDECODE + " -t 4"
             response, err, _ = SimpleProcess(cmd).run()
@@ -47,11 +46,13 @@ class Dmidecode(Utility):
                              f"ERROR:{err}")
                 return
             matches = re.findall("Socket Designation:.*|"
-                                 "Status:.*", response.decode())
+                                 "Status:.*|"
+                                 "Thread Count:.*", response.decode())
 
-            cpu_map = {}
+            cpu_status_map = {}
+            cpu_thread_map = {}
             cpu_list = []
-            cpu_present = cpu_status = None
+            cpu_present = cpu_status = cpu_threads = None
             while matches:
                 item = matches.pop(0)
                 if "Designation:" in item:
@@ -61,47 +62,36 @@ class Dmidecode(Utility):
                     cpu_list.append(int(cpu_present))
                 if "Status:" in item:
                     cpu_status = item.strip().split(": ")[1]
-                if cpu_present and cpu_status:
-                    cpu_map[cpu_present] = cpu_status
-            logger.debug(f"Mapping of CPU and status:{cpu_map}")
-            online_cpus = []
-            for cpu, status in cpu_map.items():
-                if "Enabled" in status:
-                    online_cpus.append(int(cpu))
-            logger.info(f"Online CPU list:{online_cpus}")
-            return cpu_list, online_cpus
-        except Exception as e:
-            logger.error(f"Failed to get online CPUs info. ERROR:{e}")
-            return
-
-    def get_per_cpu_usage(self):
-        try:
-            cmd = self.DMIDECODE + " -t 4"
-            response, err, _ = SimpleProcess(cmd).run()
-            matches = re.findall("Socket Designation:.*|"
-                                 "Thread Count:.*", response.decode())
-            cpu_thread_map = {}
-            cpu_present = cpu_threads = None
-            per_cpu_usage = []
-            while matches:
-                item = matches.pop(0)
-                if "Designation:" in item:
-                    cpu_str = item.strip().split(": ")[1]
-                    cpu_dig = re.findall('\d+', cpu_str )
-                    cpu_present = cpu_dig.pop(0)
                 if "Thread Count:" in item:
                     cpu_threads = item.strip().split(": ")[1]
-                if cpu_present and cpu_threads:
+                if cpu_status:
+                    cpu_status_map[cpu_present] = cpu_status
+                if cpu_threads:
                     cpu_thread_map[cpu_present] = cpu_threads
+            logger.debug(f"CPU status map:{cpu_status_map}")
+            logger.debug(f"CPU thread map: {cpu_thread_map}")
+            online_cpus = []
+            per_cpu_usage = []
+            cpu_info = {}
+            for cpu, status in cpu_status_map.items():
+                if "Enabled" in status:
+                    online_cpus.append(int(cpu))
+    
+            # psutil gives cpu_usage per thread, taking mean value of threads
+            # available per cpu to calculate per_cpu_usage
             cpu_usage_threads = psutil.cpu_percent(interval=None, percpu=True)
-            for cpu, threads in cpu_thread_map.items():
+            for _, threads in cpu_thread_map.items():
                 thread_avg = cpu_usage_threads[:int(threads)]
                 cpu_usage_threads = cpu_usage_threads[int(threads):]
                 usage = mean(thread_avg)
-                cpu_usage = round(usage,2)
+                cpu_usage = round(usage, 2)
                 per_cpu_usage.append(cpu_usage)
-            return per_cpu_usage
-        except Exception as e:
-            logger.error(f"Failed to get per CPU usage. ERROR:{e}")
-            return
 
+            cpu_info["cpu_present"] = cpu_list
+            cpu_info["online_cpus"] = online_cpus
+            cpu_info["cpu_usage"] = per_cpu_usage
+            logger.info(f"Fetched CPU info: {cpu_info}")
+            return cpu_info
+        except Exception as e:
+            logger.error(f"Failed to get CPUs info. ERROR:{e}")
+            return
