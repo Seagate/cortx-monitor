@@ -469,7 +469,7 @@ class RealStorEnclosure(StorageEnclosure):
             "sensors": self.URI_CLIAPI_SHOWSENSORSTATUS,
             "volumes": self.URI_CLIAPI_SHOWVOLUMES,
             "disk-groups": self.URI_CLIAPI_SHOWDISKGROUPS,
-            "enclosures": self.URI_CLIAPI_SHOWENCLOSURE,
+            "storage": self.URI_CLIAPI_SHOWENCLOSURE,
             "network-parameters": self.URI_CLIAPI_NETWORKHEALTHSTATUS,
             "drives": self.URI_CLIAPI_SHOWDISKS,
             "expander-ports": self.URI_CLIAPI_SASHEALTHSTATUS,

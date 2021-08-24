@@ -48,8 +48,8 @@ def test_bmc_interface(args):
             try:
                 # Make sure we get back the message type that matches the request
                 msg_type = ingressMsg.get("sensor_response_type")
-                if msg_type["info"]["resource_type"] == "node:bmc:interface:kcs" or \
-                    msg_type["info"]["resource_type"] == "node:bmc:interface:rmcp":
+                if msg_type["info"]["resource_type"] == "server:hw:bmc:channel:kcs" or \
+                    msg_type["info"]["resource_type"] == "server:hw:bmc:channel:rmcp":
                     bmc_interface_message = msg_type
                     break
             except Exception as exception:

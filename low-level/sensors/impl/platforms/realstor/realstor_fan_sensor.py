@@ -48,7 +48,7 @@ class RealStorFanSensor(SensorThread, InternalMsgQ):
 
     SENSOR_NAME = "RealStorFanSensor"
     SENSOR_TYPE = "enclosure_fan_module_alert"
-    RESOURCE_TYPE = "enclosure:hw:fan"
+    RESOURCE_TYPE = "storage:hw:fan"
 
     PRIORITY = 1
 

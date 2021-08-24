@@ -15,18 +15,21 @@
 
 # -*- coding: utf-8 -*-
 
-from common import check_sspl_ll_is_running, get_fru_response, send_enclosure_request
+from common import (
+    check_sspl_ll_is_running, get_fru_response, send_enclosure_actuator_request)
 
 
 def init(args):
     pass
 
-def test_real_stor_controller_actuator(agrs):
+def test_real_stor_controller_actuator(args):
     instance_id = "*"
-    resource_type = "enclosure:hw:controller"
-    send_enclosure_request("ENCL:%s" % resource_type, instance_id)
-    ingressMsg = get_fru_response(resource_type, instance_id)
-    controller_actuator_msg = ingressMsg.get("actuator_response_type")
+    resource_type = "storage:hw:controller"
+    ingress_msg_type = "actuator_response_type"
+    send_enclosure_actuator_request("ENCL:%s" % resource_type, instance_id)
+    ingressMsg = get_fru_response(
+        resource_type, instance_id, ingress_msg_type)
+    controller_actuator_msg = ingressMsg.get(ingress_msg_type)
 
     assert(controller_actuator_msg is not None)
     assert(controller_actuator_msg.get("alert_type") is not None)

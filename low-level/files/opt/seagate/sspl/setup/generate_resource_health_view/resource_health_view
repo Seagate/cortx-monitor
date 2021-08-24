@@ -70,14 +70,14 @@ class SSPLHealthView(object):
 
         self.node_os_disks_filename = persistent_data_location + 'server/systemd_watchdog/disks/disks.json'
 
-        encl_fru = 'enclosure:fru'
+        encl_fru = 'storage:hw'
         self.encl_disk_resource_type = encl_fru + ":disk"
         self.encl_controller_resource_type = encl_fru + ":controller"
         self.encl_fan_resource_type = encl_fru + ":fan"
         self.encl_psu_resource_type = encl_fru + ":psu"
         self.encl_sideplane_resource_type = encl_fru + ":sideplane"
         self.encl_logical_volume_resource_type = f"enclosure:{PRODUCT_FAMILY}:logical_volume"
-        self.encl_sas_resource_type = "enclosure:interface:sas"
+        self.encl_sas_resource_type = "storage:hw:sas_port"
 
         self.undesired_vals = ["N/A", ""]
         self.NODE_REQUEST_MAP = {

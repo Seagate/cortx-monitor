@@ -51,7 +51,7 @@ class RealStorDiskSensor(SensorThread, InternalMsgQ):
 
 
     SENSOR_NAME = "RealStorDiskSensor"
-    RESOURCE_TYPE = "enclosure:hw:disk"
+    RESOURCE_TYPE = "storage:hw:disk"
 
     PRIORITY = 1
 

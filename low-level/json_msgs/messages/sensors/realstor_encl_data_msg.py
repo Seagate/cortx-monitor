@@ -27,7 +27,7 @@ from json_msgs.messages.sensors.base_sensors_msg import BaseSensorMsg
 
 class RealStorEnclDataMsg(BaseSensorMsg):
 
-    SENSOR_RESPONSE_TYPE = "enclosure"
+    SENSOR_RESPONSE_TYPE = "storage"
     MESSAGE_VERSION = "1.0.0"
 
     def __init__(self, host_name,

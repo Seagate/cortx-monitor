@@ -756,11 +756,11 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         channel_info = self.CHANNEL_INFO
 
         if IF_name in BMCInterface.LAN_IF.value:
-            resource_type = "node:bmc:interface:rmcp"
+            resource_type = "server:hw:bmc:channel:rmcp"
             specific_info["bmc_user"] = self._bmc_user
             channel_info = self.LAN_CHANNEL_INFO
         else:
-            resource_type = "node:bmc:interface:kcs"
+            resource_type = "server:hw:bmc:channel:kcs"
             if alert_type == "fault":
                 channel_info = self.KCS_CHANNEL_INFO
         info = {

@@ -601,7 +601,7 @@ def when_i_send_the_enclosure_sas_port_message_to_request_the_current_actuator_t
         },
         "actuator_request_type": {
           "storage_enclosure": {
-            "enclosure_request": "ENCL: enclosure:interface:sas",
+            "enclosure_request": "ENCL:storage:hw:sas_port",
             "resource": "Expansion Port"
           }
         }

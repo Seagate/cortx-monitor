@@ -14,27 +14,26 @@
 # cortx-questions@seagate.com.
 
 # -*- coding: utf-8 -*-
-import json
-import os
-import psutil
 import time
-import sys
 import subprocess
 
 from default import world
 from messaging.ingress_processor_tests import IngressProcessorTests
 from messaging.egress_processor_tests import EgressProcessorTests
-from common import check_sspl_ll_is_running
+from common import check_sspl_ll_is_running, send_enclosure_sensor_request
 
 
 def init(args):
     pass
 
-def test_real_stor_enclosure_sensor(agrs):
+def test_real_stor_enclosure_sensor(args):
     timeout = time.time() + 60*3
     check_sspl_ll_is_running()
     kill_mock_server()
-    encl_sensor_message_request("enclosure")
+    instance_id = "*"
+    resource_type = "storage"
+    ingress_msg_type = "sensor_response_type"
+    send_enclosure_sensor_request(resource_type, instance_id)
     encl_sensor_msg = None
     while time.time() < timeout:
         if world.sspl_modules[IngressProcessorTests.name()]._is_my_msgQ_empty():
@@ -45,9 +44,9 @@ def test_real_stor_enclosure_sensor(agrs):
         print("Received: %s" % ingressMsg)
         try:
             # Make sure we get back the message type that matches the request
-            msg_type = ingressMsg.get("sensor_response_type")
-            if msg_type["info"]["resource_type"] == "enclosure":
-                encl_sensor_msg = ingressMsg.get("sensor_response_type")
+            msg_type = ingressMsg.get(ingress_msg_type)
+            if msg_type["info"]["resource_type"] == resource_type:
+                encl_sensor_msg = ingressMsg.get(ingress_msg_type)
                 break
         except Exception as exception:
             time.sleep(0.1)
@@ -77,7 +76,6 @@ def test_real_stor_enclosure_sensor(agrs):
         assert(encl_specific_info.get("event") is not None)
 
 def kill_mock_server():
-    running_process = []
     cmd = "sudo pkill -f mock_server"
     result = run_cmd(cmd)
     if result:
@@ -89,36 +87,5 @@ def run_cmd(cmd):
         res = False
     res = True
     return res
-
-def encl_sensor_message_request(resource_type):
-    egressMsg = {
-        "title": "SSPL Actuator Request",
-        "description": "Seagate Storage Platform Library - Actuator Request",
-
-        "username" : "JohnDoe",
-        "signature" : "None",
-        "time" : "1576148751",
-        "expires" : 500,
-
-        "message" : {
-            "sspl_ll_msg_header": {
-                "schema_version": "1.0.0",
-                "sspl_version": "1.0.0",
-                "msg_version": "1.0.0"
-            },
-            "sspl_ll_debug": {
-                "debug_component" : "sensor",
-                "debug_enabled" : True
-            },
-            "sensor_request_type": {
-                "enclosure_alert": {
-                    "info": {
-                        "resource_type": resource_type
-                    }
-                }
-            }
-        }
-    }
-    world.sspl_modules[EgressProcessorTests.name()]._write_internal_msgQ(EgressProcessorTests.name(), egressMsg)
 
 test_list = [test_real_stor_enclosure_sensor]
