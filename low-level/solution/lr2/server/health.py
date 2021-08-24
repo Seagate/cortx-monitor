@@ -56,6 +56,7 @@ class ServerHealth():
         server_type = Conf.get(GLOBAL_CONF, NODE_TYPE_KEY)
         Platform.validate_server_type_support(self.log, ResourceMapError, server_type)
         self.sysfs = ToolFactory().get_instance('sysfs')
+        self.dmidecode = ToolFactory().get_instance('dmidecode')
         self.sysfs.initialize()
         self.sysfs_base_path = self.sysfs.get_sysfs_base_path()
         self.cpu_path = self.sysfs_base_path + const.CPU_PATH
@@ -242,23 +243,11 @@ class ServerHealth():
             i = i + 1
         return cpu_usage
 
-    def get_cpu_list(self, mode):
-        """Returns the CPU list as per specified mode."""
-        cpu_info_path = Path(self.cpu_path + mode)
-        # Read the text from /cpu/online file
-        cpu_info = cpu_info_path.read_text()
-        # Drop the \n character from the end of string
-        cpu_info = cpu_info.rstrip('\n')
-        # Convert the string to list of indexes
-        cpu_list = self.sysfs.convert_cpu_info_list(cpu_info)
-        return cpu_list
-
     def get_cpu_info(self, add_overall_usage=False):
         """Update and return CPU information in specific format."""
         per_cpu_data = []
-        cpu_present = self.get_cpu_list("present")
-        cpu_online = self.get_cpu_list("online")
-        cpu_usage = self.get_cpu_usage(percpu=True)
+        cpu_present, cpu_online = self.dmidecode.get_cpu_info()
+        cpu_usage = self.dmidecode.get_per_cpu_usage()
         cpu_usage_dict = dict(zip(cpu_online, cpu_usage))
         overall_cpu_usage = list(psutil.getloadavg())
         cpu_count = len(cpu_present)

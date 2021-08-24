@@ -89,40 +89,6 @@ class SysFS(Utility):
                     phy_dir[phy_name] = link_rate
         return phy_dir
 
-    def convert_cpu_info_list(self, cpu_info):
-        """Converts cpu info as read from file to a list of cpu indexes
-        eg. '0-2,4,6-8' => [0,1,2,4,6,7,8]
-        """
-        # Split the string with comma
-        cpu_info = cpu_info.split(',')
-        cpu_list = []
-        for item in cpu_info:
-            # Split item with a hyphen if it is a range of indexes
-            item = item.split('-')
-            if len(item) == 2:
-                # Item is a range
-                num1 = int(item[0])
-                num2 = int(item[1])
-                # Append all indexes in that range
-                for i in range(num1,num2+1):
-                    cpu_list.append(i)
-            elif len(item) == 1:
-                # Item is a single index
-                cpu_list.append(int(item[0]))
-        return cpu_list
-
-    def get_cpu_info(self):
-        """Returns the cpus online after reading /sys/devices/system/cpu/online
-        """
-        cpu_info_path = Path(self.cpu_online_fp)
-        # Read the text from /cpu/online file
-        cpu_info = cpu_info_path.read_text()
-        # Drop the \n character from the end of string
-        cpu_info = cpu_info.rstrip('\n')
-        # Convert the string to list of indexes
-        cpu_list = self.convert_cpu_info_list(cpu_info)
-        return cpu_list
-
     def fetch_nw_cable_status(self, nw_interface_path, interface):
         '''
            Gets the status of nw carrier cable from the path:

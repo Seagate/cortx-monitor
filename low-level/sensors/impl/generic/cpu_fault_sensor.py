@@ -92,7 +92,7 @@ class CPUFaultSensor(SensorThread, InternalMsgQ):
 
         # get the cpu fault implementor from configuration
         cpu_fault_utility = Conf.get(SSPL_CONF, f"{self.name().capitalize()}>{self.PROBE}",
-                                    'sysfs')
+                                    'dmidecode')
 
         # Creating the instance of ToolFactory class
         self.tool_factory = ToolFactory()
@@ -125,7 +125,7 @@ class CPUFaultSensor(SensorThread, InternalMsgQ):
     def read_current_cpu_info(self):
         """Read current cpu info"""
         try:
-            self.current_cpu_info = self._utility_instance.get_cpu_info()
+            _, self.current_cpu_info = self._utility_instance.get_cpu_info()
         except Exception as e:
             logger.error(f"Error while reading current cpu info, shutting down CPUFaultSensor : {e}")
             self.shutdown()
