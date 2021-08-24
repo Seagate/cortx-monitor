@@ -164,7 +164,7 @@ class SSPLDevDeploy:
         print('Cleaning up local repos...')
         for p in Path('/etc/yum.repos.d').glob('var_artifacts_*'):
             p.unlink()
-        for p in Path('/etc/yum.repos.d').glob('cortx-storage.colo.seagate.com_*'):
+        for p in Path('/etc/yum.repos.d').glob('cortx-*'):
             p.unlink()
         if os.path.exists('/etc/pip.conf'):
             Path('/etc/pip.conf').unlink()
