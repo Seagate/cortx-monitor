@@ -28,7 +28,7 @@ from framework.base.sspl_constants import (
     PRODUCT_FAMILY, sspl_config_path, sspl_test_file_path,
     sspl_test_config_path, global_config_path, SSPL_CONFIG_INDEX,
     SSPL_TEST_CONFIG_INDEX, IVT_TEST_PLANS, NOT_IMPLEMENTED_TEST_PLANS,
-    sspl_newtest_config_path, sspl_newtest_file_path)
+    sspl_testv2_config_path, sspl_testv2_file_path)
 
 
 SSPL_TEST_GLOBAL_CONFIG = "sspl_test_gc"
@@ -43,7 +43,7 @@ class SSPLTestCmd:
         self.plan = "sanity"
         self.coverage_enabled = self.args.coverage
         self.test_dir = f"/opt/seagate/{PRODUCT_FAMILY}/sspl/sspl_test"
-        if self.args.newtest:
+        if self.args.v2:
             self.test_dir = f"/opt/seagate/{PRODUCT_FAMILY}/sspl/sspl_test/functional_tests"
 
         self.dbus_service = DbusServiceHandler()
@@ -102,8 +102,8 @@ class SSPLTestCmd:
             host=socket.getfqdn(), pkgs=rpm_deps, skip_version_check=True)
         # Load global, sspl and test configs
         Conf.load(SSPL_CONFIG_INDEX, sspl_config_path)
-        if self.args.newtest:
-            Conf.load(SSPL_TEST_CONFIG_INDEX, sspl_newtest_config_path)
+        if self.args.v2:
+            Conf.load(SSPL_TEST_CONFIG_INDEX, sspl_testv2_config_path)
         else:
             Conf.load(SSPL_TEST_CONFIG_INDEX, sspl_test_config_path)
         # Take copy of supplied config passed to sspl_test and load it
@@ -131,8 +131,8 @@ class SSPLTestCmd:
         if self.plan not in IVT_TEST_PLANS:
             # Take back up of sspl test config
             sspl_test_backup = '/etc/sspl_tests.conf.back'
-            if self.args.newtest:
-                shutil.copyfile(sspl_newtest_file_path, sspl_test_backup)    
+            if self.args.v2:
+                shutil.copyfile(sspl_testv2_file_path, sspl_test_backup)
             else:
                 shutil.copyfile(sspl_test_file_path, sspl_test_backup)
 
@@ -229,7 +229,7 @@ class SSPLTestCmd:
             # RunQATest(self.plan, self.coverage_enabled).run()
             CMD = "%s/run_qa_test.sh --plan %s --coverage %s"\
                 % (self.test_dir, self.plan, self.coverage_enabled)
-            if self.args.newtest:
+            if self.args.v2:
                 CMD = "%s/run_tests.sh --plan %s --coverage %s"\
                    % (self.test_dir, self.plan, self.coverage_enabled)
             try:
@@ -260,8 +260,8 @@ class SSPLTestCmd:
                      "NODEDATAMSGHANDLER>high_memory_usage_wait_threshold",
                      memory_usage_alert_wait)
             Conf.save(SSPL_CONFIG_INDEX)
-            if self.args.newtest:
-                shutil.copyfile(sspl_test_backup, sspl_newtest_file_path)
+            if self.args.v2:
+                shutil.copyfile(sspl_test_backup, sspl_testv2_file_path)
             else:
                 shutil.copyfile(sspl_test_backup, sspl_test_file_path)
             if rc != 0:
@@ -285,7 +285,7 @@ class SSPLTestCmd:
             # RunQATest(self.plan).run()
             try:
                 CMD = "%s/run_qa_test.sh --plan %s" % (self.test_dir, self.plan)
-                if self.args.newtest:
+                if self.args.v2:
                     CMD = "%s/run_tests.sh --plan %s" % (self.test_dir, self.plan)
                 _, error, returncode = SimpleProcess(CMD).run(
                     realtime_output=True)

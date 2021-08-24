@@ -306,7 +306,7 @@ class TestCmd(Cmd):
                              help='Test plan type')
         parsers.add_argument('--coverage', action="store_true",
                              help='Boolean - Enable Code Coverage.')
-        parsers.add_argument('--newtest', action="store_true",
+        parsers.add_argument('--v2', action="store_true",
                              help='Boolean - Run with new test framework.')
         parsers.set_defaults(command=cls)
 
