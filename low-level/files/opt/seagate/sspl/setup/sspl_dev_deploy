@@ -190,8 +190,8 @@ class SSPLDevDeploy:
                 trusted-host: localhost\n""").format(self.target_build)
             pw.write(cont)
         python_install_command = "yum install -y python3"
-        kafka_install_command = "yum install --nogpgcheck -y cortx-prereq"
-        for repo_cmd in [cmd1, cmd2, python_install_command, kafka_install_command]:
+        prereq_install_command = "yum install --nogpgcheck -y cortx-prereq"
+        for repo_cmd in [cmd1, cmd2, python_install_command, prereq_install_command]:
             out, rc = self._execute_cmd(repo_cmd)
             if rc != 0:
                 raise DeployError(rc, "%s - %s CMD: %s",
