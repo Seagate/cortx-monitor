@@ -14,11 +14,6 @@
 # cortx-questions@seagate.com.
 
 
-#****************************************************************************
-# Description:       Common utility functions required for encryption purpose
-#****************************************************************************
-# TODO - Avoid duplicate code between sspl and sspl_test
-
 from cortx.utils.security.cipher import Cipher
 
 

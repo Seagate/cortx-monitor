@@ -20,14 +20,14 @@ from subprocess import call
 def create_nw_interface():
     # Load the dummy interface module
     call("modprobe dummy".split())
-    sleep(.1)
+    sleep(0.1)
     call("ip link add eth-mocked type dummy".split())
-    sleep(.1)
+    sleep(0.1)
     # Create a dummy interface called dummy1
     call("ip link set name eth-mocked dev dummy0".split())
-    sleep(.1)
+    sleep(0.1)
     call("ip link add br0 type bridge".split())
-    sleep(.1)
+    sleep(0.1)
     # TODO: Replace with non-offensive terms when possible.
     # An email was sent on 18082020 to stephen@networkplumber.org requesting this
     call("ip link set dev eth-mocked master br0".split())
@@ -39,11 +39,12 @@ def shuffle_nw_interface():
     # Change interface's state from down to up
     # Default state for eth-mocked and br0 is down.
     call("ip link set eth-mocked up".split())
-    sleep(.1)
+    sleep(0.1)
     call("ip link set br0 up".split())
+
 
 def delete_nw_interface():
     # Delete created new intefaces
     call("ip link delete dummy0".split())
-    sleep(.1)
+    sleep(0.1)
     call("ip link delete br0".split())

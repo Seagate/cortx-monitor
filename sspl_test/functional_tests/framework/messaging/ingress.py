@@ -21,12 +21,8 @@ from cortx.utils.message_bus import MessageConsumer
 from framework.utils.service_logging import logger
 from framework.utils.conf_utils import Conf, SSPL_TEST_CONF, NODE_ID_KEY
 
-import ctypes
 
-SSPL_SEC = ctypes.cdll.LoadLibrary('libsspl_sec.so.0')
-
-
-class TestIngressProcessor():
+class TestIngressProcessor:
     """Handles incoming messages via messaging for automated tests."""
 
     MODULE_NAME = "IngressProcessorTests"
@@ -38,17 +34,20 @@ class TestIngressProcessor():
     CONSUMER_GROUP = "consumer_group"
     MESSAGE_TYPE = "message_type"
     OFFSET = "offset"
-    SYSTEM_INFORMATION_KEY = 'SYSTEM_INFORMATION'
+    SYSTEM_INFORMATION_KEY = "SYSTEM_INFORMATION"
 
     JSON_ACTUATOR_SCHEMA = "SSPL-LL_Actuator_Response.json"
     JSON_SENSOR_SCHEMA = "SSPL-LL_Sensor_Response.json"
 
     def __init__(self):
         self._read_config()
-        self._consumer = MessageConsumer(consumer_id=self._consumer_id,
-                                         consumer_group=self._consumer_group,
-                                         message_types=[self._message_type],
-                                         auto_ack=True, offset=self._offset)
+        self._consumer = MessageConsumer(
+            consumer_id=self._consumer_id,
+            consumer_group=self._consumer_group,
+            message_types=[self._message_type],
+            auto_ack=True,
+            offset=self._offset,
+        )
 
     def message_reader(self):
         logger.info("Started reading messages")
@@ -58,9 +57,9 @@ class TestIngressProcessor():
                 if message:
                     logger.info(f"IngressProcessorTests, Message Received: {message}")
                     self._consumer.ack()
-                    yield json.loads(message)['message']
+                    yield json.loads(message)["message"]
                 else:
-                    time.sleep(.2)
+                    time.sleep(0.2)
         except Exception as e:
             logger.error("IngressProcessorTests, Exception: %s" % str(e))
             logger.error(traceback.format_exc())
@@ -68,16 +67,16 @@ class TestIngressProcessor():
     def _read_config(self):
         """Configure the messaging exchange with defaults available."""
         # Make methods locally available
-        self._node_id = Conf.get(SSPL_TEST_CONF, NODE_ID_KEY, 'SN01')
-        self._consumer_id = Conf.get(SSPL_TEST_CONF,
-                                     f"{self.PROCESSOR}>{self.CONSUMER_ID}",
-                                     'sspl_actuator')
-        self._consumer_group = Conf.get(SSPL_TEST_CONF,
-                                        f"{self.PROCESSOR}>{self.CONSUMER_GROUP}",
-                                        'cortx_monitor')
-        self._message_type = Conf.get(SSPL_TEST_CONF,
-                                      f"{self.PROCESSOR}>{self.MESSAGE_TYPE}",
-                                      'Requests')
-        self._offset = Conf.get(SSPL_TEST_CONF,
-                                f"{self.PROCESSOR}>{self.OFFSET}",
-                                'earliest')
+        self._node_id = Conf.get(SSPL_TEST_CONF, NODE_ID_KEY, "SN01")
+        self._consumer_id = Conf.get(
+            SSPL_TEST_CONF, f"{self.PROCESSOR}>{self.CONSUMER_ID}", "sspl_actuator"
+        )
+        self._consumer_group = Conf.get(
+            SSPL_TEST_CONF, f"{self.PROCESSOR}>{self.CONSUMER_GROUP}", "cortx_monitor"
+        )
+        self._message_type = Conf.get(
+            SSPL_TEST_CONF, f"{self.PROCESSOR}>{self.MESSAGE_TYPE}", "Requests"
+        )
+        self._offset = Conf.get(
+            SSPL_TEST_CONF, f"{self.PROCESSOR}>{self.OFFSET}", "earliest"
+        )

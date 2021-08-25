@@ -2,7 +2,6 @@ from abc import ABCMeta
 
 
 class TestCaseBase(metaclass=ABCMeta):
-
     def init(self):
         raise NotImplementedError()
 

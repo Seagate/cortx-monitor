@@ -28,94 +28,96 @@ class NodeFanActuatorTest(TestCaseBase):
         pass
 
     def request(self):
-        return get_node_controller_message_request(self.UUID, "NDHW:%s" % self.resource_type, self.resource_id)
+        return get_node_controller_message_request(
+            self.UUID, "NDHW:%s" % self.resource_type, self.resource_id
+        )
 
     def filter(self, msg):
         return actuator_response_filter(msg, self.resource_type)
 
     def response(self, msg):
-        assert(msg.get("sspl_ll_msg_header").get("uuid") == self.UUID)
+        assert msg.get("sspl_ll_msg_header").get("uuid") == self.UUID
 
         fan_module_actuator_msg = msg.get("actuator_response_type")
-        assert(fan_module_actuator_msg is not None)
-        assert(fan_module_actuator_msg.get("alert_type") is not None)
-        assert(fan_module_actuator_msg.get("severity") is not None)
-        assert(fan_module_actuator_msg.get("host_id") is not None)
-        assert(fan_module_actuator_msg.get("info") is not None)
-        assert(fan_module_actuator_msg.get("instance_id") == self.resource_id)
+        assert fan_module_actuator_msg is not None
+        assert fan_module_actuator_msg.get("alert_type") is not None
+        assert fan_module_actuator_msg.get("severity") is not None
+        assert fan_module_actuator_msg.get("host_id") is not None
+        assert fan_module_actuator_msg.get("info") is not None
+        assert fan_module_actuator_msg.get("instance_id") == self.resource_id
 
         fan_module_info = fan_module_actuator_msg.get("info")
-        assert(fan_module_info.get("site_id") is not None)
-        assert(fan_module_info.get("node_id") is not None)
-        assert(fan_module_info.get("rack_id") is not None)
-        assert(fan_module_info.get("resource_type") is not None)
-        assert(fan_module_info.get("event_time") is not None)
-        assert(fan_module_info.get("resource_id") is not None)
+        assert fan_module_info.get("site_id") is not None
+        assert fan_module_info.get("node_id") is not None
+        assert fan_module_info.get("rack_id") is not None
+        assert fan_module_info.get("resource_type") is not None
+        assert fan_module_info.get("event_time") is not None
+        assert fan_module_info.get("resource_id") is not None
 
         fan_specific_infos = fan_module_actuator_msg.get("specific_info")
-        assert(fan_specific_infos is not None)
+        assert fan_specific_infos is not None
 
         if fan_module_info.get("resource_id") == "*":
             for fan_specific_info in fan_specific_infos:
-                assert(fan_specific_info is not None)
+                assert fan_specific_info is not None
                 if fan_specific_info.get("ERROR"):
                     # Skip any validation on specific info if ERROR seen on FRU
                     continue
                 resource_id = fan_specific_info.get("resource_id", "")
                 if fan_specific_info.get(resource_id):
-                    assert(fan_specific_info.get(resource_id).get("ERROR") is not None)
+                    assert fan_specific_info.get(resource_id).get("ERROR") is not None
                     # Skip any validation on specific info if ERROR seen on sensor
                     continue
                 if "Fan Fail" in resource_id or "Fan Redundancy" in resource_id:
                     sensor_type = [
                         k if k.startswith("Sensor Type") else None
                         for k in fan_specific_info.keys()
-                        ][0]
-                    assert(sensor_type is not None)
-                    assert(fan_specific_info.get("resource_id") is not None)
-                    assert(fan_specific_info.get("States Asserted") is not None)
+                    ][0]
+                    assert sensor_type is not None
+                    assert fan_specific_info.get("resource_id") is not None
+                    assert fan_specific_info.get("States Asserted") is not None
                 else:
-                    assert(fan_specific_info.get("resource_id") is not None)
+                    assert fan_specific_info.get("resource_id") is not None
                     sensor_type = [
                         k if k.startswith("Sensor Type") else None
                         for k in fan_specific_info.keys()
-                        ][0]
-                    assert(sensor_type is not None)
-                    assert(fan_specific_info.get("Sensor Reading") is not None)
-                    assert(fan_specific_info.get("Status") is not None)
-                    assert(fan_specific_info.get("Lower Non_Recoverable") is not None)
-                    assert(fan_specific_info.get("Lower Critical") is not None)
-                    assert(fan_specific_info.get("Lower Non_Critical") is not None)
-                    assert(fan_specific_info.get("Upper Non_Critical") is not None)
-                    assert(fan_specific_info.get("Upper Critical") is not None)
-                    assert(fan_specific_info.get("Upper Non_Recoverable") is not None)
-                    assert(fan_specific_info.get("Positive Hysteresis") is not None)
-                    assert(fan_specific_info.get("Negative Hysteresis") is not None)
-                    assert(fan_specific_info.get("Assertion Events") is not None)
-                    assert(fan_specific_info.get("Assertions Enabled") is not None)
-                    assert(fan_specific_info.get("Deassertions Enabled") is not None)
+                    ][0]
+                    assert sensor_type is not None
+                    assert fan_specific_info.get("Sensor Reading") is not None
+                    assert fan_specific_info.get("Status") is not None
+                    assert fan_specific_info.get("Lower Non_Recoverable") is not None
+                    assert fan_specific_info.get("Lower Critical") is not None
+                    assert fan_specific_info.get("Lower Non_Critical") is not None
+                    assert fan_specific_info.get("Upper Non_Critical") is not None
+                    assert fan_specific_info.get("Upper Critical") is not None
+                    assert fan_specific_info.get("Upper Non_Recoverable") is not None
+                    assert fan_specific_info.get("Positive Hysteresis") is not None
+                    assert fan_specific_info.get("Negative Hysteresis") is not None
+                    assert fan_specific_info.get("Assertion Events") is not None
+                    assert fan_specific_info.get("Assertions Enabled") is not None
+                    assert fan_specific_info.get("Deassertions Enabled") is not None
         else:
             # Skip any validation if ERROR seen on the specifc FRU
             if not fan_specific_infos.get("ERROR"):
                 sensor_type = [
                     k if k.startswith("Sensor Type") else None
                     for k in fan_specific_infos.keys()
-                    ][0]
-                assert(sensor_type is not None)
-                assert(fan_specific_infos.get("Sensor Reading") is not None)
-                assert(fan_specific_infos.get("Status") is not None)
-                assert(fan_specific_infos.get("Lower Non_Recoverable") is not None)
-                assert(fan_specific_infos.get("Lower Critical") is not None)
-                assert(fan_specific_infos.get("Lower Non_Critical") is not None)
-                assert(fan_specific_infos.get("Upper Non_Critical") is not None)
-                assert(fan_specific_infos.get("Upper Critical") is not None)
-                assert(fan_specific_infos.get("Upper Non_Recoverable") is not None)
-                assert(fan_specific_infos.get("Positive Hysteresis") is not None)
-                assert(fan_specific_infos.get("Negative Hysteresis") is not None)
-                assert(fan_specific_infos.get("Assertion Events") is not None)
-                assert(fan_specific_infos.get("Assertions Enabled") is not None)
-                assert(fan_specific_infos.get("Deassertions Enabled") is not None)
-                assert(fan_specific_infos.get("resource_id") is not None)
+                ][0]
+                assert sensor_type is not None
+                assert fan_specific_infos.get("Sensor Reading") is not None
+                assert fan_specific_infos.get("Status") is not None
+                assert fan_specific_infos.get("Lower Non_Recoverable") is not None
+                assert fan_specific_infos.get("Lower Critical") is not None
+                assert fan_specific_infos.get("Lower Non_Critical") is not None
+                assert fan_specific_infos.get("Upper Non_Critical") is not None
+                assert fan_specific_infos.get("Upper Critical") is not None
+                assert fan_specific_infos.get("Upper Non_Recoverable") is not None
+                assert fan_specific_infos.get("Positive Hysteresis") is not None
+                assert fan_specific_infos.get("Negative Hysteresis") is not None
+                assert fan_specific_infos.get("Assertion Events") is not None
+                assert fan_specific_infos.get("Assertions Enabled") is not None
+                assert fan_specific_infos.get("Deassertions Enabled") is not None
+                assert fan_specific_infos.get("resource_id") is not None
 
 
 test_list = [NodeFanActuatorTest]

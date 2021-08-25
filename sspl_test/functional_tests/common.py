@@ -23,40 +23,25 @@
 """
 
 import inspect
-import traceback
-import json
-import time
-import sys
-import os
-import psutil
 import subprocess
-from threading import Thread
-from default import world
-from framework.utils.service_logging import init_logging
-from framework.utils.service_logging import logger
 from sspl_constants import DEFAULT_NODE_ID
 from framework.utils.conf_utils import (
-    Conf, SSPL_TEST_CONF, GLOBAL_CONF, PRODUCT_KEY, NODE_ID_KEY)
-
-PY2 = sys.version_info[0] == 2
-PY3 = sys.version_info[0] == 3
-
-if PY3:
-    import queue as queue
-else:
-    import Queue as queue
+    Conf,
+    GLOBAL_CONF,
+    NODE_ID_KEY,
+)
 
 # Section and key in config file for bootstrap
-SSPL_SETTING = 'SSPL-TESTS_SETTING'
-MODULES = 'modules'
-SYS_INFORMATION = 'SYSTEM_INFORMATION'
-PRODUCT_NAME = 'product'
+SSPL_SETTING = "SSPL-TESTS_SETTING"
+MODULES = "modules"
+SYS_INFORMATION = "SYSTEM_INFORMATION"
+PRODUCT_NAME = "product"
 conf_reader = None
 
 
-class TestFailed(Exception): 
+class TestFailed(Exception):
     def __init__(self, desc):
-        desc = '[%s] %s' % (inspect.stack()[1][3], desc)
+        desc = "[%s] %s" % (inspect.stack()[1][3], desc)
         super(TestFailed, self).__init__(desc)
 
 
@@ -66,87 +51,23 @@ def get_current_node_id():
     return node_id
 
 
-def init_messaging_msg_processors(message_processor_class):
-    """The main bootstrap for sspl automated tests"""
-
-    # Initialize logging 
-    try:
-        init_logging("SSPL-Tests", "DEBUG")
-    except Exception as err:
-        # We don't have logger since it threw an exception, use generic 'print'
-        print("[ Error ] when initializing logging :")
-        print(err)
-        print("Exiting ...")
-        exit(os.EX_USAGE)
-
-    # Modules to be used for testing
-    conf_modules = Conf.get(SSPL_TEST_CONF, f"{SSPL_SETTING}>{MODULES}")
-
-    # Create a map of references to all the module's message queues.  Each module
-    #  is passed this mapping so that it can send messages to other modules.
-    msgQlist = {}
-
-    # Create a mapping of all the instantiated modules to their names
-    world.sspl_modules = {}
-
-    # Read in product value from configuration file
-    product = Conf.get(GLOBAL_CONF, PRODUCT_KEY)
-    logger.info("sspl-ll Bootstrap: product name supported: %s" % product)
-    # Use reflection to instantiate the class based upon its class name in config file
-    klass = globals()[message_processor_class]
-    # Create mappings of modules and their message queues
-    world.sspl_modules[klass.name()] = klass()
-    msgQlist[klass.name()] = queue.Queue()
-
-    # Convert to a dict
-    # TODO: Check use of this
-    world.diskmonitor_file = json.loads("{}")
-
-    try:
-        # Loop through the list of instanced modules and start them on threads
-        threads = []
-        for name, curr_module in list(world.sspl_modules.items()):
-            logger.info("SSPL-Tests Starting %s" % curr_module.name())
-            curr_module._set_debug(True)
-            thread = Thread(target=_run_thread_capture_errors,
-                            args=(curr_module, msgQlist, conf_reader, product))
-            thread.start()
-            threads.append(thread)
-
-        # Allow threads to startup before running tests
-        time.sleep(2)
-
-        # Clear the message queue buffer out from msgs sent at startup
-        while not world.sspl_modules[message_processor_class]._is_my_msgQ_empty():
-            world.sspl_modules[message_processor_class]._read_my_msgQ()
-
-    except Exception as ex:
-        logger.error(traceback.format_exc())
-        logger.exception(ex)
-
-
-# Global method used by Thread to capture and log errors.  This must be global.
-
-def stop_messaging_msg_processors():
-    """Shuts down messaging threads and terminates tests"""
-    time.sleep(5)
-    print("SSPL Automated Test Process ended successfully")
-    for name, module in list(world.sspl_modules.items()):
-        module.shutdown()
-    os._exit(0)
-
-
 def check_os_platform():
-    """ Returns the os platform on which test-case is running"""
+    """Returns the os platform on which test-case is running"""
     CHECK_PLATFORM = " hostnamectl status | grep Chassis"
-    process = subprocess.Popen(CHECK_PLATFORM, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    process = subprocess.Popen(
+        CHECK_PLATFORM, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+    )
     response, error = process.communicate()
     if response:
-        output = response.decode().rstrip('\n')
+        output = response.decode().rstrip("\n")
         platform = output.split(":")[1].lstrip()
         return platform
     if error:
-        print("Failed to get the os platform: error:{}".format(error.decode().rstrip('\n')))
+        print(
+            "Failed to get the os platform: error:{}".format(
+                error.decode().rstrip("\n")
+            )
+        )
 
 
 def actuator_response_filter(msg, resource_type, resource_id=None):
@@ -156,8 +77,11 @@ def actuator_response_filter(msg, resource_type, resource_id=None):
         if msg_type and msg_type["info"]["resource_type"] == resource_type:
             return True
         if resource_id:
-            if msg_type and msg_type["info"]["resource_type"] == resource_type and \
-                    msg_type["info"]["resource_id"] == resource_id:
+            if (
+                msg_type
+                and msg_type["info"]["resource_type"] == resource_type
+                and msg_type["info"]["resource_id"] == resource_id
+            ):
                 return True
     except KeyError:
         return False
@@ -195,21 +119,18 @@ def get_node_controller_message_request(uuid, resource_type, instance_id="*"):
                 "msg_version": "1.0.0",
                 "uuid": uuid,
                 "schema_version": "1.0.0",
-                "sspl_version": "1.0.0"
+                "sspl_version": "1.0.0",
             },
-            "sspl_ll_debug": {
-                "debug_component": "sensor",
-                "debug_enabled": True
-            },
+            "sspl_ll_debug": {"debug_component": "sensor", "debug_enabled": True},
             "response_dest": {},
             "target_node_id": get_current_node_id(),
             "actuator_request_type": {
                 "node_controller": {
                     "node_request": resource_type,
-                    "resource": instance_id
+                    "resource": instance_id,
                 }
-            }
-        }
+            },
+        },
     }
 
 
@@ -217,38 +138,30 @@ def get_enclosure_request(resource_type, resource_id):
     return {
         "title": "SSPL Actuator Request",
         "description": "Seagate Storage Platform Library - Actuator Request",
-
         "username": "JohnDoe",
         "signature": "None",
         "time": "2015-05-29 14:28:30.974749",
         "expires": 500,
-
         "message": {
             "sspl_ll_msg_header": {
                 "schema_version": "1.0.0",
                 "sspl_version": "1.0.0",
-                "msg_version": "1.0.0"
+                "msg_version": "1.0.0",
             },
-            "sspl_ll_debug": {
-                "debug_component": "sensor",
-                "debug_enabled": True
-            },
+            "sspl_ll_debug": {"debug_component": "sensor", "debug_enabled": True},
             "request_path": {
                 "site_id": "1",
                 "rack_id": "1",
                 "cluster_id": "1",
-                "node_id": "1"
+                "node_id": "1",
             },
             "response_dest": {},
             "target_node_id": get_current_node_id(),
             "actuator_request_type": {
                 "storage_enclosure": {
                     "enclosure_request": resource_type,
-                    "resource": resource_id
+                    "resource": resource_id,
                 }
-            }
-        }
+            },
+        },
     }
-
-
-

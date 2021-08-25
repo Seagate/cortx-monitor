@@ -35,44 +35,44 @@ class RealStorDiskActuatorTest(TestCaseBase):
     def response(self, msg):
         disk_actuator_msg = msg.get("actuator_response_type")
 
-        assert(disk_actuator_msg is not None)
-        assert(disk_actuator_msg.get("alert_type") is not None)
-        assert(disk_actuator_msg.get("alert_id") is not None)
-        assert(disk_actuator_msg.get("severity") is not None)
-        assert(disk_actuator_msg.get("host_id") is not None)
-        assert(disk_actuator_msg.get("info") is not None)
+        assert disk_actuator_msg is not None
+        assert disk_actuator_msg.get("alert_type") is not None
+        assert disk_actuator_msg.get("alert_id") is not None
+        assert disk_actuator_msg.get("severity") is not None
+        assert disk_actuator_msg.get("host_id") is not None
+        assert disk_actuator_msg.get("info") is not None
 
         disk_actuator_info = disk_actuator_msg.get("info")
-        assert(disk_actuator_info.get("site_id") is not None)
-        assert(disk_actuator_info.get("node_id") is not None)
-        assert(disk_actuator_info.get("cluster_id") is not None)
-        assert(disk_actuator_info.get("rack_id") is not None)
-        assert(disk_actuator_info.get("resource_type") is not None)
-        assert(disk_actuator_info.get("event_time") is not None)
-        assert(disk_actuator_info.get("resource_id") is not None)
+        assert disk_actuator_info.get("site_id") is not None
+        assert disk_actuator_info.get("node_id") is not None
+        assert disk_actuator_info.get("cluster_id") is not None
+        assert disk_actuator_info.get("rack_id") is not None
+        assert disk_actuator_info.get("resource_type") is not None
+        assert disk_actuator_info.get("event_time") is not None
+        assert disk_actuator_info.get("resource_id") is not None
 
         disk_actuator_specific_infos = disk_actuator_msg.get("specific_info")
         for disk_actuator_specific_info in disk_actuator_specific_infos:
-            assert(disk_actuator_specific_info is not None)
-            assert(disk_actuator_specific_info.get("description") is not None)
-            assert(disk_actuator_specific_info.get("slot") is not None)
-            assert(disk_actuator_specific_info.get("status") is not None)
-            assert(disk_actuator_specific_info.get("architecture") is not None)
-            assert(disk_actuator_specific_info.get("serial_number") is not None)
-            assert(disk_actuator_specific_info.get("size") is not None)
-            assert(disk_actuator_specific_info.get("vendor") is not None)
-            assert(disk_actuator_specific_info.get("model") is not None)
-            assert(disk_actuator_specific_info.get("revision") is not None)
-            assert(disk_actuator_specific_info.get("temperature") is not None)
-            assert(disk_actuator_specific_info.get("LED_status".lower()) is not None)
-            assert(disk_actuator_specific_info.get("locator_LED".lower()) is not None)
-            assert(disk_actuator_specific_info.get("blink") is not None)
-            assert(disk_actuator_specific_info.get("smart") is not None)
-            assert(disk_actuator_specific_info.get("health") is not None)
-            assert(disk_actuator_specific_info.get("health_reason") is not None)
-            assert(disk_actuator_specific_info.get("health_recommendation") is not None)
-            assert(disk_actuator_specific_info.get("enclosure_id") is not None)
-            assert(disk_actuator_specific_info.get("enclosure_wwn") is not None)
+            assert disk_actuator_specific_info is not None
+            assert disk_actuator_specific_info.get("description") is not None
+            assert disk_actuator_specific_info.get("slot") is not None
+            assert disk_actuator_specific_info.get("status") is not None
+            assert disk_actuator_specific_info.get("architecture") is not None
+            assert disk_actuator_specific_info.get("serial_number") is not None
+            assert disk_actuator_specific_info.get("size") is not None
+            assert disk_actuator_specific_info.get("vendor") is not None
+            assert disk_actuator_specific_info.get("model") is not None
+            assert disk_actuator_specific_info.get("revision") is not None
+            assert disk_actuator_specific_info.get("temperature") is not None
+            assert disk_actuator_specific_info.get("LED_status".lower()) is not None
+            assert disk_actuator_specific_info.get("locator_LED".lower()) is not None
+            assert disk_actuator_specific_info.get("blink") is not None
+            assert disk_actuator_specific_info.get("smart") is not None
+            assert disk_actuator_specific_info.get("health") is not None
+            assert disk_actuator_specific_info.get("health_reason") is not None
+            assert disk_actuator_specific_info.get("health_recommendation") is not None
+            assert disk_actuator_specific_info.get("enclosure_id") is not None
+            assert disk_actuator_specific_info.get("enclosure_wwn") is not None
 
 
 test_list = [RealStorDiskActuatorTest]

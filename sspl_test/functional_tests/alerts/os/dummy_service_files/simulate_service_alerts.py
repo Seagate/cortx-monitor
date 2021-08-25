@@ -28,21 +28,24 @@ service_executable_code_src = f"{path}/dummy_service.py"
 service_executable_code_des = "/var/cortx/sspl/test"
 dbus_service = DbusServiceHandler()
 
+
 def simulate_fault_alert():
     """Simulate fault for dummy service by deleting executable service file."""
     os.remove(f"{service_executable_code_des}/dummy_service.py")
     dbus_service.restart(service_name)
     time.sleep(5)
 
+
 def restore_service_file():
     """Simulate fault resolved for dummy service by creating executable
-        service file."""
+    service file."""
     shutil.copy(service_executable_code_src, service_executable_code_des)
     # Make service file executable.
     cmd = f"chmod +x {service_executable_code_des}/dummy_service.py"
     execute_cmd(cmd)
     dbus_service.restart(service_name)
     time.sleep(5)
+
 
 def cleanup():
     dbus_service.stop(service_name)
@@ -51,7 +54,8 @@ def cleanup():
     os.remove(f"/etc/systemd/system/{service_name}")
     execute_cmd("systemctl daemon-reload")
 
+
 def execute_cmd(cmd):
     _, error, returncode = SimpleProcess(cmd).run()
-    if returncode !=0:
-        print("%s error occurred while executing cmd: %s" %(error, cmd))
+    if returncode != 0:
+        print("%s error occurred while executing cmd: %s" % (error, cmd))

@@ -13,32 +13,34 @@
 # about this software or licensing, please email opensource@seagate.com or
 # cortx-questions@seagate.com.
 
-"""
- ****************************************************************************
-  Description:       Configuration file reader
- ****************************************************************************
-"""
-
 import os
 import sys
+import pickle
 import configparser
-from framework.base.sspl_constants import (component, file_store_config_path,
-    SSPL_STORE_TYPE, StoreTypes, CONSUL_HOST, CONSUL_PORT)
+from framework.base.sspl_constants import (
+    component,
+    file_store_config_path,
+    SSPL_STORE_TYPE,
+    StoreTypes,
+    CONSUL_HOST,
+    CONSUL_PORT,
+)
 from framework.utils.service_logging import logger
 
 
 # Onward LDR_R2, consul will be abstracted out and won't exist as hard dependency for SSPL
-if SSPL_STORE_TYPE == 'consul':
+if SSPL_STORE_TYPE == "consul":
     import consul
+
 
 class ConfigReader(object):
     """Configuration reader for notification sender"""
 
     # Available exceptions from ConfigParser
-    MissingSectionHeaderError   = configparser.MissingSectionHeaderError
-    NoSectionError              = configparser.NoSectionError
-    NoOptionError               = configparser.NoOptionError
-    Error                       = configparser.Error
+    MissingSectionHeaderError = configparser.MissingSectionHeaderError
+    NoSectionError = configparser.NoSectionError
+    NoOptionError = configparser.NoOptionError
+    Error = configparser.Error
 
     def __init__(self):
         """Constructor for ConfigReader
@@ -46,24 +48,28 @@ class ConfigReader(object):
         """
         self.store = None
         try:
-            store_type = os.getenv('SSPL_STORE_TYPE', SSPL_STORE_TYPE)
+            store_type = os.getenv("SSPL_STORE_TYPE", SSPL_STORE_TYPE)
             if store_type == StoreTypes.FILE.value:
                 self.store = configparser.RawConfigParser()
                 self.store.read([file_store_config_path])
             elif store_type == StoreTypes.CONSUL.value:
-                host = os.getenv('CONSUL_HOST', CONSUL_HOST)
-                port = os.getenv('CONSUL_PORT', CONSUL_PORT)
+                host = os.getenv("CONSUL_HOST", CONSUL_HOST)
+                port = os.getenv("CONSUL_PORT", CONSUL_PORT)
                 self.store = consul.Consul(host=host, port=port)
             else:
                 raise Exception("{} type store is not supported".format(store_type))
 
         except Exception as serror:
-            print("Error in connecting either with file or consul store: {}".format(serror))
+            print(
+                "Error in connecting either with file or consul store: {}".format(
+                    serror
+                )
+            )
             print("Exiting ...")
             sys.exit(os.EX_USAGE)
 
     def get_value(self, section, key):
-        '''public method to get_value'''
+        """public method to get_value"""
         return self._get_value(section, key)
 
     def _get_value(self, section, key):
@@ -79,25 +85,27 @@ class ConfigReader(object):
         """
         value = None
         try:
-            if self.store is not None and isinstance(self.store, configparser.RawConfigParser):
+            if self.store is not None and isinstance(
+                self.store, configparser.RawConfigParser
+            ):
                 value = self.store.get(section, key)
             elif self.store is not None and isinstance(self.store, consul.Consul):
-                value = self.kv_get(component + '/' + section + '/' + key)
+                value = self.kv_get(component + "/" + section + "/" + key)
             else:
                 raise Exception("{} Invalid store type object.".format(self.store))
-        except (RuntimeError, Exception) as e:
+        except (RuntimeError, Exception):
             # Taking values from normal configparser in dev env
             value = self.store.get(section, key)
 
-        if value in [None, '', ['']]:
-            return ''
+        if value in [None, "", [""]]:
+            return ""
         elif isinstance(value, str):
             return value.strip()
         else:
-            return value.decode('utf-8').strip()
+            return value.decode("utf-8").strip()
 
     def get_value_list(self, section, key):
-        '''public method to _get_value_list'''
+        """public method to _get_value_list"""
         return self._get_value_list(section, key)
 
     def _get_value_list(self, section, key):
@@ -111,10 +119,10 @@ class ConfigReader(object):
             exist
         """
         values_from_config_parser = self._get_value(section, key)
-        if values_from_config_parser == '':
+        if values_from_config_parser == "":
             return []
         else:
-            split_vals = values_from_config_parser.split(',')
+            split_vals = values_from_config_parser.split(",")
             stripped_vals = [val.strip() for val in split_vals]
             return stripped_vals
 
@@ -125,24 +133,26 @@ class ConfigReader(object):
         """
         try:
             val = self._get_value(section, key)
-            if val == '':
+            if val == "":
                 return default_value
             return val
         except Exception as ex:
-            print(f'Error reading config value: {ex}. Returning default value')
+            print(f"Error reading config value: {ex}. Returning default value")
             return default_value
 
     def _get_all_values_for_section(self, section):
         """Get all values for all the keys in the section"""
         value_list = list()
         try:
-            if self.store is not None and isinstance(self.store, configparser.RawConfigParser):
+            if self.store is not None and isinstance(
+                self.store, configparser.RawConfigParser
+            ):
                 pairs = self.store.items(section)
             elif self.store is not None and isinstance(self.store, consul.Consul):
-                pairs = self.kv_get(component + '/' + section + '/', recurse=True)
+                pairs = self.kv_get(component + "/" + section + "/", recurse=True)
             else:
                 raise Exception("{} Invalid store type object.".format(self.store))
-        except (RuntimeError, Exception) as e:
+        except (RuntimeError, Exception):
             # Taking values from normal configparser in dev env
             pairs = self.store.items(section)
 
@@ -153,7 +163,7 @@ class ConfigReader(object):
     def _get_key(self, key):
         """remove '/' from begining of the key"""
 
-        if key[:1] ==  "/":
+        if key[:1] == "/":
             return key[1:]
         else:
             return key
@@ -167,10 +177,9 @@ class ConfigReader(object):
                 data = data["Value"]
                 try:
                     data = pickle.loads(data)
-                except:
+                except Exception:
                     pass
         except Exception as gerr:
-            logger.warn("Error{0} while reading data from consul {1}"\
-                .format(gerr, key))
+            logger.warn("Error{0} while reading data from consul {1}".format(gerr, key))
 
         return data

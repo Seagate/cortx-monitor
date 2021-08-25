@@ -18,21 +18,21 @@ import sys
 import consul
 from configparser import ConfigParser
 
-CONSUL_HOST = '127.0.0.1'
-CONSUL_PORT = '8500'
+CONSUL_HOST = "127.0.0.1"
+CONSUL_PORT = "8500"
+
 
 class TestConfig(object):
-
-   @staticmethod
-   def set_config():
+    @staticmethod
+    def set_config():
         try:
-            host = os.getenv('CONSUL_HOST', CONSUL_HOST)
-            port = os.getenv('CONSUL_PORT', CONSUL_PORT)
+            host = os.getenv("CONSUL_HOST", CONSUL_HOST)
+            port = os.getenv("CONSUL_PORT", CONSUL_PORT)
             consul_conn = consul.Consul(host=host, port=port)
 
             # for test configs
             print("reading test conf file and inserting data to consul.")
-            test_component='sspl_test/config'
+            test_component = "sspl_test/config"
             path_to_conf_file = "/opt/seagate/cortx/sspl/sspl_test/conf/sspl_tests.conf"
             if os.path.exists(path_to_conf_file):
                 print("Using conf file : {}".format(path_to_conf_file))
@@ -45,11 +45,12 @@ class TestConfig(object):
             parser.read(path_to_conf_file)
             for sect in parser.sections():
                 for k, v in parser.items(sect):
-                    consul_conn.kv.put(test_component + '/' + sect + '/' + k, v)
+                    consul_conn.kv.put(test_component + "/" + sect + "/" + k, v)
 
         except Exception as serror:
             print("Error occured: {}".format(serror))
             print("Exiting ...")
             sys.exit(os.EX_USAGE)
+
 
 TestConfig.set_config()

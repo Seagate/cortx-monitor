@@ -34,21 +34,21 @@ class SystemdServiceValidRequestTest(TestCaseBase):
     def response(self, msg):
         service_actuator_msg = msg.get("actuator_response_type")
 
-        assert(service_actuator_msg is not None)
-        assert(service_actuator_msg.get("alert_type") == "UPDATE")
-        assert(service_actuator_msg.get("severity") is not None)
-        assert(service_actuator_msg.get("host_id") is not None)
-        assert(service_actuator_msg.get("info") is not None)
+        assert service_actuator_msg is not None
+        assert service_actuator_msg.get("alert_type") == "UPDATE"
+        assert service_actuator_msg.get("severity") is not None
+        assert service_actuator_msg.get("host_id") is not None
+        assert service_actuator_msg.get("info") is not None
 
         info = service_actuator_msg.get("info")
-        assert(info.get("site_id") is not None)
-        assert(info.get("node_id") is not None)
-        assert(info.get("cluster_id") is not None)
-        assert(info.get("rack_id") is not None)
-        assert(info.get("resource_type") == self.resource_type)
-        assert(info.get("event_time") is not None)
-        assert(info.get("resource_id") == self.service_name)
-        assert(service_actuator_msg.get("specific_info") is not None)
+        assert info.get("site_id") is not None
+        assert info.get("node_id") is not None
+        assert info.get("cluster_id") is not None
+        assert info.get("rack_id") is not None
+        assert info.get("resource_type") == self.resource_type
+        assert info.get("event_time") is not None
+        assert info.get("resource_id") == self.service_name
+        assert service_actuator_msg.get("specific_info") is not None
 
 
 class SystemdServiceInvalidRequestTest(TestCaseBase):
@@ -68,60 +68,53 @@ class SystemdServiceInvalidRequestTest(TestCaseBase):
     def response(self, msg):
         service_actuator_msg = msg.get("actuator_response_type")
 
-        assert(service_actuator_msg is not None)
-        assert(service_actuator_msg.get("alert_type") == "UPDATE")
-        assert(service_actuator_msg.get("severity") is not None)
-        assert(service_actuator_msg.get("host_id") is not None)
-        assert(service_actuator_msg.get("info") is not None)
+        assert service_actuator_msg is not None
+        assert service_actuator_msg.get("alert_type") == "UPDATE"
+        assert service_actuator_msg.get("severity") is not None
+        assert service_actuator_msg.get("host_id") is not None
+        assert service_actuator_msg.get("info") is not None
 
         info = service_actuator_msg.get("info")
-        assert(info.get("site_id") is not None)
-        assert(info.get("node_id") is not None)
-        assert(info.get("cluster_id") is not None)
-        assert(info.get("rack_id") is not None)
-        assert(info.get("resource_type") == self.resource_type)
-        assert(info.get("event_time") is not None)
-        assert(info.get("resource_id") == self.service_name)
+        assert info.get("site_id") is not None
+        assert info.get("node_id") is not None
+        assert info.get("cluster_id") is not None
+        assert info.get("rack_id") is not None
+        assert info.get("resource_type") == self.resource_type
+        assert info.get("event_time") is not None
+        assert info.get("resource_id") == self.service_name
 
-        assert(service_actuator_msg.get("specific_info") is not None)
+        assert service_actuator_msg.get("specific_info") is not None
         specific_info = service_actuator_msg.get("specific_info")
-        assert (specific_info[0].get("error_msg") is not None)
+        assert specific_info[0].get("error_msg") is not None
 
 
 def service_actuator_request(service_name, action):
     egressMsg = {
-                "title": "SSPL-LL Actuator Request",
-                "description": "Seagate Storage Platform Library - Actuator Request",
-                "username": "sspl-ll",
-                "expires": 3600,
-                "signature": "None",
-                "time": "2020-03-06 04:08:04.071170",
-                "message": {
-                    "sspl_ll_debug": {
-                        "debug_component": "sensor",
-                        "debug_enabled": True
-                    },
-                    "sspl_ll_msg_header": {
-                        "msg_version": "1.0.0",
-                        "uuid": "9e6b8e53-10f7-4de0-a9aa-b7895bab7774",
-                        "schema_version": "1.0.0",
-                        "sspl_version": "2.0.0"
-                    },
-                    "request_path": {
-                        "site_id": "1",
-                        "rack_id": "1",
-                        "node_id": "1"
-                    },
-                    "response_dest": {},
-                    "target_node_id": get_current_node_id(),
-                    "actuator_request_type": {
-                        "service_controller": {
-                            "service_request": action,
-                            "service_name": service_name
-                        }
-                    }
+        "title": "SSPL-LL Actuator Request",
+        "description": "Seagate Storage Platform Library - Actuator Request",
+        "username": "sspl-ll",
+        "expires": 3600,
+        "signature": "None",
+        "time": "2020-03-06 04:08:04.071170",
+        "message": {
+            "sspl_ll_debug": {"debug_component": "sensor", "debug_enabled": True},
+            "sspl_ll_msg_header": {
+                "msg_version": "1.0.0",
+                "uuid": "9e6b8e53-10f7-4de0-a9aa-b7895bab7774",
+                "schema_version": "1.0.0",
+                "sspl_version": "2.0.0",
+            },
+            "request_path": {"site_id": "1", "rack_id": "1", "node_id": "1"},
+            "response_dest": {},
+            "target_node_id": get_current_node_id(),
+            "actuator_request_type": {
+                "service_controller": {
+                    "service_request": action,
+                    "service_name": service_name,
                 }
-            }
+            },
+        },
+    }
     return egressMsg
 
 

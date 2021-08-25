@@ -16,23 +16,24 @@
 import os
 from time import sleep
 from subprocess import call
-from sspl_constants import CONSUL_PATH
 
 
-def kcs_channel_alert(active_bmc_IF_key,active_bmc_IF_value):
-    sleep(.1)
+def kcs_channel_alert(active_bmc_IF_key, active_bmc_IF_value):
+    sleep(0.1)
     # disable kcs interface
     call("touch /tmp/kcs_disable".split())
 
-def lan_channel_alert(active_bmc_IF_key,active_bmc_IF_value):
-    sleep(.1)
+
+def lan_channel_alert(active_bmc_IF_key, active_bmc_IF_value):
+    sleep(0.1)
     # disable lan interface
     call("touch /tmp/lan_disable".split())
+
 
 def restore_config():
     if os.path.exists("/tmp/lan_disable"):
         call("rm -rf /tmp/lan_disable".split())
-        sleep(.1)
+        sleep(0.1)
     elif os.path.exists("/tmp/kcs_disable"):
         call("rm -rf /tmp/kcs_disable".split())
-        sleep(.1)
+        sleep(0.1)

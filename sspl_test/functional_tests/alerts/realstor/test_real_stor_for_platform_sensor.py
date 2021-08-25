@@ -1,4 +1,3 @@
-
 # Copyright (c) 2020 Seagate Technology LLC and/or its Affiliates
 #
 # This program is free software: you can redistribute it and/or modify it under the
@@ -34,22 +33,22 @@ class RealStorCurrentSensorTest(TestCaseBase):
     def response(self, msg):
         current_module_actuator_msg = msg.get("actuator_response_type")
 
-        assert(current_module_actuator_msg is not None)
-        assert(current_module_actuator_msg.get("alert_type") is not None)
-        assert(current_module_actuator_msg.get("alert_id") is not None)
-        assert(current_module_actuator_msg.get("severity") is not None)
-        assert(current_module_actuator_msg.get("host_id") is not None)
-        assert(current_module_actuator_msg.get("info") is not None)
-        assert(current_module_actuator_msg.get("specific_info") is not None)
+        assert current_module_actuator_msg is not None
+        assert current_module_actuator_msg.get("alert_type") is not None
+        assert current_module_actuator_msg.get("alert_id") is not None
+        assert current_module_actuator_msg.get("severity") is not None
+        assert current_module_actuator_msg.get("host_id") is not None
+        assert current_module_actuator_msg.get("info") is not None
+        assert current_module_actuator_msg.get("specific_info") is not None
 
         info = current_module_actuator_msg.get("info")
-        assert(info.get("site_id") is not None)
-        assert(info.get("node_id") is not None)
-        assert(info.get("cluster_id") is not None)
-        assert(info.get("rack_id") is not None)
-        assert(info.get("resource_type") is not None)
-        assert(info.get("event_time") is not None)
-        assert(info.get("resource_id") is not None)
+        assert info.get("site_id") is not None
+        assert info.get("node_id") is not None
+        assert info.get("cluster_id") is not None
+        assert info.get("rack_id") is not None
+        assert info.get("resource_type") is not None
+        assert info.get("event_time") is not None
+        assert info.get("resource_id") is not None
 
         specific_info = current_module_actuator_msg.get("specific_info")
         generic_specific_info(specific_info)
@@ -71,22 +70,22 @@ class RealStorVoltageSensorTest(TestCaseBase):
     def response(self, msg):
         voltage_module_actuator_msg = msg.get("actuator_response_type")
 
-        assert(voltage_module_actuator_msg is not None)
-        assert(voltage_module_actuator_msg.get("alert_type") is not None)
-        assert(voltage_module_actuator_msg.get("alert_id") is not None)
-        assert(voltage_module_actuator_msg.get("severity") is not None)
-        assert(voltage_module_actuator_msg.get("host_id") is not None)
-        assert(voltage_module_actuator_msg.get("info") is not None)
-        assert(voltage_module_actuator_msg.get("specific_info") is not None)
+        assert voltage_module_actuator_msg is not None
+        assert voltage_module_actuator_msg.get("alert_type") is not None
+        assert voltage_module_actuator_msg.get("alert_id") is not None
+        assert voltage_module_actuator_msg.get("severity") is not None
+        assert voltage_module_actuator_msg.get("host_id") is not None
+        assert voltage_module_actuator_msg.get("info") is not None
+        assert voltage_module_actuator_msg.get("specific_info") is not None
 
         info = voltage_module_actuator_msg.get("info")
-        assert(info.get("site_id") is not None)
-        assert(info.get("node_id") is not None)
-        assert(info.get("cluster_id") is not None)
-        assert(info.get("rack_id") is not None)
-        assert(info.get("resource_type") is not None)
-        assert(info.get("event_time") is not None)
-        assert(info.get("resource_id") is not None)
+        assert info.get("site_id") is not None
+        assert info.get("node_id") is not None
+        assert info.get("cluster_id") is not None
+        assert info.get("rack_id") is not None
+        assert info.get("resource_type") is not None
+        assert info.get("event_time") is not None
+        assert info.get("resource_id") is not None
 
         specific_info = voltage_module_actuator_msg.get("specific_info")
         generic_specific_info(specific_info)
@@ -108,22 +107,22 @@ class RealStorTemperatureSensorTest(TestCaseBase):
     def response(self, msg):
         temperature_module_actuator_msg = msg.get("actuator_response_type")
 
-        assert(temperature_module_actuator_msg is not None)
-        assert(temperature_module_actuator_msg.get("alert_type") is not None)
-        assert(temperature_module_actuator_msg.get("alert_id") is not None)
-        assert(temperature_module_actuator_msg.get("severity") is not None)
-        assert(temperature_module_actuator_msg.get("host_id") is not None)
-        assert(temperature_module_actuator_msg.get("info") is not None)
-        assert(temperature_module_actuator_msg.get("specific_info") is not None)
+        assert temperature_module_actuator_msg is not None
+        assert temperature_module_actuator_msg.get("alert_type") is not None
+        assert temperature_module_actuator_msg.get("alert_id") is not None
+        assert temperature_module_actuator_msg.get("severity") is not None
+        assert temperature_module_actuator_msg.get("host_id") is not None
+        assert temperature_module_actuator_msg.get("info") is not None
+        assert temperature_module_actuator_msg.get("specific_info") is not None
 
         info = temperature_module_actuator_msg.get("info")
-        assert(info.get("site_id") is not None)
-        assert(info.get("node_id") is not None)
-        assert(info.get("cluster_id") is not None)
-        assert(info.get("rack_id") is not None)
-        assert(info.get("resource_type") is not None)
-        assert(info.get("event_time") is not None)
-        assert(info.get("resource_id") is not None)
+        assert info.get("site_id") is not None
+        assert info.get("node_id") is not None
+        assert info.get("cluster_id") is not None
+        assert info.get("rack_id") is not None
+        assert info.get("resource_type") is not None
+        assert info.get("event_time") is not None
+        assert info.get("resource_id") is not None
 
         specific_info = temperature_module_actuator_msg.get("specific_info")
         generic_specific_info(specific_info)
@@ -131,60 +130,59 @@ class RealStorTemperatureSensorTest(TestCaseBase):
 
 def generic_specific_info(specific_info):
     for resource in specific_info:
-        assert(resource.get("drawer_id_numeric") is not None)
-        assert(resource.get("sensor_type") is not None)
-        assert(resource.get("container") is not None)
-        assert(resource.get("enclosure_id") is not None)
-        assert(resource.get("durable_id") is not None)
-        assert(resource.get("value") is not None)
-        assert(resource.get("status") is not None)
-        assert(resource.get("controller_id_numeric") is not None)
-        assert(resource.get("object_name") is not None)
-        assert(resource.get("container_numeric") is not None)
-        assert(resource.get("controller_id") is not None)
-        assert(resource.get("sensor_type_numeric") is not None)
-        assert(resource.get("sensor_name") is not None)
-        assert(resource.get("drawer_id") is not None)
-        assert(resource.get("status_numeric") is not None)
+        assert resource.get("drawer_id_numeric") is not None
+        assert resource.get("sensor_type") is not None
+        assert resource.get("container") is not None
+        assert resource.get("enclosure_id") is not None
+        assert resource.get("durable_id") is not None
+        assert resource.get("value") is not None
+        assert resource.get("status") is not None
+        assert resource.get("controller_id_numeric") is not None
+        assert resource.get("object_name") is not None
+        assert resource.get("container_numeric") is not None
+        assert resource.get("controller_id") is not None
+        assert resource.get("sensor_type_numeric") is not None
+        assert resource.get("sensor_name") is not None
+        assert resource.get("drawer_id") is not None
+        assert resource.get("status_numeric") is not None
 
 
 def enclosure_sensor_message_request(resource_type, resource_id):
     egressMsg = {
         "title": "SSPL Actuator Request",
         "description": "Seagate Storage Platform Library - Actuator Request",
-
         "username": "JohnDoe",
         "signature": "None",
         "time": "2015-05-29 14:28:30.974749",
         "expires": 500,
-
         "message": {
             "sspl_ll_msg_header": {
                 "schema_version": "1.0.0",
                 "sspl_version": "1.0.0",
-                "msg_version": "1.0.0"
+                "msg_version": "1.0.0",
             },
-            "sspl_ll_debug": {
-                "debug_component": "sensor",
-                "debug_enabled": True
-            },
+            "sspl_ll_debug": {"debug_component": "sensor", "debug_enabled": True},
             "request_path": {
                 "site_id": "1",
                 "rack_id": "1",
                 "cluster_id": "1",
-                "node_id": "1"
+                "node_id": "1",
             },
             "response_dest": {},
             "target_node_id": get_current_node_id(),
             "actuator_request_type": {
                 "storage_enclosure": {
                     "enclosure_request": resource_type,
-                    "resource": resource_id
+                    "resource": resource_id,
                 }
-            }
-        }
+            },
+        },
     }
     return egressMsg
 
 
-test_list = [RealStorCurrentSensorTest, RealStorVoltageSensorTest, RealStorTemperatureSensorTest]
+test_list = [
+    RealStorCurrentSensorTest,
+    RealStorVoltageSensorTest,
+    RealStorTemperatureSensorTest,
+]

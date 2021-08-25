@@ -18,7 +18,7 @@
 
 import time
 import traceback
-import argparse 
+import argparse
 
 from common import TestFailed
 from framework.messaging.ingress import TestIngressProcessor
@@ -37,24 +37,28 @@ class TestReceiverRunner:
         start_time = time.time()
         test_class = getattr(ts_module, self.tc)
         test_obj = test_class()
-        print('waiting for %s:%s' % (self.ts, self.tc), flush=True)
+        print("waiting for %s:%s" % (self.ts, self.tc), flush=True)
         for msg in self.message_reader.message_reader():
             valid_msg = test_obj.filter(msg)
             if valid_msg:
                 try:
                     test_obj.response(msg)
                     duration += time.time() - start_time
-                    print('%s:%s: PASSED (Time: %ds)' % (self.ts, self.tc, duration), flush=True)
+                    print(
+                        "%s:%s: PASSED (Time: %ds)" % (self.ts, self.tc, duration),
+                        flush=True,
+                    )
                 except (TestFailed, Exception):
                     print(traceback.format_exc(), flush=True)
-                    print('%s:%s: FAILED #@#@#@' % (self.ts, self.tc), flush=True)
+                    print("%s:%s: FAILED #@#@#@" % (self.ts, self.tc), flush=True)
                 break
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     arg_parser = argparse.ArgumentParser(
         usage="%(prog)s [-h] [--mode] [--ts] [--tc]",
-        formatter_class=argparse.RawDescriptionHelpFormatter)
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     arg_parser.add_argument("--mode", choices=["sender", "receiver"])
     arg_parser.add_argument("--ts", required=True)
     arg_parser.add_argument("--tc", required=True)

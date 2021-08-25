@@ -15,20 +15,19 @@
 # about this software or licensing, please email opensource@seagate.com or
 # cortx-questions@seagate.com.
 
-
 import json
 import os
 import logging
+from flask import Flask
+
+
 log = logging.getLogger('werkzeug')
 log.setLevel(logging.ERROR)
 
-import flask
-from flask import Flask
-from flask import jsonify
-
 app = Flask(__name__)
-curr_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)),'mock_data')
+curr_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'mock_data')
 api = "api"
+
 
 @app.route('/{0}/login/<loginhash>'.format(api), methods=["GET"])
 def login(loginhash):
@@ -41,6 +40,7 @@ def login(loginhash):
     response = json_data.get("api-response", {})
     return response, status_code
 
+
 @app.route('/{0}/show/disks/detail'.format(api), methods=["GET"])
 def show_disks_detail():
     api_file = open("{0}/disks-detail.txt".format(curr_dir), "r")
@@ -50,6 +50,7 @@ def show_disks_detail():
     status_code = json_data.get("status_code")
     response = json_data.get("api-response")
     return response, status_code
+
 
 @app.route('/{0}/show/disks/<diskId>/detail'.format(api), methods=["GET"])
 def show_single_disk_detail(diskId):
@@ -66,6 +67,7 @@ def show_single_disk_detail(diskId):
     response["drives"] = new_drives
     return response, status_code
 
+
 @app.route('/{0}/show/volumes/pool/<pool_serial_number>'.format(api), methods=["GET"])
 def show_volumes(pool_serial_number):
     api_file = open("{0}/volumes.txt".format(curr_dir), "r")
@@ -76,11 +78,12 @@ def show_volumes(pool_serial_number):
     response = json_data.get("api-response")
     return response, status_code
 
+
 # Generic function to serve all api /show/<endpoint> endpoints
 # It reads data from file with a name same as endpoint.
 @app.route('/{0}/show/<endpoint>'.format(api), methods=["GET"])
 def show_data(endpoint):
-    endpoint = endpoint.replace("/","-")
+    endpoint = endpoint.replace("/", "-")
     api_file = open("{0}/{1}.txt".format(curr_dir, endpoint), "r")
     data = api_file.read()
     api_file.close()

@@ -20,25 +20,27 @@
 from enum import Enum
 
 
-PRODUCT_NAME = 'LDR_R2'
-PRODUCT_FAMILY = 'cortx'
-enabled_products = [ "CS-A", "SINGLE","DUAL","CLUSTER" ,"LDR_R1", "LDR_R2"]
+PRODUCT_NAME = "LDR_R2"
+PRODUCT_FAMILY = "cortx"
+enabled_products = ["CS-A", "SINGLE", "DUAL", "CLUSTER", "LDR_R1", "LDR_R2"]
 cs_products = ["CS-A"]
 cs_legacy_products = ["CS-L", "CS-G"]
 RESOURCE_PATH = f"/opt/seagate/{PRODUCT_FAMILY}/sspl/low-level/json_msgs/schemas/"
 DATA_PATH = f"/var/{PRODUCT_FAMILY}/sspl/data/"
-IEM_DATA_PATH = "/var/%s/sspl/data/iem/sspl_iems"  %(PRODUCT_FAMILY)
+IEM_DATA_PATH = "/var/%s/sspl/data/iem/sspl_iems" % (PRODUCT_FAMILY)
 
-SSPL_STORE_TYPE = 'file'
-CONSUL_HOST = '127.0.0.1'
-CONSUL_PORT = '8500'
-CONSUL_PATH = '/usr/bin/'
-DEFAULT_NODE_ID = 'SN01'
+SSPL_STORE_TYPE = "file"
+CONSUL_HOST = "127.0.0.1"
+CONSUL_PORT = "8500"
+CONSUL_PATH = "/usr/bin/"
+DEFAULT_NODE_ID = "SN01"
 
 # required only for init
-component = 'sspl_test/config'
-file_store_config_path = f'/opt/seagate/{PRODUCT_FAMILY}/sspl/sspl_test/conf/sspl_tests.conf'
-salt_provisioner_pillar_sls = 'sspl'
+component = "sspl_test/config"
+file_store_config_path = (
+    f"/opt/seagate/{PRODUCT_FAMILY}/sspl/sspl_test/conf/sspl_tests.conf"
+)
+salt_provisioner_pillar_sls = "sspl"
 
 
 class BMCInterface(Enum):
@@ -73,10 +75,12 @@ class StoreTypes(Enum):
     FILE = "file"
     CONSUL = "consul"
 
+
 class ServiceTypes(Enum):
     MESSAGING = "messaging"
 
+
 if __name__ == "__main__":
-    print(' '.join(enabled_products))
+    print(" ".join(enabled_products))
 
 SSPL_TEST_PATH = "/opt/seagate/cortx/sspl/sspl_test"

@@ -34,74 +34,65 @@ class RealStorDiskSensorTest(TestCaseBase):
     def response(self, msg):
         disk_sensor_msg = msg.get("sensor_response_type")
 
-        assert(disk_sensor_msg is not None)
-        assert(disk_sensor_msg.get("alert_type") is not None)
-        assert(disk_sensor_msg.get("alert_id") is not None)
-        assert(disk_sensor_msg.get("severity") is not None)
-        assert(disk_sensor_msg.get("host_id") is not None)
-        assert(disk_sensor_msg.get("info") is not None)
+        assert disk_sensor_msg is not None
+        assert disk_sensor_msg.get("alert_type") is not None
+        assert disk_sensor_msg.get("alert_id") is not None
+        assert disk_sensor_msg.get("severity") is not None
+        assert disk_sensor_msg.get("host_id") is not None
+        assert disk_sensor_msg.get("info") is not None
 
         disk_sensor_info = disk_sensor_msg.get("info")
-        assert(disk_sensor_info.get("site_id") is not None)
-        assert(disk_sensor_info.get("node_id") is not None)
-        assert(disk_sensor_info.get("cluster_id") is not None)
-        assert(disk_sensor_info.get("rack_id") is not None)
-        assert(disk_sensor_info.get("resource_type") is not None)
-        assert(disk_sensor_info.get("event_time") is not None)
-        assert(disk_sensor_info.get("resource_id") is not None)
-        assert(disk_sensor_info.get("description") is not None)
+        assert disk_sensor_info.get("site_id") is not None
+        assert disk_sensor_info.get("node_id") is not None
+        assert disk_sensor_info.get("cluster_id") is not None
+        assert disk_sensor_info.get("rack_id") is not None
+        assert disk_sensor_info.get("resource_type") is not None
+        assert disk_sensor_info.get("event_time") is not None
+        assert disk_sensor_info.get("resource_id") is not None
+        assert disk_sensor_info.get("description") is not None
 
         disk_sensor_specific_info = disk_sensor_msg.get("specific_info")
-        assert(disk_sensor_specific_info is not None)
-        assert(disk_sensor_specific_info.get("description") is not None)
-        assert(disk_sensor_specific_info.get("slot") is not None)
-        assert(disk_sensor_specific_info.get("status") is not None)
-        assert(disk_sensor_specific_info.get("architecture") is not None)
-        assert(disk_sensor_specific_info.get("serial_number") is not None)
-        assert(disk_sensor_specific_info.get("size") is not None)
-        assert(disk_sensor_specific_info.get("vendor") is not None)
-        assert(disk_sensor_specific_info.get("model") is not None)
-        assert(disk_sensor_specific_info.get("revision") is not None)
-        assert(disk_sensor_specific_info.get("temperature") is not None)
-        assert(disk_sensor_specific_info.get("LED_status") is not None)
-        assert(disk_sensor_specific_info.get("locator_LED") is not None)
-        assert(disk_sensor_specific_info.get("blink") is not None)
-        assert(disk_sensor_specific_info.get("smart") is not None)
-        assert(disk_sensor_specific_info.get("health") is not None)
-        assert(disk_sensor_specific_info.get("health_reason") is not None)
-        assert(disk_sensor_specific_info.get("health_recommendation") is not None)
-        assert(disk_sensor_specific_info.get("enclosure_family") is not None)
-        assert(disk_sensor_specific_info.get("enclosure_id") is not None)
-        assert(disk_sensor_specific_info.get("enclosure_wwn") is not None)
+        assert disk_sensor_specific_info is not None
+        assert disk_sensor_specific_info.get("description") is not None
+        assert disk_sensor_specific_info.get("slot") is not None
+        assert disk_sensor_specific_info.get("status") is not None
+        assert disk_sensor_specific_info.get("architecture") is not None
+        assert disk_sensor_specific_info.get("serial_number") is not None
+        assert disk_sensor_specific_info.get("size") is not None
+        assert disk_sensor_specific_info.get("vendor") is not None
+        assert disk_sensor_specific_info.get("model") is not None
+        assert disk_sensor_specific_info.get("revision") is not None
+        assert disk_sensor_specific_info.get("temperature") is not None
+        assert disk_sensor_specific_info.get("LED_status") is not None
+        assert disk_sensor_specific_info.get("locator_LED") is not None
+        assert disk_sensor_specific_info.get("blink") is not None
+        assert disk_sensor_specific_info.get("smart") is not None
+        assert disk_sensor_specific_info.get("health") is not None
+        assert disk_sensor_specific_info.get("health_reason") is not None
+        assert disk_sensor_specific_info.get("health_recommendation") is not None
+        assert disk_sensor_specific_info.get("enclosure_family") is not None
+        assert disk_sensor_specific_info.get("enclosure_id") is not None
+        assert disk_sensor_specific_info.get("enclosure_wwn") is not None
 
     def disk_sensor_message_request(self):
         egressMsg = {
             "title": "SSPL Actuator Request",
             "description": "Seagate Storage Platform Library - Actuator Request",
-
             "username": "JohnDoe",
             "signature": "None",
             "time": "2015-05-29 14:28:30.974749",
             "expires": 500,
-
             "message": {
                 "sspl_ll_msg_header": {
                     "schema_version": "1.0.0",
                     "sspl_version": "1.0.0",
-                    "msg_version": "1.0.0"
+                    "msg_version": "1.0.0",
                 },
-                "sspl_ll_debug": {
-                    "debug_component": "sensor",
-                    "debug_enabled": True
-                },
+                "sspl_ll_debug": {"debug_component": "sensor", "debug_enabled": True},
                 "sensor_request_type": {
-                    "enclosure_alert": {
-                        "info": {
-                            "resource_type": self.resource_type
-                        }
-                    }
-                }
-            }
+                    "enclosure_alert": {"info": {"resource_type": self.resource_type}}
+                },
+            },
         }
         return egressMsg
 

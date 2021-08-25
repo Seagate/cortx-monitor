@@ -21,15 +21,17 @@
 
 import json
 from framework.utils.service_logging import logger
+
 try:
-   from systemd import journal
-   use_journal=True
+    from systemd import journal
+
+    use_journal = True
 except ImportError:
-    use_journal=False
+    use_journal = False
 
 
 class Debug(object):
-    """"Flags and methods for handling debug mode"""
+    """ "Flags and methods for handling debug mode"""
 
     def __init__(self):
         super(Debug, self).__init__()
@@ -47,7 +49,7 @@ class Debug(object):
 
     def _set_debug(self, debug):
         """Sets debug flag"""
-        if self._debug_persist == False:
+        if not self._debug_persist:
             self._debug = debug
 
     def _get_debug(self):
@@ -64,7 +66,7 @@ class Debug(object):
 
     def _disable_debug_if_persist_false(self):
         """Turn debug mode off if persistence is False"""
-        if self._debug_persist == False:
+        if not self._debug_persist:
             self._debug = False
 
     def _check_debug(self, jsonMsgRaw):
@@ -75,52 +77,56 @@ class Debug(object):
         debug mode persistence off and reset to default startup"""
 
         # Handle raw strings
-        if isinstance(jsonMsgRaw, dict) == False:
+        if not isinstance(jsonMsgRaw, dict):
             jsonMsg = json.loads(jsonMsgRaw)
         else:
             jsonMsg = jsonMsgRaw
 
         # Handle case for optional debug_enabled for keeping debug persistent
         # TODO: Break this apart into small methods to make it easier to understand
-        if jsonMsg.get("sspl_ll_debug") is not None and \
-            jsonMsg.get("sspl_ll_debug").get("debug_enabled") is not None:
-                #logger.info("%s, _check_debug, debug_enabled: %s" % (self.name(), jsonMsgRaw))
+        if (
+            jsonMsg.get("sspl_ll_debug") is not None
+            and jsonMsg.get("sspl_ll_debug").get("debug_enabled") is not None
+        ):
+            # logger.info("%s, _check_debug, debug_enabled: %s" % (self.name(), jsonMsgRaw))
 
-                if jsonMsg.get("sspl_ll_debug").get("debug_enabled") == False:
-                    #logger.info("%s, _check_debug, debug_enabled is False" % self.name())
-                    self._set_debug_persist(False)
+            if not jsonMsg.get("sspl_ll_debug").get("debug_enabled"):
+                # logger.info("%s, _check_debug, debug_enabled is False" % self.name())
+                self._set_debug_persist(False)
 
-                    #logger.info("_check_debug, debug_component: %s" % \
-                    #            jsonMsg.get("sspl_ll_debug").get("debug_component"))
+                # logger.info("_check_debug, debug_component: %s" % \
+                #            jsonMsg.get("sspl_ll_debug").get("debug_component"))
 
-                    # If no debug_component line then flag to turn debug off globally
-                    if jsonMsg.get("sspl_ll_debug").get("debug_component") is None:
-                        #logger.info("%s, _check_debug, Turn debug off globally" % self.name())
-                        return (True, None)
+                # If no debug_component line then flag to turn debug off globally
+                if jsonMsg.get("sspl_ll_debug").get("debug_component") is None:
+                    # logger.info("%s, _check_debug, Turn debug off globally" % self.name())
+                    return (True, None)
 
-                    # Internal msg sent to turn debug mode off on all modules
-                    elif jsonMsg.get("sspl_ll_debug").get("debug_component") == "all":
-                        #logger.info("%s, _check_debug, debug_component is all" % self.name())
-                        return (False, None)
+                # Internal msg sent to turn debug mode off on all modules
+                elif jsonMsg.get("sspl_ll_debug").get("debug_component") == "all":
+                    # logger.info("%s, _check_debug, debug_component is all" % self.name())
+                    return (False, None)
 
-                    # If it's an valid msg being processed then it will have a sspl_ll_msg_header section
-                    elif jsonMsg.get("sspl_ll_msg_header") is not None:
-                        return (False, jsonMsg)
+                # If it's an valid msg being processed then it will have a sspl_ll_msg_header section
+                elif jsonMsg.get("sspl_ll_msg_header") is not None:
+                    return (False, jsonMsg)
 
-                elif jsonMsg.get("sspl_ll_debug").get("debug_enabled") == True:
-                    self._set_debug(True)
-                    self._set_debug_persist(True)
+            elif jsonMsg.get("sspl_ll_debug").get("debug_enabled"):
+                self._set_debug(True)
+                self._set_debug_persist(True)
 
-                    # TODO: See if there is no debug_component and set all modules to debug mode
-                    #return (True, jsonMsg)
+                # TODO: See if there is no debug_component and set all modules to debug mode
+                # return (True, jsonMsg)
         else:
-             # Handle case for having an optional debug_component; we want granularity in modules
-             if jsonMsg.get("sspl_ll_debug") is not None and \
-                jsonMsg.get("sspl_ll_debug").get("debug_component") is not None:
-                    #logger.info("%s, _check_debug, debug_enabled: %s" % (self.name(), jsonMsgRaw))
-                    self._set_debug(True)
-             # Check to see if persistent debug is set, if not then turn debug mode off
-             elif self._get_debug_persist() == False:
-                 self._set_debug(False)
+            # Handle case for having an optional debug_component; we want granularity in modules
+            if (
+                jsonMsg.get("sspl_ll_debug") is not None
+                and jsonMsg.get("sspl_ll_debug").get("debug_component") is not None
+            ):
+                # logger.info("%s, _check_debug, debug_enabled: %s" % (self.name(), jsonMsgRaw))
+                self._set_debug(True)
+            # Check to see if persistent debug is set, if not then turn debug mode off
+            elif not self._get_debug_persist():
+                self._set_debug(False)
 
         return (False, jsonMsg)

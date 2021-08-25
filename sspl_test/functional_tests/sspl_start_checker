@@ -54,7 +54,7 @@ def process_msg(body):
         if received_msg == successfull_msg and host == socket.getfqdn():
             print("Got message: {0}".format(received_msg))
             sys.exit(0)
-    except Exception as e:
+    except Exception:
         pass
 
     # Check for bmc unreachable error

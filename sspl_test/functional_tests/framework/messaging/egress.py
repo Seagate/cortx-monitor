@@ -14,14 +14,11 @@
 # cortx-questions@seagate.com.
 
 import json
-import time
 
 from cortx.utils.message_bus import MessageProducer
 
 from framework.utils.service_logging import logger
 from framework.utils.conf_utils import Conf, SSPL_TEST_CONF
-
-import ctypes
 
 
 class TestEgressProcessor:
@@ -38,13 +35,13 @@ class TestEgressProcessor:
     SITE_ID = "site_id"
 
     PROCESSOR = MODULE_NAME.upper()
-    SIGNATURE_USERNAME = 'message_signature_username'
-    SIGNATURE_TOKEN = 'message_signature_token'
-    SIGNATURE_EXPIRES = 'message_signature_expires'
-    IEM_ROUTE_ADDR = 'iem_route_addr'
-    PRODUCER_ID = 'producer_id'
-    MESSAGE_TYPE = 'message_type'
-    METHOD = 'method'
+    SIGNATURE_USERNAME = "message_signature_username"
+    SIGNATURE_TOKEN = "message_signature_token"
+    SIGNATURE_EXPIRES = "message_signature_expires"
+    IEM_ROUTE_ADDR = "iem_route_addr"
+    PRODUCER_ID = "producer_id"
+    MESSAGE_TYPE = "message_type"
+    METHOD = "method"
 
     def __init__(self):
         self._request_shutdown = False
@@ -52,66 +49,40 @@ class TestEgressProcessor:
         # Configure messaging Exchange to transmit messages
         self._connection = None
         self._read_config()
-        self._producer = MessageProducer(producer_id=self._producer_id,
-                                         message_type=self._message_type,
-                                         method=self._method)
+        self._producer = MessageProducer(
+            producer_id=self._producer_id,
+            message_type=self._message_type,
+            method=self._method,
+        )
 
     def _read_config(self):
         """Configure the messaging exchange with defaults available."""
         try:
-            self._signature_user = Conf.get(SSPL_TEST_CONF,
-                                            f"{self.PROCESSOR}>{self.SIGNATURE_USERNAME}",
-                                            'sspl-ll')
-            self._signature_token = Conf.get(SSPL_TEST_CONF,
-                                             f"{self.PROCESSOR}>{self.SIGNATURE_TOKEN}",
-                                             'FAKETOKEN1234')
-            self._signature_expires = Conf.get(SSPL_TEST_CONF,
-                                               f"{self.PROCESSOR}>{self.SIGNATURE_EXPIRES}",
-                                               "3600")
-            self._producer_id = Conf.get(SSPL_TEST_CONF,
-                                         f"{self.PROCESSOR}>{self.PRODUCER_ID}",
-                                         "sspl-sensor")
-            self._message_type = Conf.get(SSPL_TEST_CONF,
-                                          f"{self.PROCESSOR}>{self.MESSAGE_TYPE}",
-                                          "Alerts")
-            self._method = Conf.get(SSPL_TEST_CONF,
-                                    f"{self.PROCESSOR}>{self.METHOD}",
-                                    "Sync")
+            self._signature_user = Conf.get(
+                SSPL_TEST_CONF, f"{self.PROCESSOR}>{self.SIGNATURE_USERNAME}", "sspl-ll"
+            )
+            self._signature_token = Conf.get(
+                SSPL_TEST_CONF,
+                f"{self.PROCESSOR}>{self.SIGNATURE_TOKEN}",
+                "FAKETOKEN1234",
+            )
+            self._signature_expires = Conf.get(
+                SSPL_TEST_CONF, f"{self.PROCESSOR}>{self.SIGNATURE_EXPIRES}", "3600"
+            )
+            self._producer_id = Conf.get(
+                SSPL_TEST_CONF, f"{self.PROCESSOR}>{self.PRODUCER_ID}", "sspl-sensor"
+            )
+            self._message_type = Conf.get(
+                SSPL_TEST_CONF, f"{self.PROCESSOR}>{self.MESSAGE_TYPE}", "Alerts"
+            )
+            self._method = Conf.get(
+                SSPL_TEST_CONF, f"{self.PROCESSOR}>{self.METHOD}", "Sync"
+            )
 
         except Exception as ex:
             logger.error("EgressProcessorTests, _read_config: %r" % ex)
 
-    def _add_signature(self, msg):
-        """Adds the authentication signature to the message"""
-        self._log_debug("_add_signature, jsonMsg: %s" % self._jsonMsg)
-        self._jsonMsg["username"] = self._signature_user
-        self._jsonMsg["expires"] = int(self._signature_expires)
-        self._jsonMsg["time"] = str(int(time.time()))
-
-        if use_security_lib:
-            authn_token_len = len(self._signature_token) + 1
-            session_length = int(self._signature_expires)
-            token = ctypes.create_string_buffer(
-                SSPL_SEC.sspl_get_token_length())
-
-            SSPL_SEC.sspl_generate_session_token(
-                self._signature_user, authn_token_len,
-                self._signature_token, session_length, token)
-
-            # Generate the signature
-            msg_len = len(self._jsonMsg) + 1
-            sig = ctypes.create_string_buffer(SSPL_SEC.sspl_get_sig_length())
-            SSPL_SEC.sspl_sign_message(msg_len, str(self._jsonMsg),
-                                       self._signature_user,
-                                       token, sig)
-
-            self._jsonMsg["signature"] = str(sig.raw)
-        else:
-            self._jsonMsg["signature"] = "SecurityLibNotInstalled"
-
     def publish(self, msg):
         """Transmit json message onto messaging exchange."""
-        # self._add_signature(msg)
         msg = json.dumps(msg)
         self._producer.send([msg])
-

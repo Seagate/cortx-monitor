@@ -32,81 +32,72 @@ class RealStorFanModuleSensorTest(TestCaseBase):
     def response(self, msg):
         fan_module_sensor_msg = msg.get("sensor_response_type")
 
-        assert(fan_module_sensor_msg is not None)
-        assert(fan_module_sensor_msg.get("alert_type") is not None)
-        assert(fan_module_sensor_msg.get("alert_id") is not None)
-        assert(fan_module_sensor_msg.get("severity") is not None)
-        assert(fan_module_sensor_msg.get("host_id") is not None)
-        assert(fan_module_sensor_msg.get("info") is not None)
+        assert fan_module_sensor_msg is not None
+        assert fan_module_sensor_msg.get("alert_type") is not None
+        assert fan_module_sensor_msg.get("alert_id") is not None
+        assert fan_module_sensor_msg.get("severity") is not None
+        assert fan_module_sensor_msg.get("host_id") is not None
+        assert fan_module_sensor_msg.get("info") is not None
 
         fan_module_info = fan_module_sensor_msg.get("info")
-        assert(fan_module_info.get("site_id") is not None)
-        assert(fan_module_info.get("node_id") is not None)
-        assert(fan_module_info.get("cluster_id") is not None)
-        assert(fan_module_info.get("rack_id") is not None)
-        assert(fan_module_info.get("resource_type") is not None)
-        assert(fan_module_info.get("event_time") is not None)
-        assert(fan_module_info.get("resource_id") is not None)
-        assert(fan_module_info.get("description") is not None)
+        assert fan_module_info.get("site_id") is not None
+        assert fan_module_info.get("node_id") is not None
+        assert fan_module_info.get("cluster_id") is not None
+        assert fan_module_info.get("rack_id") is not None
+        assert fan_module_info.get("resource_type") is not None
+        assert fan_module_info.get("event_time") is not None
+        assert fan_module_info.get("resource_id") is not None
+        assert fan_module_info.get("description") is not None
 
         fru_specific_info = fan_module_sensor_msg.get("specific_info", {})
         if fru_specific_info:
-            assert(fru_specific_info.get("durable_id") is not None)
-            assert(fru_specific_info.get("status") is not None)
-            assert(fru_specific_info.get("name") is not None)
-            assert(fru_specific_info.get("enclosure_id") is not None)
-            assert(fru_specific_info.get("health") is not None)
-            assert(fru_specific_info.get("health_reason") is not None)
-            assert(fru_specific_info.get("location") is not None)
-            assert(fru_specific_info.get("health_recommendation") is not None)
-            assert(fru_specific_info.get("position") is not None)
+            assert fru_specific_info.get("durable_id") is not None
+            assert fru_specific_info.get("status") is not None
+            assert fru_specific_info.get("name") is not None
+            assert fru_specific_info.get("enclosure_id") is not None
+            assert fru_specific_info.get("health") is not None
+            assert fru_specific_info.get("health_reason") is not None
+            assert fru_specific_info.get("location") is not None
+            assert fru_specific_info.get("health_recommendation") is not None
+            assert fru_specific_info.get("position") is not None
 
         fans = fan_module_sensor_msg.get("specific_info").get("fans", [])
         if fans:
             for fan in fans:
-                assert(fan.get("durable_id") is not None)
-                assert(fan.get("status") is not None)
-                assert(fan.get("name") is not None)
-                assert(fan.get("speed") is not None)
-                assert(fan.get("locator_led") is not None)
-                assert(fan.get("position") is not None)
-                assert(fan.get("location") is not None)
-                assert(fan.get("part_number") is not None)
-                assert(fan.get("serial_number") is not None)
-                assert(fan.get("fw_revision") is not None)
-                assert(fan.get("hw_revision") is not None)
-                assert(fan.get("health") is not None)
-                assert(fan.get("health_reason") is not None)
-                assert(fan.get("health_recommendation") is not None)
+                assert fan.get("durable_id") is not None
+                assert fan.get("status") is not None
+                assert fan.get("name") is not None
+                assert fan.get("speed") is not None
+                assert fan.get("locator_led") is not None
+                assert fan.get("position") is not None
+                assert fan.get("location") is not None
+                assert fan.get("part_number") is not None
+                assert fan.get("serial_number") is not None
+                assert fan.get("fw_revision") is not None
+                assert fan.get("hw_revision") is not None
+                assert fan.get("health") is not None
+                assert fan.get("health_reason") is not None
+                assert fan.get("health_recommendation") is not None
 
     def fan_sensor_message_request(self):
         egressMsg = {
             "title": "SSPL Actuator Request",
             "description": "Seagate Storage Platform Library - Actuator Request",
-
             "username": "JohnDoe",
             "signature": "None",
             "time": "2015-05-29 14:28:30.974749",
             "expires": 500,
-
             "message": {
                 "sspl_ll_msg_header": {
                     "schema_version": "1.0.0",
                     "sspl_version": "1.0.0",
-                    "msg_version": "1.0.0"
+                    "msg_version": "1.0.0",
                 },
-                "sspl_ll_debug": {
-                    "debug_component": "sensor",
-                    "debug_enabled": True
-                },
+                "sspl_ll_debug": {"debug_component": "sensor", "debug_enabled": True},
                 "sensor_request_type": {
-                    "enclosure_alert": {
-                        "info": {
-                            "resource_type": self.resource_type
-                        }
-                    }
-                }
-            }
+                    "enclosure_alert": {"info": {"resource_type": self.resource_type}}
+                },
+            },
         }
         return egressMsg
 

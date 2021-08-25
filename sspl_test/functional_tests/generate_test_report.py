@@ -62,12 +62,13 @@ footer_template = """
                 Time Taken: {}s<br>
                 </body></html>"""
 
+
 def generate_html_report(test_result):
     result_table = ""
     overall_status = "Passed"
     total_ts = 0
     total_failed = 0
-    time_taken=0
+    time_taken = 0
     for ts, value in test_result.items():
         status = list(value.keys())[0]
         duration = int(list(value.values())[0])
@@ -77,19 +78,24 @@ def generate_html_report(test_result):
             st_style = """<p style="color:red">"""
             st_end = """</p>"""
             status = st_style + status + st_end
-        result_table += result_template.format(testsuite=ts, status=status, duration=duration)
+        result_table += result_template.format(
+            testsuite=ts, status=status, duration=duration
+        )
         total_ts += 1
         time_taken += duration
-    footer = footer_template.format(overall_status, total_ts, total_ts-total_failed, total_failed, time_taken)
+    footer = footer_template.format(
+        overall_status, total_ts, total_ts - total_failed, total_failed, time_taken
+    )
     html = header_template + result_table + footer
-    with open('/tmp/sspl_test_result.html', 'w') as fObj:
+    with open("/tmp/sspl_test_result.html", "w") as fObj:
         fObj.write(html)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # Test using samples
-    result = {"alerts.realstor.test_real_stor_controller_sensor1": {"Pass": 10},
-              "alerts.realstor.test_sensor_real_stor_controller_actuator": {"Pass": 20},
-              "ts3": {"Pass": 30}
-              }
+    result = {
+        "alerts.realstor.test_real_stor_controller_sensor1": {"Pass": 10},
+        "alerts.realstor.test_sensor_real_stor_controller_actuator": {"Pass": 20},
+        "ts3": {"Pass": 30},
+    }
     generate_html_report(result)
