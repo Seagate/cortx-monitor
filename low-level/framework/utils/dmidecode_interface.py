@@ -13,8 +13,6 @@
 # about this software or licensing, please email opensource@seagate.com or
 # cortx-questions@seagate.com.
 
-"""Interface class which provides system information using 'dmidecode' command."""
-
 import re
 import psutil
 import traceback
@@ -28,6 +26,7 @@ class Dmidecode(Utility):
     """
     Interface class to retrieve system's hardware related information
     using 'dmidecode' command.
+
     """
     DMIDECODE = "sudo /sbin/dmidecode"
 
@@ -38,7 +37,7 @@ class Dmidecode(Utility):
     def get_cpu_info(self):
         """Returns a dict having CPU information.
 
-        For example: 
+        For example:
             output of resulted CPU dict -
             {'cpu_present': [0, 1],
             'online_cpus': [0, 1],
@@ -83,7 +82,7 @@ class Dmidecode(Utility):
             for cpu, status in cpu_status_map.items():
                 if "Enabled" in status:
                     online_cpus.append(int(cpu))
-    
+
             # psutil gives cpu_usage per thread, taking mean value of threads
             # available per cpu to calculate per_cpu_usage
             cpu_usage_threads = psutil.cpu_percent(interval=None, percpu=True)
@@ -101,5 +100,5 @@ class Dmidecode(Utility):
             return cpu_info
         except Exception as e:
             logger.error(f"Failed to get CPUs info. ERROR:{e}")
-            logger.debug(traceback.format_exc())
+            logger.debug("%s\n" % traceback.format_exc())
             return
