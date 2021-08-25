@@ -92,7 +92,7 @@ class CPUFaultSensor(SensorThread, InternalMsgQ):
 
         # get the cpu fault implementor from configuration
         cpu_fault_utility = Conf.get(SSPL_CONF, f"{self.name().capitalize()}>{self.PROBE}",
-                                    'dmidecode')
+                                     'dmidecode')
 
         # Creating the instance of ToolFactory class
         self.tool_factory = ToolFactory()

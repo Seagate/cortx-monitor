@@ -13,12 +13,11 @@
 # about this software or licensing, please email opensource@seagate.com or
 # cortx-questions@seagate.com.
 
-"""
-Module which provides system information using 'dmidecode' command
-"""
+"""Interface class which provides system information using 'dmidecode' command."""
 
 import re
 import psutil
+import traceback
 from statistics import mean
 from framework.utils.utility import Utility
 from framework.utils.service_logging import logger
@@ -33,11 +32,20 @@ class Dmidecode(Utility):
     DMIDECODE = "sudo /sbin/dmidecode"
 
     def __init__(self):
-        """init method."""
+        """Init method."""
         super(Dmidecode, self).__init__()
 
     def get_cpu_info(self):
-        """Returns a dict having CPU information."""
+        """Returns a dict having CPU information.
+
+        For example: 
+            output of resulted CPU dict -
+            {'cpu_present': [0, 1],
+            'online_cpus': [0, 1],
+            'cpu_usage': [0.59, 0.56]
+            }
+
+        """
         try:
             cmd = self.DMIDECODE + " -t 4"
             response, err, _ = SimpleProcess(cmd).run()
@@ -57,7 +65,7 @@ class Dmidecode(Utility):
                 item = matches.pop(0)
                 if "Designation:" in item:
                     cpu_str = item.strip().split(": ")[1]
-                    cpu_dig = re.findall('\d+', cpu_str )
+                    cpu_dig = re.findall(r'\d+', cpu_str)
                     cpu_present = cpu_dig.pop(0)
                     cpu_list.append(int(cpu_present))
                 if "Status:" in item:
@@ -68,8 +76,7 @@ class Dmidecode(Utility):
                     cpu_status_map[cpu_present] = cpu_status
                 if cpu_threads:
                     cpu_thread_map[cpu_present] = cpu_threads
-            logger.debug(f"CPU status map:{cpu_status_map}")
-            logger.debug(f"CPU thread map: {cpu_thread_map}")
+
             online_cpus = []
             per_cpu_usage = []
             cpu_info = {}
@@ -94,4 +101,5 @@ class Dmidecode(Utility):
             return cpu_info
         except Exception as e:
             logger.error(f"Failed to get CPUs info. ERROR:{e}")
+            logger.debug(traceback.format_exc())
             return

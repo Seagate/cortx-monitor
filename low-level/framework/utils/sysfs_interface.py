@@ -112,7 +112,8 @@ class SysFS(Utility):
         return cpu_list
 
     def get_per_cpu_thread_info(self):
-        """Returns the cpus threads online info after reading /sys/devices/system/cpu/online
+        """Returns the cpus threads online info after reading
+        /sys/devices/system/cpu/online
         """
         # As per current Implementation, reading CPU info
         # through 'dmidecode' command, not from /sys/ file

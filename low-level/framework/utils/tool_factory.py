@@ -19,7 +19,7 @@ Factory module which returns instance of specific tool/utility class.
 
 from framework.utils.sysfs_interface import *
 from framework.utils.procfs_interface import *
-from framework.utils.dmidecode_interface import *
+from framework.utils.dmidecode_interface import Dmidecode
 
 
 class ToolFactory(object):
