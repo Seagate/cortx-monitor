@@ -14,18 +14,11 @@
 # cortx-questions@seagate.com.
 
 import json
-import os
 import time
-import socket
 import traceback
 
-from jsonschema import Draft3Validator
-from jsonschema import validate
-
 from cortx.utils.message_bus import MessageConsumer
-
 from framework.utils.service_logging import logger
-
 from framework.utils.conf_utils import Conf, SSPL_TEST_CONF, NODE_ID_KEY
 
 import ctypes
@@ -72,7 +65,7 @@ class TestIngressProcessor():
             logger.error("IngressProcessorTests, Exception: %s" % str(e))
             logger.error(traceback.format_exc())
 
-    def _read_config(self): 
+    def _read_config(self):
         """Configure the messaging exchange with defaults available."""
         # Make methods locally available
         self._node_id = Conf.get(SSPL_TEST_CONF, NODE_ID_KEY, 'SN01')
@@ -88,7 +81,3 @@ class TestIngressProcessor():
         self._offset = Conf.get(SSPL_TEST_CONF,
                                 f"{self.PROCESSOR}>{self.OFFSET}",
                                 'earliest')
-
-    def shutdown(self):
-        """Clean up scheduler queue and gracefully shutdown thread"""
-        super(IngressProcessorTests, self).shutdown()
