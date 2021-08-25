@@ -30,7 +30,7 @@ class SysFS(Utility):
        internal to system such as SAS Port/SAS phy/network
        using /sys file system"""
 
-    nw_phy_link_state = {'0': 'DISCONNECTED', '1': 'CONNECTED', 'X': 'UNKNOWN'}
+    nw_phy_link_state = {'0':'DOWN', '1':'UP', 'unknown':'UNKNOWN'}
 
     def __init__(self):
         """init method"""
@@ -137,7 +137,8 @@ class SysFS(Utility):
             with open(carrier_file_path) as cFile:
                 carrier_indicator = cFile.read().strip()
             if carrier_indicator not in self.nw_phy_link_state.keys():
-                carrier_indicator = 'X'
+                carrier_indicator = 'unknown'
         except OSError as os_err:
             return os_err.errno
         return self.nw_phy_link_state[carrier_indicator]
+

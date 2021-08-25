@@ -91,10 +91,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         'disk': 0
     }
     prev_nw_status = {}
-    prev_cable_cnxns = {}
-    # Dir to maintain fault detected state for interface
-    # in case of cable fault detection
-    interface_fault_state = {}
+    prev_cable_status = {}
     FAULT = "fault"
     FAULT_RESOLVED = "fault_resolved"
 
@@ -211,10 +208,8 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             if resource == 'nw':
                 self.prev_nw_status = \
                     self.persistent_data[resource].get('prev_nw_status', {})
-                self.prev_cable_cnxns \
-                    = self.persistent_data[resource].get('prev_cable_cnxns', {})
-                self.interface_fault_state \
-                    = self.persistent_data[resource].get('interface_fault_state', {})
+                self.prev_cable_status = \
+                    self.persistent_data[resource].get('prev_cable_status', {})
             elif self.persistent_data[resource]\
                 [f'high_{resource}_usage'].lower() == "true":
                 self.high_usage[resource] = True
@@ -228,9 +223,8 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                             f'{data_path}_{self.node_id}')
         if resource == 'nw':
             self.persistent_data[resource] = {
-                'prev_nw_status' : self.prev_nw_status,
-                'prev_cable_cnxns' : self.prev_cable_cnxns,
-                'interface_fault_state' : self.interface_fault_state
+                'prev_nw_status': self.prev_nw_status,
+                'prev_cable_status': self.prev_cable_status
             }
         else:
             self.persistent_data[resource] = {
@@ -720,20 +714,21 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     # Store the state to Persistent Cache.
                     self.persist_state_data('cpu', 'CPU_USAGE_DATA')
 
-    def _send_ifdata_json_msg(self, sensor_type, resource_id, resource_type, state, severity, event=""):
+    def _send_ifdata_json_msg(self, resource_id, resource_type, state, event=""):
         """A resuable method for transmitting IFDataMsg to RMQ and IEM logging"""
         ifDataMsg = IFdataMsg(self._node_sensor.host_id,
                                 self._node_sensor.local_time,
                                 self._node_sensor.if_data,
                                 resource_id,
                                 resource_type,
-                                state, severity, event)
+                                state,
+                                self.severity_reader.map_severity(state), event)
         # Add in uuid if it was present in the json request
         if self._uuid is not None:
             ifDataMsg.set_uuid(self._uuid)
         jsonMsg = ifDataMsg.getJson()
         self.if_sensor_data = jsonMsg
-        self.os_sensor_type[sensor_type] = self.if_sensor_data
+        self.os_sensor_type["nw"] = self.if_sensor_data
 
         # Transmit it to message processor
         self._write_internal_msgQ(EgressProcessor.name(), jsonMsg)
@@ -742,149 +737,71 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
     def _generate_if_data(self):
         """Create & transmit a network interface data message as defined
             by the sensor response json schema"""
-
-        event_field = ""
-
         # Notify the node sensor to update its data required for the if_data message
         successful = self._node_sensor.read_data("if_data", self._get_debug())
         if not successful:
             logger.error("NodeDataMsgHandler, _generate_if_data was NOT successful.")
         interfaces = self._node_sensor.if_data
 
-        nw_alerts = self._get_nwalert(interfaces)
-
-        # Get all cable connections state and generate alert on
-        # cables identified for fault detected and resolved state
-        nw_cable_alerts = self._nw_cable_alert_exists(interfaces)
-        for nw_cable_resource_id, state in nw_cable_alerts.items():
-            severity = self.severity_reader.map_severity(state)
-
-            # Check if any nw interface fault is there because of cable pull
-            if nw_alerts and nw_alerts[nw_cable_resource_id] == state:
-                if state == self.FAULT:
-                    self.INTERFACE_FAULT_DETECTED = True
-
-                    # if yes, then mark the flag detection True for the respective interface
-                    self.interface_fault_state[nw_cable_resource_id] = self.INTERFACE_FAULT_DETECTED
-                    event_field = f'Network interface: {nw_cable_resource_id} ' +\
-                                   'is also down because of cable fault'
-                else:
-                    event_field = f'Network interface: {nw_cable_resource_id} ' +\
-                                   'is also up after cable insertion'
-            
-            if not event_field:
-                status = "DISCONNECTED" if state == self.FAULT else "CONNECTED"
-                event_field = (f"Network Interface {nw_cable_resource_id}: "
-                               f"Network Cable is {status}.")
-            # Send the cable alert
-            self._send_ifdata_json_msg("nw", nw_cable_resource_id, self.NW_CABLE_RESOURCE_TYPE, state, severity, event_field)
-
-        # Check for Nw interface fault
-        for nw_resource_id, nw_state in nw_alerts.items():
-            # Check if nw interface fault is resolved. If resolved, check whether its
-            # resolved by cable insertion by checking the self.interface_fault_state
-            # dictionary.
-            if (self.interface_fault_state and nw_state == self.FAULT_RESOLVED and not \
-               self.interface_fault_state.get(nw_resource_id)):
-
-                # delete the entry for that interface from the interface
-                # directory specifically maintaned to track interface
-                # fault in case of cable fault. This is imp because otherwise
-                # if fault occurs for the same nw interface after cable insertion case,
-                # fault_resolved alert for the same nw interface will not be seen.
-                del self.interface_fault_state[nw_resource_id]
-                continue
-
-            elif self.interface_fault_state.get(nw_resource_id):
-                # If yes, then don't repeat the alert.
-                continue
-
-            if nw_state == self.FAULT:
-                event_field = f'Network interface {nw_resource_id} is down'
-            else:
-                event_field = f'Network interface {nw_resource_id} is up'
-
-            # If no or for othe interface, send the alert
-            severity = self.severity_reader.map_severity(nw_state)
-            self._send_ifdata_json_msg("nw", nw_resource_id, self.NW_RESOURCE_TYPE, nw_state, severity, event_field)
-
-    def _get_nwalert(self, interfaces):
-        """
-        Get network interfaces with fault/OK state for each interface.
-        Parameters:
-                    interfaces(list) : List of availabel network interfaces
-        Returns: Dictionary of network interfaces having key as interface name and value as fault state.
-        Return type: dict
-        """
-        nw_alerts = {}
-        try:
-            for interface in interfaces:
-                interface_name = interface.get("ifId")
-                nw_status = interface.get("nwStatus")
-                logger.debug("{0}:{1}".format(interface_name, nw_status))
-                # fault detected (Down/UNKNOWN, Up/UNKNOWN to Down, Up/Down to UNKNOWN)
-                if nw_status == 'DOWN' or nw_status == 'UNKNOWN':
-                    if self.prev_nw_status.get(interface_name) != nw_status:
-                        if self.prev_nw_status.get(interface_name) and self.prev_nw_status.get(interface_name) == 'UP':
-                            logger.warning(f"Network connection fault is detected for interface:'{interface_name}'")
-                            nw_alerts[interface_name] = self.FAULT
-                        self.prev_nw_status[interface_name] = nw_status
-                # fault resolved (Down to Up)
-                elif nw_status == 'UP':
-                    if self.prev_nw_status.get(interface_name) != nw_status:
-                        if self.prev_nw_status.get(interface_name):
-                            logger.info(f"Network connection fault is resolved for interface:'{interface_name}'")
-                            nw_alerts[interface_name] = self.FAULT_RESOLVED
-                        self.prev_nw_status[interface_name] = nw_status
-                else:
-                    logger.warning(f"Network connection state is:'{nw_status}', for interface:'{interface_name}'")
-        except Exception as e:
-            logger.error(f"Exception occurs while checking for network alert condition:'{e}'")
-        logger.debug("nw_alerts existed for:{}".format(nw_alerts))
-        return nw_alerts
-
-    def _nw_cable_alert_exists(self, interfaces):
-        """Checks cable connection status with physical link(carrier) state and
-        avoids duplicate alert reporting by comparing with its previous state.
-        Fault detection is identified by physical link state Down.
-        Fault resolved is identified by physical link state changed from Down to Up.
-        """
-        identified_cables = {}
+        cable_alert_desc = "Newtork Cable for interface {} is {}."
+        nw_alert_desc = "Network interface {} is {}."
 
         for interface in interfaces:
-
-            interface_name = interface.get("ifId")
-            phy_link_status = interface.get("nwCableConnStatus")
-
-            # fault detected (Disconnected, Connected to Disconnected)
-            if phy_link_status == "DISCONNECTED":
-                if self.prev_cable_cnxns.get(interface_name) != phy_link_status:
-                    if self.prev_cable_cnxns.get(interface_name):
-                        logger.warning(f"Cable connection fault is detected with '{interface_name}'")
-                        identified_cables[interface_name] = self.FAULT
-                    self.prev_cable_cnxns[interface_name] = phy_link_status
-            # fault resolved (Disconnected to Connected)
-            elif phy_link_status == "CONNECTED":
-                if self.prev_cable_cnxns.get(interface_name) != phy_link_status:
-                    if self.prev_cable_cnxns.get(interface_name):
-                        logger.info(f"Cable connection fault is resolved with '{interface_name}'")
-                        identified_cables[interface_name] = self.FAULT_RESOLVED
-
-                        if self.interface_fault_state and interface_name in self.interface_fault_state:
-                            # After the cable fault is resolved, unset the flag for interface
-                            # So that, it can be tracked further for any failure
-                            self.INTERFACE_FAULT_DETECTED = False
-                            self.interface_fault_state[interface_name] = self.INTERFACE_FAULT_DETECTED
-
-                            # Also clear the global nw interface dictionary
-                            self.prev_nw_status[interface_name] = phy_link_status
-
-                    self.prev_cable_cnxns[interface_name] = phy_link_status
-            else:
-                logger.debug(f"Cable connection state is unknown with '{interface_name}'")
-
-        return identified_cables
-
+            if_name = interface["ifId"]
+            nw_status = interface['nwStatus'].upper()
+            # if nw_fault
+            if nw_status in ["DOWN", "UNKNOWN"]:
+                nw_cable_status = interface['nwCableConnStatus'].upper()
+                # if nw_cable_disconneted
+                if nw_cable_status == "DISCONNECTED":
+                    if self.prev_cable_status.get(if_name) != "cable_disconnected":
+                        # raise nw_cable_fault_alert
+                        self.prev_cable_status[if_name] = "cable_disconnected"
+                        self._send_ifdata_json_msg(
+                            if_name, self.NW_CABLE_RESOURCE_TYPE, self.FAULT,
+                            cable_alert_desc.format(if_name, nw_cable_status))
+                # elif nw_cable_connected
+                elif nw_cable_status == "CONNECTED":
+                    if self.prev_cable_status.get(if_name) == "cable_disconnected":
+                        # raise nw_cable_fault_resolved_alert 
+                        self.prev_cable_status[if_name] = "cable_connected"
+                        self._send_ifdata_json_msg(
+                            if_name, self.NW_CABLE_RESOURCE_TYPE,
+                            self.FAULT_RESOLVED,
+                            cable_alert_desc.format(if_name, nw_cable_status))
+                    if self.prev_nw_status.get(if_name) != "nw_down":
+                        # raise nw_fault_alert
+                        self.prev_nw_status[if_name] = "nw_down"
+                        self._send_ifdata_json_msg(
+                            if_name, self.NW_RESOURCE_TYPE, self.FAULT,
+                            nw_alert_desc.format(if_name, "DOWN")
+                        )
+                # nw_cable_state is unknown and nw_is_faulty
+                else:
+                    if self.prev_nw_status.get(if_name) != "nw_down":
+                        # raise nw_fault_alert
+                        self.prev_nw_status[if_name] = "nw_down"
+                        self._send_ifdata_json_msg(
+                            if_name, self.NW_RESOURCE_TYPE, self.FAULT,
+                            nw_alert_desc.format(if_name, "DOWN")
+                        )
+            else: # no nw_fault
+                if self.prev_nw_status.get(if_name) == "nw_down":
+                    # raise nw_fault_resolved_alert
+                    self.prev_nw_status[if_name] = "nw_up"
+                    self._send_ifdata_json_msg(
+                        if_name, self.NW_RESOURCE_TYPE, self.FAULT_RESOLVED,
+                        nw_alert_desc.format(if_name, "UP")
+                    )
+                elif self.prev_cable_status.get(if_name) == "cable_disconnected":
+                    # raise nw_cable_fault_resolved_alert
+                    self.prev_cable_status[if_name] = "cable_connected"
+                    self._send_ifdata_json_msg(
+                        if_name, self.NW_CABLE_RESOURCE_TYPE,
+                        self.FAULT_RESOLVED,
+                        cable_alert_desc.format(if_name, "CONNECTED")
+                    )
+            
     def _generate_disk_space_alert(self):
         """Create & transmit a disk_space_alert message as defined
             by the sensor response json schema"""
