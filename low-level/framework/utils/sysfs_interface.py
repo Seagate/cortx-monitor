@@ -112,8 +112,9 @@ class SysFS(Utility):
         return cpu_list
 
     def get_per_cpu_thread_info(self):
-        """Returns the cpus threads online info after reading from /sys file
-        
+        """
+        Returns the cpus threads online info after reading from /sys file
+
         Path:- /sys/devices/system/cpu/online
 
         """

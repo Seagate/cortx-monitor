@@ -23,11 +23,9 @@ from cortx.utils.process import SimpleProcess
 
 
 class Dmidecode(Utility):
-    """
-    Interface class to retrieve system's hardware related information
-    using 'dmidecode' command.
 
-    """
+    """ Interface class to retrieve system's hardware related info using 'dmidecode' command."""
+
     DMIDECODE = "sudo /sbin/dmidecode"
 
     def __init__(self):
