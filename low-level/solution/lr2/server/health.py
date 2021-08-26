@@ -31,6 +31,7 @@ from framework.platforms.server.network import Network
 from framework.platforms.server.platform import Platform
 from framework.platforms.server.raid import RAIDs
 from framework.platforms.server.sas import SAS
+from framework.platforms.server.cpu import CPU
 from framework.platforms.server.software import BuildInfo, Service
 from framework.utils.mon_utils import MonUtils
 from framework.utils.conf_utils import (GLOBAL_CONF, NODE_TYPE_KEY, SSPL_CONF,
@@ -39,7 +40,6 @@ from framework.utils.ipmi_client import IpmiFactory
 from framework.utils.service_logging import CustomLog, logger
 from framework.utils.tool_factory import ToolFactory
 from server.server_resource_map import ServerResourceMap
-from framework.utils.os_utils import OSUtils
 
 
 class ServerHealth():
@@ -57,7 +57,6 @@ class ServerHealth():
         server_type = Conf.get(GLOBAL_CONF, NODE_TYPE_KEY)
         Platform.validate_server_type_support(self.log, ResourceMapError, server_type)
         self.sysfs = ToolFactory().get_instance('sysfs')
-        self.dmidecode = ToolFactory().get_instance('dmidecode')
         self.sysfs.initialize()
         self.sysfs_base_path = self.sysfs.get_sysfs_base_path()
         self.cpu_path = self.sysfs_base_path + const.CPU_PATH
@@ -235,8 +234,9 @@ class ServerHealth():
 
     def get_cpu_info(self, add_overall_usage=False):
         """Update and return CPU information in specific format."""
+        cpu_instance = CPU()
         per_cpu_data = []
-        cpu_info_dict = self.dmidecode.get_cpu_info()
+        cpu_info_dict = cpu_instance.get_cpu_info()
         cpu_present = cpu_info_dict["cpu_present"]
         cpu_online =  cpu_info_dict["online_cpus"]
         cpu_usage = cpu_info_dict["cpu_usage"]
@@ -244,7 +244,7 @@ class ServerHealth():
         overall_cpu_usage = list(psutil.getloadavg())
         cpu_count = len(cpu_present)
         overall_usage = {
-            "current": OSUtils().get_cpu_usage(percpu=False),
+            "current": psutil.cpu_percent(interval=2, percpu=False),
             "1_min_avg": overall_cpu_usage[0],
             "5_min_avg": overall_cpu_usage[1],
             "15_min_avg": overall_cpu_usage[2]

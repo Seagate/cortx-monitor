@@ -31,8 +31,7 @@ from framework.utils.conf_utils import (NODE_ID_KEY, Conf,
 from framework.utils.service_logging import logger
 from framework.utils.severity_reader import SeverityReader
 from framework.utils.store_factory import file_store
-from framework.utils.sysfs_interface import SysFS
-from framework.utils.tool_factory import ToolFactory
+from framework.platforms.server.cpu import CPU
 from framework.utils.os_utils import OSUtils
 from message_handlers.node_data_msg_handler import NodeDataMsgHandler
 
@@ -90,21 +89,6 @@ class CPUFaultSensor(SensorThread, InternalMsgQ):
 
         super(CPUFaultSensor, self).initialize_msgQ(msgQlist)
 
-        # get the cpu fault implementor from configuration
-        cpu_fault_utility = Conf.get(SSPL_CONF, f"{self.name().capitalize()}>{self.PROBE}",
-                                     'dmidecode')
-
-        # Creating the instance of ToolFactory class
-        self.tool_factory = ToolFactory()
-
-        try:
-            # Get the instance of the utility using ToolFactory
-            self._utility_instance = self._utility_instance or \
-                                self.tool_factory.get_instance(cpu_fault_utility)
-        except Exception as e:
-            logger.error(f"Error while initializing, shutting down CPUFaultSensor : {e}")
-            self.shutdown()
-
         self._node_id = Conf.get(GLOBAL_CONF, NODE_ID_KEY,'SN01')
         cache_dir_path = os.path.join(DATA_PATH, self.CACHE_DIR_NAME)
         self.CPU_FAULT_SENSOR_DATA = os.path.join(cache_dir_path, f'CPU_FAULT_SENSOR_DATA_{self._node_id}')
@@ -125,7 +109,7 @@ class CPUFaultSensor(SensorThread, InternalMsgQ):
     def read_current_cpu_info(self):
         """Read current cpu info"""
         try:
-            cpu_dict = self._utility_instance.get_cpu_info()
+            cpu_dict = CPU().get_cpu_info()
             self.current_cpu_info = cpu_dict["online_cpus"]
         except Exception as e:
             logger.error(f"Error while reading current cpu info, shutting down CPUFaultSensor : {e}")

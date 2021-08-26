@@ -20,8 +20,6 @@
 """
 
 import socket
-import psutil
-import time
 
 
 class OSUtils:
@@ -31,15 +29,3 @@ class OSUtils:
     def get_fqdn():
         """Get fully qualified domain name for current node."""
         return socket.getfqdn()
-
-
-    @staticmethod
-    def get_cpu_usage(index=2, percpu=False):
-        """Get CPU usage list."""
-        i = 0
-        cpu_usage = None
-        while i < index:
-            cpu_usage = psutil.cpu_percent(interval=None, percpu=percpu)
-            time.sleep(1)
-            i = i + 1
-        return cpu_usage
