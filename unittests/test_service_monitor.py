@@ -40,7 +40,8 @@ class TestServiceMonitor(unittest.TestCase):
         self.mocked_conf_values = {
             "SERVICEMONITOR>thread_sleep": "1",
             "SERVICEMONITOR>polling_frequency": "5",
-            "SERVICEMONITOR>threshold_inactive_time": "10"
+            "SERVICEMONITOR>threshold_inactive_time": "10",
+            "SERVICEMONITOR>threshold_waiting_time": "10"
         }
         self.mocked_properties_value = {
             "Id": "spam.service",
@@ -207,7 +208,7 @@ class TestServiceMonitor(unittest.TestCase):
             "service_state": "inactive",
             "service_monitor_state": InactiveState,
             "nonactive_enter_timestamp": time.time() - 999,
-            "state_enter_timestamp": time.time()
+            "waiting_timestamp": time.time()
         })
         self.service_monitor.initialize(Mock(), Mock(), Mock())
         self.assertIs(
