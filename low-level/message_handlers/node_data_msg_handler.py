@@ -763,7 +763,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 # elif nw_cable_connected
                 elif nw_cable_status == "CONNECTED":
                     if self.prev_cable_status.get(if_name) == "cable_disconnected":
-                        # raise nw_cable_fault_resolved_alert 
+                        # raise nw_cable_fault_resolved_alert
                         self.prev_cable_status[if_name] = "cable_connected"
                         self._send_ifdata_json_msg(
                             if_name, self.NW_CABLE_RESOURCE_TYPE,
@@ -774,8 +774,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                         self.prev_nw_status[if_name] = "nw_down"
                         self._send_ifdata_json_msg(
                             if_name, self.NW_RESOURCE_TYPE, self.FAULT,
-                            nw_alert_desc.format(if_name, "DOWN")
-                        )
+                            nw_alert_desc.format(if_name, "DOWN"))
                 # nw_cable_state is unknown and nw_is_faulty
                 else:
                     if self.prev_nw_status.get(if_name) != "nw_down":
@@ -783,25 +782,22 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                         self.prev_nw_status[if_name] = "nw_down"
                         self._send_ifdata_json_msg(
                             if_name, self.NW_RESOURCE_TYPE, self.FAULT,
-                            nw_alert_desc.format(if_name, "DOWN")
-                        )
+                            nw_alert_desc.format(if_name, "DOWN"))
             else: # no nw_fault
                 if self.prev_nw_status.get(if_name) == "nw_down":
                     # raise nw_fault_resolved_alert
                     self.prev_nw_status[if_name] = "nw_up"
                     self._send_ifdata_json_msg(
                         if_name, self.NW_RESOURCE_TYPE, self.FAULT_RESOLVED,
-                        nw_alert_desc.format(if_name, "UP")
-                    )
-                elif self.prev_cable_status.get(if_name) == "cable_disconnected":
+                        nw_alert_desc.format(if_name, "UP"))
+                if self.prev_cable_status.get(if_name) == "cable_disconnected":
                     # raise nw_cable_fault_resolved_alert
                     self.prev_cable_status[if_name] = "cable_connected"
                     self._send_ifdata_json_msg(
                         if_name, self.NW_CABLE_RESOURCE_TYPE,
                         self.FAULT_RESOLVED,
-                        cable_alert_desc.format(if_name, "CONNECTED")
-                    )
-            
+                        cable_alert_desc.format(if_name, "CONNECTED"))
+
     def _generate_disk_space_alert(self):
         """Create & transmit a disk_space_alert message as defined
             by the sensor response json schema"""
