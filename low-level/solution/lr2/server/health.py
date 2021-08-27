@@ -234,9 +234,8 @@ class ServerHealth():
 
     def get_cpu_info(self, add_overall_usage=False):
         """Update and return CPU information in specific format."""
-        cpu_instance = CPU()
         per_cpu_data = []
-        cpu_info_dict = cpu_instance.get_cpu_info()
+        cpu_info_dict = CPU().get_cpu_info()
         cpu_present = cpu_info_dict["cpu_present"]
         cpu_online =  cpu_info_dict["online_cpus"]
         cpu_usage = cpu_info_dict["cpu_usage"]
