@@ -16,20 +16,20 @@
 from cortx.utils.process import SimpleProcess
 
 
-class SystemInfo:
+class DmidecodeUtil:
     """ Interface class to retrieve system's hardware related info using 'dmidecode' command."""
 
     DMIDECODE = "sudo /sbin/dmidecode"
 
     def __init__(self):
         """Init method."""
-        super(SystemInfo, self).__init__()
+        super(DmidecodeUtil, self).__init__()
         self.resource_code_map = {
             "cpu" : 4,
             "psu" : 39
         }
 
-    def get_system_info(self, resource):
+    def get_resource_info(self, resource):
         cmd = self.DMIDECODE + " -t " + str(self.resource_code_map[resource])
         output, err, rc = SimpleProcess(cmd).run()
         return output, err, rc

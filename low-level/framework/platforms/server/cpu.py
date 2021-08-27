@@ -18,7 +18,7 @@ import psutil
 import traceback
 from statistics import mean
 
-from framework.utils.system_info import SystemInfo
+from framework.utils.dmidecode_util import DmidecodeUtil
 from framework.utils.service_logging import logger
 
 class CPU:
@@ -36,7 +36,7 @@ class CPU:
 
         """
         try:
-            response, err, _ = SystemInfo().get_system_info("cpu")
+            response, err, _ = DmidecodeUtil().get_resource_info("cpu")
             if err:
                 logger.error("Failed to get list of Online CPUs."
                              f"ERROR:{err}")
@@ -47,6 +47,7 @@ class CPU:
 
             cpu_status_map = {}
             cpu_thread_map = {}
+            cpu_info = {}
             cpu_list = []
             while matches:
                 item = matches.pop(0)
@@ -64,7 +65,6 @@ class CPU:
 
             online_cpus = []
             per_cpu_usage = []
-            cpu_info = {}
             for cpu, status in cpu_status_map.items():
                 if "Enabled" in status:
                     online_cpus.append(int(cpu))
@@ -83,8 +83,7 @@ class CPU:
             cpu_info["online_cpus"] = online_cpus
             cpu_info["cpu_usage"] = per_cpu_usage
             logger.debug(f"Fetched CPU info: {cpu_info}")
-            return cpu_info
         except Exception as e:
             logger.error(f"Failed to get CPUs info. ERROR:{e}")
             logger.debug("%s\n" % traceback.format_exc())
-            return
+        return cpu_info
