@@ -70,7 +70,7 @@ class ActiveState:
     @staticmethod
     def enter(service):
         for set_type in [
-            service.non_active,
+                service.non_active,
                 service.failed_waiting_services,
                 service.active_waiting_services]:
             set_type.discard(service.name)
@@ -85,7 +85,7 @@ class FailedState:
     @staticmethod
     def enter(service):
         for set_type in [
-            service.non_active,
+                service.non_active,
                 service.failed_waiting_services,
                 service.active_waiting_services]:
             set_type.discard(service.name)
@@ -170,7 +170,7 @@ class Service:
     # into the active_waiting_services list.
     active_waiting_services = set()
     # if service state changed to Failed state add service name
-    # in failed_service list.
+    # in failed_waiting_services list.
     failed_waiting_services = set()
     monitoring_disabled = set()
 
