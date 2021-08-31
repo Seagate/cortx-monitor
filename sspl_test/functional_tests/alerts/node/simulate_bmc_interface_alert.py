@@ -15,25 +15,25 @@
 
 import os
 from time import sleep
-from subprocess import call
+from cortx.utils.process import SimpleProcess
 
 
 def kcs_channel_alert(active_bmc_IF_key, active_bmc_IF_value):
     sleep(0.1)
     # disable kcs interface
-    call("touch /tmp/kcs_disable".split())
+    SimpleProcess("touch /tmp/kcs_disable").run()
 
 
 def lan_channel_alert(active_bmc_IF_key, active_bmc_IF_value):
     sleep(0.1)
     # disable lan interface
-    call("touch /tmp/lan_disable".split())
+    SimpleProcess("touch /tmp/lan_disable").run()
 
 
 def restore_config():
     if os.path.exists("/tmp/lan_disable"):
-        call("rm -rf /tmp/lan_disable".split())
+        SimpleProcess("rm -rf /tmp/lan_disable").run()
         sleep(0.1)
     elif os.path.exists("/tmp/kcs_disable"):
-        call("rm -rf /tmp/kcs_disable".split())
+        SimpleProcess("rm -rf /tmp/kcs_disable").run()
         sleep(0.1)

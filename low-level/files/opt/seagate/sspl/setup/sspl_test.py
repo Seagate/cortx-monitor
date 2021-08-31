@@ -24,6 +24,7 @@ from cortx.utils.validator.v_pkg import PkgV
 from .conf_based_sensors_enable import update_sensor_info
 from files.opt.seagate.sspl.setup.setup_logger import logger
 from framework.utils.utility import Utility
+from framework.base import sspl_constants
 from framework.base.sspl_constants import (
     PRODUCT_FAMILY, sspl_config_path, sspl_test_file_path,
     sspl_test_config_path, global_config_path, SSPL_CONFIG_INDEX,
@@ -45,6 +46,8 @@ class SSPLTestCmd:
         self.test_dir = f"/opt/seagate/{PRODUCT_FAMILY}/sspl/sspl_test"
         if self.args.v2:
             self.test_dir = f"/opt/seagate/{PRODUCT_FAMILY}/sspl/sspl_test/functional_tests"
+            sspl_constants.sspl_test_file_path = sspl_testv2_file_path
+            sspl_constants.sspl_test_config_path = sspl_testv2_config_path
 
         self.dbus_service = DbusServiceHandler()
         if args.config and args.config[0]:
@@ -102,10 +105,7 @@ class SSPLTestCmd:
             host=socket.getfqdn(), pkgs=rpm_deps, skip_version_check=True)
         # Load global, sspl and test configs
         Conf.load(SSPL_CONFIG_INDEX, sspl_config_path)
-        if self.args.v2:
-            Conf.load(SSPL_TEST_CONFIG_INDEX, sspl_testv2_config_path)
-        else:
-            Conf.load(SSPL_TEST_CONFIG_INDEX, sspl_test_config_path)
+        Conf.load(SSPL_TEST_CONFIG_INDEX, sspl_test_config_path)
         # Take copy of supplied config passed to sspl_test and load it
         with open(self.sspl_test_gc_copy_file, "w") as f:
             f.write("")
@@ -131,10 +131,7 @@ class SSPLTestCmd:
         if self.plan not in IVT_TEST_PLANS:
             # Take back up of sspl test config
             sspl_test_backup = '/etc/sspl_tests.conf.back'
-            if self.args.v2:
-                shutil.copyfile(sspl_testv2_file_path, sspl_test_backup)
-            else:
-                shutil.copyfile(sspl_test_file_path, sspl_test_backup)
+            shutil.copyfile(sspl_test_file_path, sspl_test_backup)
 
             # Add global config in sspl_test config and revert the changes once
             # test completes. Global config path in sspl_tests.conf will be
@@ -260,10 +257,7 @@ class SSPLTestCmd:
                      "NODEDATAMSGHANDLER>high_memory_usage_wait_threshold",
                      memory_usage_alert_wait)
             Conf.save(SSPL_CONFIG_INDEX)
-            if self.args.v2:
-                shutil.copyfile(sspl_test_backup, sspl_testv2_file_path)
-            else:
-                shutil.copyfile(sspl_test_backup, sspl_test_file_path)
+            shutil.copyfile(sspl_test_backup, sspl_test_file_path)
             if rc != 0:
                 raise TestException(
                     "%s - ERROR: %s - CMD %s" % (self.name, error, CMD))

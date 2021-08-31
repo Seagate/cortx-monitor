@@ -165,3 +165,26 @@ def get_enclosure_request(resource_type, resource_id):
             },
         },
     }
+
+
+def get_enclosure_sensor_message_request(resource_type):
+    egressMsg = {
+        "title": "SSPL Actuator Request",
+        "description": "Seagate Storage Platform Library - Actuator Request",
+        "username": "JohnDoe",
+        "signature": "None",
+        "time": "2015-05-29 14:28:30.974749",
+        "expires": 500,
+        "message": {
+            "sspl_ll_msg_header": {
+                "schema_version": "1.0.0",
+                "sspl_version": "1.0.0",
+                "msg_version": "1.0.0",
+            },
+            "sspl_ll_debug": {"debug_component": "sensor", "debug_enabled": True},
+            "sensor_request_type": {
+                "enclosure_alert": {"info": {"resource_type": resource_type}}
+            },
+        },
+    }
+    return egressMsg

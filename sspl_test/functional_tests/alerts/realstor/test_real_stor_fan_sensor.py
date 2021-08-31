@@ -14,7 +14,7 @@
 # cortx-questions@seagate.com.
 
 from framework.base.functional_test_base import TestCaseBase
-from common import sensor_response_filter
+from common import sensor_response_filter, get_enclosure_sensor_message_request
 
 
 class RealStorFanModuleSensorTest(TestCaseBase):
@@ -27,7 +27,7 @@ class RealStorFanModuleSensorTest(TestCaseBase):
         return sensor_response_filter(msg, self.resource_type)
 
     def request(self):
-        return self.fan_sensor_message_request()
+        return get_enclosure_sensor_message_request(self.resource_type)
 
     def response(self, msg):
         fan_module_sensor_msg = msg.get("sensor_response_type")
@@ -78,28 +78,6 @@ class RealStorFanModuleSensorTest(TestCaseBase):
                 assert fan.get("health") is not None
                 assert fan.get("health_reason") is not None
                 assert fan.get("health_recommendation") is not None
-
-    def fan_sensor_message_request(self):
-        egressMsg = {
-            "title": "SSPL Actuator Request",
-            "description": "Seagate Storage Platform Library - Actuator Request",
-            "username": "JohnDoe",
-            "signature": "None",
-            "time": "2015-05-29 14:28:30.974749",
-            "expires": 500,
-            "message": {
-                "sspl_ll_msg_header": {
-                    "schema_version": "1.0.0",
-                    "sspl_version": "1.0.0",
-                    "msg_version": "1.0.0",
-                },
-                "sspl_ll_debug": {"debug_component": "sensor", "debug_enabled": True},
-                "sensor_request_type": {
-                    "enclosure_alert": {"info": {"resource_type": self.resource_type}}
-                },
-            },
-        }
-        return egressMsg
 
 
 test_list = [RealStorFanModuleSensorTest]

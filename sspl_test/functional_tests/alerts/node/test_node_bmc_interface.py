@@ -14,11 +14,12 @@
 # cortx-questions@seagate.com.
 
 # -*- coding: utf-8 -*-
-import subprocess
 
 from sspl_constants import BMCInterface
 from alerts.node import simulate_bmc_interface_alert
 from framework.base.functional_test_base import TestCaseBase
+
+from cortx.utils.process import SimpleProcess
 
 
 class BmcInterfaceTest(TestCaseBase):
@@ -38,7 +39,6 @@ class BmcInterfaceTest(TestCaseBase):
             print(exception)
 
     def request(self):
-        # check_sspl_ll_is_running()
         # backup active bmc interface
         BMC_IF_CONSUL_KEY, BMC_IF_CONSUL_VAL = self.backup_bmc_config()
 
@@ -78,8 +78,7 @@ class BmcInterfaceTest(TestCaseBase):
     def backup_bmc_config(self):
         path = BMCInterface.ACTIVE_BMC_IF.value
         cmd = f"cat {path}"
-        bmc_interface, retcode = self.run_cmd(cmd)
-        bmc_interface = bmc_interface[0]
+        bmc_interface, error, retcode = SimpleProcess(cmd).run()
         if retcode != 0:
             print(f"command:{cmd} not executed successfully")
             return
@@ -95,15 +94,6 @@ class BmcInterfaceTest(TestCaseBase):
         elif b"lan" in bmc_interface:
             active_bmc_IF_value = bmc_interface.replace(bmc_interface, b"lan").decode()
         return active_bmc_IF_key, active_bmc_IF_value
-
-    def run_cmd(self, cmd):
-        process = subprocess.Popen(
-            cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
-        )
-        result = process.communicate()
-        result = b"".join([val for val in result if val]).split(b":")
-        retcode = process.returncode
-        return result, retcode
 
 
 test_list = [BmcInterfaceTest]

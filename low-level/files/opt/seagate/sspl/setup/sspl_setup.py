@@ -307,7 +307,7 @@ class TestCmd(Cmd):
         parsers.add_argument('--coverage', action="store_true",
                              help='Boolean - Enable Code Coverage.')
         parsers.add_argument('--v2', action="store_true",
-                             help='Boolean - Run with new test framework.')
+                             help='Boolean - Run tests with v2 test framework with multi-node support.')
         parsers.set_defaults(command=cls)
 
     def validate(self):
