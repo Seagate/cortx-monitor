@@ -20,11 +20,6 @@ set -u -o pipefail
 SCRIPT_NAME=$(basename $0)
 source $script_dir/constants.sh
 SSPL_CONF="/etc/sspl.conf"
-RSYSLOG_CONF="/etc/rsyslog.d/0-iemfwd.conf"
-RSYSLOG_SSPL_CONF="/etc/rsyslog.d/1-ssplfwd.conf"
-LOGROTATE_DIR="/etc/logrotate.d"
-IEM_LOGROTATE_CONF="$LOGROTATE_DIR/iem_messages"
-SSPL_LOGROTATE_CONF="$LOGROTATE_DIR/sspl_logs"
 SSPL_CONFIGURED="/var/$PRODUCT_FAMILY/sspl/sspl-configured"
 ROLES="gw ssu vm cmu cortx"
 
@@ -148,13 +143,6 @@ config_sspl() {
     # Copy sspl conf
     [ -f /etc/sspl.conf ] || cp /opt/seagate/$PRODUCT_FAMILY/sspl/conf/sspl.conf.LDR_R1 /etc/sspl.conf
 
-    # Copy rsyslog configuration
-    [ -f /etc/rsyslog.d/0-iemfwd.conf ] ||
-       cp /opt/seagate/$PRODUCT_FAMILY/sspl/low-level/files/etc/rsyslog.d/0-iemfwd.conf /etc/rsyslog.d/0-iemfwd.conf
-
-    [ -f $RSYSLOG_SSPL_CONF ] ||
-       cp /opt/seagate/$PRODUCT_FAMILY/sspl/low-level/files/$RSYSLOG_SSPL_CONF $RSYSLOG_SSPL_CONF
-
     force=0
     role=
     rabbitmq_reset=1
@@ -245,44 +233,6 @@ config_sspl() {
 
     cp /opt/seagate/$PRODUCT_FAMILY/sspl/conf/sspl-ll.service.$product /etc/systemd/system/sspl-ll.service
     touch $SSPL_CONFIGURED
-
-    # SSPL Log file configuration
-    IFS='=' lfp=`grep sspl_log_file_path $SSPL_CONF`; logpath=( $lfp )
-    SSPL_LOG_FILE_PATH=`echo ${logpath[1]}`
-
-    [ ! -z "$SSPL_LOG_FILE_PATH" ] &&
-    {
-        sed -i "s|File=.*|File=\"$SSPL_LOG_FILE_PATH\")|g" $RSYSLOG_SSPL_CONF
-        sed -i "1 s|^.*$|${SSPL_LOG_FILE_PATH}|g" /opt/seagate/$PRODUCT_FAMILY/sspl/low-level/files/etc/logrotate.d/sspl_logs
-    }
-
-
-    # Configure log file path in Rsyslog and logrotate configuration file
-    IFS='=' lfp=`grep log_file_path $SSPL_CONF`; datapath=( $lfp )
-    LOG_FILE_PATH=`echo ${datapath[1]}`
-
-    if [ -z "$LOG_FILE_PATH" ]
-    then
-        sed -i "s|File=.*|File=\/var/log/$PRODUCT_FAMILY/iem/iem_messages\"|g" $RSYSLOG_CONF
-    else
-        sed -i "s|File=.*|File=\"${LOG_FILE_PATH}\"|g" $RSYSLOG_CONF
-        sed -i "1 s|^.*$|${LOG_FILE_PATH}|g" /opt/seagate/$PRODUCT_FAMILY/sspl/low-level/files/etc/logrotate.d/iem_messages
-    fi
-
-    # Create logrotate dir in case it's not present for dev environment
-    if [ ! -d "${LOGROTATE_DIR}" ]; then
-        mkdir -p ${LOGROTATE_DIR}
-    fi
-
-    cp /opt/seagate/$PRODUCT_FAMILY/sspl/low-level/files/etc/logrotate.d/iem_messages $IEM_LOGROTATE_CONF
-    cp /opt/seagate/$PRODUCT_FAMILY/sspl/low-level/files/etc/logrotate.d/sspl_logs $SSPL_LOGROTATE_CONF
-
-    # This rsyslog restart will happen after successful updation of rsyslog
-    # conf file and before sspl starts. If at all this will be removed from
-    # here, there will be a chance that SSPL intial logs will not be present in
-    # /var/log/<product>/sspl/sspl.log file. So, initial logs needs to be collected from
-    # /var/log/messages
-    systemctl restart rsyslog
     systemctl enable sspl-ll.service
     systemctl start sspl-ll.service
 }

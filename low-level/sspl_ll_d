@@ -43,7 +43,7 @@ from framework.actuator_state_manager import actuator_state_manager
 from framework.base.module_thread import SensorThread
 from framework.base.sspl_constants import (SSPL_SETTINGS, COMMON_CONFIGS, PRODUCT_FAMILY,
     OperatingSystem, enabled_products, SYSLOG_HOST, SYSLOG_PORT,
-    IEM_INIT_FAILED)
+    IEM_INIT_FAILED, SSPL_LOG_PATH)
 from framework.messaging.egress_accumulated_msgs_processor import \
     EgressAccumulatedMsgsProcessor
 # Modules for handling messages and manipulating internal threads
@@ -780,7 +780,7 @@ if __name__ == "__main__":
     # Initialize logging
     try:
         logging_level = Conf.get(SSPL_CONF, f"{SYSTEM_INFORMATION}>{LOG_LEVEL}", "INFO")
-        init_logging("SSPL-LL", logging_level, SYSLOG_HOST, SYSLOG_PORT)
+        init_logging("sspl", SSPL_LOG_PATH , logging_level)
 
     except Exception as err:
         # We don't have logger since it threw an exception, use generic 'print'

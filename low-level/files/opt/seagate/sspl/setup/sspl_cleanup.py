@@ -28,9 +28,7 @@ from framework.utils.utility import Utility
 from framework.base.sspl_constants import (
     SSPL_CONFIG_INDEX, file_store_config_path, global_config_file_path,
     sspl_config_path, PRODUCT_BASE_DIR, SSPL_BASE_DIR, PRODUCT_FAMILY,
-    RSYSLOG_IEM_CONF, RSYSLOG_SSPL_CONF, RSYSLOG_MSB_CONF,
-    IEM_LOGROTATE_CONF, SSPL_LOGROTATE_CONF, MSB_LOGROTATE_CONF,
-    RSYSLOG_SB_CONF, SB_LOGROTATE_CONF, USER)
+    USER)
 
 
 class SSPLCleanup:
@@ -106,10 +104,8 @@ class SSPLCleanup:
             sspl_ll_cli, sspl_test_backup, sspl_test_file_path,
             file_store_config_path, global_config_file_path, sspl_log_file_path,
             iem_log_file_path, sspl_sb_log_file_path, manifest_log_file_path,
-            RSYSLOG_IEM_CONF, RSYSLOG_SSPL_CONF, RSYSLOG_MSB_CONF,
-            IEM_LOGROTATE_CONF, SSPL_LOGROTATE_CONF, MSB_LOGROTATE_CONF,
-            RSYSLOG_SB_CONF, SB_LOGROTATE_CONF, sspl_dbus_policy_conf,
-                sspl_dbus_policy_rules, sspl_sudoers_file, sspl_service_file]:
+            sspl_dbus_policy_conf, sspl_dbus_policy_rules,
+            sspl_sudoers_file, sspl_service_file]:
             FileStore().delete(filepath)
 
         # Delete directories which were created during post_install.

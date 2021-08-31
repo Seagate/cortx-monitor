@@ -152,14 +152,15 @@ class Utility(object):
                 f.write(line)
 
     @staticmethod
-    def set_ownership_recursively(root_dir, uid, gid):
+    def set_ownership_recursively(list_root_dir, uid, gid):
         """Set ownership recursively."""
-        os.chown(root_dir, uid, gid)
-        for base, dirs, files in os.walk(root_dir):
-            for _dir in dirs:
-                os.chown(os.path.join(base, _dir), uid, gid)
-            for file in files:
-                os.chown(os.path.join(base, file), uid, gid)
+        for root_dir in list_root_dir:
+            os.chown(root_dir, uid, gid)
+            for base, dirs, files in os.walk(root_dir):
+                for _dir in dirs:
+                    os.chown(os.path.join(base, _dir), uid, gid)
+                for file in files:
+                    os.chown(os.path.join(base, file), uid, gid)
 
     @staticmethod
     def get_current_time():

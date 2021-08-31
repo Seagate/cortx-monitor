@@ -23,7 +23,8 @@
 
 import requests
 from requests.exceptions import Timeout, ConnectionError, HTTPError
-from framework.utils.service_logging import logger
+from framework.base.sspl_constants import SSPL_LOG_PATH
+from cortx.utils.log import Log as logger
 
 class WebServices(object):
     # Http Methods
@@ -47,6 +48,7 @@ class WebServices(object):
     def __init__(self):
         super(WebServices, self).__init__()
 
+        logger.init(service_name="sspl", log_path=SSPL_LOG_PATH)
         self.http_methods = [self.HTTP_GET, self.HTTP_POST]
 
     def ws_request(self, method, url, hdrs, postdata, tout):
