@@ -778,16 +778,9 @@ if __name__ == "__main__":
         sys.exit(os.EX_USAGE)
 
     # Initialize logging
-    try:
-        logging_level = Conf.get(SSPL_CONF, f"{SYSTEM_INFORMATION}>{LOG_LEVEL}", "INFO")
-        init_logging("sspl", SSPL_LOG_PATH , logging_level)
-
-    except Exception as err:
-        # We don't have logger since it threw an exception, use generic 'print'
-        print("[ Error ] when initializing logging :")
-        print(err)
-        print("Exiting ...")
-        sys.exit(os.EX_USAGE)
+    logging_level = Conf.get(SSPL_CONF, f"{SYSTEM_INFORMATION}>{LOG_LEVEL}", "INFO")
+    init_logging("sspl", SSPL_LOG_PATH , logging_level)
+    logger.info(f"Logging has been initialized for SSPL !!!")
 
     # Handle signals for log level change
     # signal.signal(signal.SIGUSR1, set_log_level)

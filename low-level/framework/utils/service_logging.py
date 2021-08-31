@@ -19,12 +19,19 @@
  ****************************************************************************
 """
 
+import sys
+import os
 from cortx.utils.log import Log
 
 def init_logging(dcs_service_name, file_path, log_level="INFO"):
     """Initialize logging for SSPL component."""
-    Log.init(service_name=dcs_service_name, log_path=file_path, level=log_level)
-    Log.info(f"Logging has been initialized for {dcs_service_name} !!!")
+    try:
+        Log.init(service_name=dcs_service_name, log_path=file_path, level=log_level)
+    except Exception as err:
+        print("[ Error ] when initializing logging :")
+        print(err)
+        print("Exiting ...")
+        sys.exit(os.EX_USAGE)
 
 logger = Log
 
