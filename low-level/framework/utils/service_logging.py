@@ -22,9 +22,9 @@
 from cortx.utils.log import Log
 
 def init_logging(dcs_service_name, file_path, log_level="INFO"):
-    """Initialize logging for SSPL component"""
+    """Initialize logging for SSPL component."""
     Log.init(service_name=dcs_service_name, log_path=file_path, level=log_level)
-    logger.info("Logging has been initialized for SSPL !!!")
+    Log.info(f"Logging has been initialized for {dcs_service_name} !!!")
 
 logger = Log
 
