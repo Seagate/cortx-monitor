@@ -21,6 +21,7 @@
 
 import sys
 import os
+import syslog
 from cortx.utils.log import Log
 
 def init_logging(dcs_service_name, file_path, log_level="INFO"):
@@ -28,10 +29,8 @@ def init_logging(dcs_service_name, file_path, log_level="INFO"):
     try:
         Log.init(service_name=dcs_service_name, log_path=file_path, level=log_level)
     except Exception as err:
-        print("[ Error ] when initializing logging :")
-        print(err)
-        print("Exiting ...")
-        sys.exit(os.EX_USAGE)
+        syslog.syslog(f"[ Error ] CORTX Logger Init failed with error {err}")
+        sys.exit(os.EX_SOFTWARE)
 
 logger = Log
 
