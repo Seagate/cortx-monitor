@@ -50,10 +50,10 @@ else
         command=$2
         case $command in
                 "list")
-                        filename="$BASE_PATH/sspl_test/functional_tests/ipmi_simulator/ipmi_mock_data/sel_list.txt"
+                        filename="$BASE_PATH/sspl_test/functional_tests/v2/ipmi_simulator/ipmi_mock_data/sel_list.txt"
                         ;;
                 "info")
-                        filename="$BASE_PATH/sspl_test/functional_tests/ipmi_simulator/ipmi_mock_data/sel_info.txt"
+                        filename="$BASE_PATH/sspl_test/functional_tests/v2/ipmi_simulator/ipmi_mock_data/sel_info.txt"
                         ;;
         esac
         if [ "$filename" == "" ]; then
@@ -68,16 +68,16 @@ else
         command=${@:3}
         case $command in
                 "Fan")
-                        filename="$BASE_PATH/sspl_test/functional_tests/ipmi_simulator/ipmi_mock_data/fan.txt"
+                        filename="$BASE_PATH/sspl_test/functional_tests/v2/ipmi_simulator/ipmi_mock_data/fan.txt"
                         ;;
                 "Power Supply")
-                        filename="$BASE_PATH/sspl_test/functional_tests/ipmi_simulator/ipmi_mock_data/power_supply.txt"
+                        filename="$BASE_PATH/sspl_test/functional_tests/v2/ipmi_simulator/ipmi_mock_data/power_supply.txt"
                         ;;
                 "Power Unit")
-                        filename="$BASE_PATH/sspl_test/functional_tests/ipmi_simulator/ipmi_mock_data/power_unit.txt"
+                        filename="$BASE_PATH/sspl_test/functional_tests/v2/ipmi_simulator/ipmi_mock_data/power_unit.txt"
                         ;;
                 "Drive Slot / Bay")
-                        filename="$BASE_PATH/sspl_test/functional_tests/ipmi_simulator/ipmi_mock_data/disk.txt"
+                        filename="$BASE_PATH/sspl_test/functional_tests/v2/ipmi_simulator/ipmi_mock_data/disk.txt"
                         ;;
                 *)
                         echo "No records found for given sdr or Invalid command - $@. IPMISIMTOOL can't process it."
@@ -89,7 +89,7 @@ else
 
     # handle 'sensor list' commands
     if [ "$1 $2" == "sensor list" ]; then
-        filename="$BASE_PATH/sspl_test/functional_tests/ipmi_simulator/ipmi_mock_data/sensor_list.txt"
+        filename="$BASE_PATH/sspl_test/functional_tests/v2/ipmi_simulator/ipmi_mock_data/sensor_list.txt"
         printf "$(cat $filename)"
     fi
 
@@ -99,16 +99,16 @@ else
         command=${@:3}
         case $command in
                 "Fan Redundancy")
-                        filename="$BASE_PATH/sspl_test/functional_tests/ipmi_simulator/ipmi_mock_data/sensor_fan_redund.txt"
+                        filename="$BASE_PATH/sspl_test/functional_tests/v2/ipmi_simulator/ipmi_mock_data/sensor_fan_redund.txt"
                         ;;
                 "PS2 Status")
-                        filename="$BASE_PATH/sspl_test/functional_tests/ipmi_simulator/ipmi_mock_data/sensor_ps2.txt"
+                        filename="$BASE_PATH/sspl_test/functional_tests/v2/ipmi_simulator/ipmi_mock_data/sensor_ps2.txt"
                         ;;
                 "HDD 0 Status")
-                        filename="$BASE_PATH/sspl_test/functional_tests/ipmi_simulator/ipmi_mock_data/sensor_hdd0.txt"
+                        filename="$BASE_PATH/sspl_test/functional_tests/v2/ipmi_simulator/ipmi_mock_data/sensor_hdd0.txt"
                         ;;
                 "Pwr Unit Redund")
-                        filename="$BASE_PATH/sspl_test/functional_tests/ipmi_simulator/ipmi_mock_data/sensor_pw_unit.txt"
+                        filename="$BASE_PATH/sspl_test/functional_tests/v2/ipmi_simulator/ipmi_mock_data/sensor_pw_unit.txt"
                         ;;
                 *)
                         echo "No records found for the sensor or Invalid command - $@. IPMISIMTOOL can't process it."
@@ -128,7 +128,7 @@ else
                 echo "No records found for the entity id. IPMISIMTOOL can't process it."
                 exit 1
         fi
-        res=`egrep "\|[ ]+$3 \|" $BASE_PATH/sspl_test/functional_tests/ipmi_simulator/ipmi_mock_data/entity.txt`
+        res=`egrep "\|[ ]+$3 \|" $BASE_PATH/sspl_test/functional_tests/v2/ipmi_simulator/ipmi_mock_data/entity.txt`
         if [ "$res" == "" ]; then
                 echo "No fru found for given entity id $3"
                 exit 1
@@ -142,16 +142,16 @@ else
         command=${@:3}
         case $command in
                 "Fan Redundancy")
-                        filename="$BASE_PATH/sspl_test/functional_tests/ipmi_simulator/ipmi_mock_data/sdr_fan_redund.txt"
+                        filename="$BASE_PATH/sspl_test/functional_tests/v2/ipmi_simulator/ipmi_mock_data/sdr_fan_redund.txt"
                         ;;
                 "PS2 Status")
-                        filename="$BASE_PATH/sspl_test/functional_tests/ipmi_simulator/ipmi_mock_data/sdr_ps2.txt"
+                        filename="$BASE_PATH/sspl_test/functional_tests/v2/ipmi_simulator/ipmi_mock_data/sdr_ps2.txt"
                         ;;
                 "HDD 0 Status")
-                        filename="$BASE_PATH/sspl_test/functional_tests/ipmi_simulator/ipmi_mock_data/sdr_hdd0.txt"
+                        filename="$BASE_PATH/sspl_test/functional_tests/v2/ipmi_simulator/ipmi_mock_data/sdr_hdd0.txt"
                         ;;
                 "Pwr Unit Redund")
-                        filename="$BASE_PATH/sspl_test/functional_tests/ipmi_simulator/ipmi_mock_data/sdr_pw_unit.txt"
+                        filename="$BASE_PATH/sspl_test/functional_tests/v2/ipmi_simulator/ipmi_mock_data/sdr_pw_unit.txt"
                         ;;
                 *)
                         echo "No records found for the sensor or Invalid command - $@. IPMISIMTOOL can't process it."

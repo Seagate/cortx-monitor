@@ -69,7 +69,7 @@ class SSHHandler:
 
     def execute_remote_test(self, ts, tc):
         cmd = (
-            "python3 /opt/seagate/cortx/sspl/sspl_test/functional_tests/sspl_test_receiver.py --ts %s --tc %s"
+            "python3 /opt/seagate/cortx/sspl/sspl_test/functional_tests/v2/sspl_test_receiver.py --ts %s --tc %s"
             % (ts, tc)
         )
         print(cmd)

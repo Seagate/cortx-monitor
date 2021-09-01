@@ -304,11 +304,11 @@ then
 else
     # Update sspl_tests.conf with updated System Information
     # append above parsed key-value pairs in sspl_tests.conf under [SYSTEM_INFORMATION] section
-    sed -i 's/node_id: .*/node_id: '"$node_id"'/g' /opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/functional_tests/conf/sspl_tests.conf
-    sed -i 's/site_id: 001/site_id: '"$site_id"'/g' /opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/functional_tests/conf/sspl_tests.conf
-    sed -i 's/rack_id: 001/rack_id: '"$rack_id"'/g' /opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/functional_tests/conf/sspl_tests.conf
-    sed -i 's/cluster_id: .*/cluster_id: '"$cluster_id"'/g' /opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/functional_tests/conf/sspl_tests.conf
-    sed -i 's/cluster_nodes: localhost/cluster_nodes: '"$cluster_nodes"'/g' /opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/functional_tests/conf/sspl_tests.conf
+    sed -i 's/node_id: .*/node_id: '"$node_id"'/g' /opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/functional_tests/v2/conf/sspl_tests.conf
+    sed -i 's/site_id: 001/site_id: '"$site_id"'/g' /opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/functional_tests/v2/conf/sspl_tests.conf
+    sed -i 's/rack_id: 001/rack_id: '"$rack_id"'/g' /opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/functional_tests/v2/conf/sspl_tests.conf
+    sed -i 's/cluster_id: .*/cluster_id: '"$cluster_id"'/g' /opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/functional_tests/v2/conf/sspl_tests.conf
+    sed -i 's/cluster_nodes: localhost/cluster_nodes: '"$cluster_nodes"'/g' /opt/seagate/$PRODUCT_FAMILY/sspl/sspl_test/functional_tests/v2/conf/sspl_tests.conf
 fi
 
 if [ "$IS_VIRTUAL" == "true" ]

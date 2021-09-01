@@ -45,7 +45,7 @@ class SSPLTestCmd:
         self.coverage_enabled = self.args.coverage
         self.test_dir = f"/opt/seagate/{PRODUCT_FAMILY}/sspl/sspl_test"
         if self.args.v2:
-            self.test_dir = f"/opt/seagate/{PRODUCT_FAMILY}/sspl/sspl_test/functional_tests"
+            self.test_dir = f"/opt/seagate/{PRODUCT_FAMILY}/sspl/sspl_test/functional_tests/v2"
             sspl_constants.sspl_test_file_path = sspl_testv2_file_path
             sspl_constants.sspl_test_config_path = sspl_testv2_config_path
 

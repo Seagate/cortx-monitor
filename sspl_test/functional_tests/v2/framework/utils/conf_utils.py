@@ -143,7 +143,7 @@ global_config = Conf.get(SSPL_CONF, "SYSTEM_INFORMATION>global_config_copy_url")
 Conf.load(GLOBAL_CONF, global_config)
 Conf.load(
     SSPL_TEST_CONF,
-    "yaml:///opt/seagate/cortx/sspl/sspl_test/functional_tests/conf/sspl_tests.conf",
+    "yaml:///opt/seagate/cortx/sspl/sspl_test/functional_tests/v2/conf/sspl_tests.conf",
 )
 
 SRVNODE = Conf.get(GLOBAL_CONF, "server_node>%s>name" % MACHINE_ID)
