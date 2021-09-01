@@ -31,6 +31,7 @@ from framework.platforms.server.network import Network
 from framework.platforms.server.platform import Platform
 from framework.platforms.server.raid import RAIDs
 from framework.platforms.server.sas import SAS
+from framework.platforms.server.cpu import CPU
 from framework.platforms.server.software import BuildInfo, Service
 from framework.utils.mon_utils import MonUtils
 from framework.utils.conf_utils import (GLOBAL_CONF, NODE_TYPE_KEY, SSPL_CONF,
@@ -231,39 +232,18 @@ class ServerHealth():
         server.append(info)
         return server
 
-    @staticmethod
-    def get_cpu_usage(index=2, percpu=False):
-        """Get CPU usage list."""
-        i = 0
-        cpu_usage = None
-        while i < index:
-            cpu_usage = psutil.cpu_percent(interval=None, percpu=percpu)
-            time.sleep(1)
-            i = i + 1
-        return cpu_usage
-
-    def get_cpu_list(self, mode):
-        """Returns the CPU list as per specified mode."""
-        cpu_info_path = Path(self.cpu_path + mode)
-        # Read the text from /cpu/online file
-        cpu_info = cpu_info_path.read_text()
-        # Drop the \n character from the end of string
-        cpu_info = cpu_info.rstrip('\n')
-        # Convert the string to list of indexes
-        cpu_list = self.sysfs.convert_cpu_info_list(cpu_info)
-        return cpu_list
-
     def get_cpu_info(self, add_overall_usage=False):
         """Update and return CPU information in specific format."""
         per_cpu_data = []
-        cpu_present = self.get_cpu_list("present")
-        cpu_online = self.get_cpu_list("online")
-        cpu_usage = self.get_cpu_usage(percpu=True)
+        cpu_info_dict = CPU().get_cpu_info()
+        cpu_present = cpu_info_dict["cpu_present"]
+        cpu_online =  cpu_info_dict["online_cpus"]
+        cpu_usage = cpu_info_dict["cpu_usage"]
         cpu_usage_dict = dict(zip(cpu_online, cpu_usage))
         overall_cpu_usage = list(psutil.getloadavg())
         cpu_count = len(cpu_present)
         overall_usage = {
-            "current": self.get_cpu_usage(percpu=False),
+            "current": psutil.cpu_percent(interval=2, percpu=False),
             "1_min_avg": overall_cpu_usage[0],
             "5_min_avg": overall_cpu_usage[1],
             "15_min_avg": overall_cpu_usage[2]
