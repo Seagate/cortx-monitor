@@ -55,7 +55,6 @@ class SSPLTestCmd:
         else:
             self.sspl_test_gc_url = global_config_path
         self.sspl_test_gc_copy_file = "/etc/sspl_test_gc_url.yaml"
-        self.test_iem_file = "/tmp/test_iem_log_messages"
 
     def validate(self):
         """Check for required packages are installed."""
@@ -220,11 +219,6 @@ class SSPLTestCmd:
                 SSPL_CONFIG_INDEX,
                 "NODEDATAMSGHANDLER>high_memory_usage_wait_threshold",
                 memory_usage_alert_wait_new)
-
-            iem_log_file = Conf.get(SSPL_CONFIG_INDEX, "IEMSENSOR>log_file_path")
-            with open(self.test_iem_file, "w") as f:
-                f.write("")
-            Conf.set(SSPL_CONFIG_INDEX, "IEMSENSOR>log_file_path", self.test_iem_file)
             Conf.save(SSPL_CONFIG_INDEX)
 
             # TODO: Convert shell script to python
@@ -262,17 +256,11 @@ class SSPLTestCmd:
             Conf.set(SSPL_CONFIG_INDEX,
                      "NODEDATAMSGHANDLER>high_memory_usage_wait_threshold",
                      memory_usage_alert_wait)
-            Conf.set(SSPL_CONFIG_INDEX, "IEMSENSOR>log_file_path",
-                     iem_log_file)
             Conf.save(SSPL_CONFIG_INDEX)
             shutil.copyfile(sspl_test_backup, sspl_test_file_path)
             if rc != 0:
                 raise TestException(
                     "%s - ERROR: %s - CMD %s" % (self.name, error, CMD))
-
-            # Remove IEM test specific file
-            if os.path.exists(self.test_iem_file):
-                os.remove(self.test_iem_file)
 
             print('Restarting the SSPL service..')
             CMD = "systemctl restart sspl-ll"

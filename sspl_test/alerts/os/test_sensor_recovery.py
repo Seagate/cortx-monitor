@@ -21,14 +21,15 @@ from default import world
 from common import (
     check_sspl_ll_is_running, get_fru_response, send_node_controller_message_request,
     get_current_node_id, send_thread_controller_actuator_request)
+from framework.base.sspl_constants import DATA_PATH
 from framework.utils.conf_utils import Conf, SSPL_CONF, SSPL_LL_SETTING
 from messaging.ingress_processor_tests import IngressProcessorTests
 from messaging.egress_processor_tests import EgressProcessorTests
 
 
-resource_id = "IEMSensor"
+resource_id = "NodeHWsensor"
 resource_type = "node:sw:cortx_sw_services:sspl"
-test_iem_file = Conf.get(SSPL_CONF, f"{resource_id.upper()}>log_file_path")
+test_file = f"{DATA_PATH}/server/activate_ipmisimtool"
 
 
 def init(args):
@@ -53,7 +54,11 @@ def get_maximum_recovery_time(module_name):
     recovery_interval = Conf.get(
         SSPL_CONF,
         f"{module_name.upper()}>sensor_recovery_interval", recovery_interval)
-    return recovery_count * recovery_interval
+    # recovery cycle time
+    polling_frequency = Conf.get(
+        SSPL_CONF,
+        f"{module_name.upper()}>polling_interval", 60)
+    return recovery_count * recovery_interval + polling_frequency
 
 
 def execute_module_thread_operation(action, thread_response, wait_time=None, resp_timeout=60):
@@ -89,16 +94,16 @@ def execute_module_thread_operation(action, thread_response, wait_time=None, res
     assert tc.get("thread_response") == thread_response
 
 
-def simulate_IEM_sensor_failure():
-    """Remove IEM log message file for raising fault alert."""
-    if os.path.exists(test_iem_file):
-        os.remove(test_iem_file)
+def simulate_NodeHWsensor_failure():
+    """Remove activate_ipmisimtool for raising fault alert."""
+    if os.path.exists(test_file):
+        os.remove(test_file)
 
 
-def simulate_IEM_sensor_recovery():
-    """Create IEM log message file for raising fault_resolved alert."""
-    if not os.path.exists(test_iem_file):
-        with open(test_iem_file, "w") as f:
+def simulate_NodeHWsensor_recovery():
+    """Create activate_ipmisimtool for raising fault_resolved alert."""
+    if not os.path.exists(test_file):
+        with open(test_file, "w") as f:
             f.write("")
 
 
@@ -111,7 +116,7 @@ def test_sensor_unrecoverable_failure_alert(args):
     Verify sensor module is not running
     """
     check_sspl_ll_is_running()
-    simulate_IEM_sensor_failure()
+    simulate_NodeHWsensor_failure()
     # Wait until know its unrecoverable error
     ingressMsg = get_fru_response(resource_type, resource_id,
                                   ingress_msg_type="sensor_response_type",
@@ -122,16 +127,15 @@ def test_sensor_unrecoverable_failure_alert(args):
     assert sensor_msg.get("alert_type") == "fault"
     assert sensor_msg.get("severity") == "critical"
     assert sensor_msg.get("host_id")
-    assert sensor_msg.get("info")
     info = sensor_msg.get("info")
     assert info
     assert info.get("site_id")
     assert info.get("node_id")
     assert info.get("rack_id")
     assert info.get("event_time")
-    assert info.get("impact") is not None
+    assert info.get("impact")
     assert info.get("recommendation") == "Restart SSPL service"
-    assert info.get("description") is not None
+    assert info.get("description")
     assert info.get("resource_type") == resource_type
     assert info.get("resource_id") == resource_id
     execute_module_thread_operation(action="status",
@@ -145,7 +149,7 @@ def test_sensor_recovery_success(args):
     Restart sensor module
     Verify sensor module is recovered and running
     """
-    simulate_IEM_sensor_recovery()
+    simulate_NodeHWsensor_recovery()
     execute_module_thread_operation(action="restart",
                                     thread_response="Restart Successful")
     execute_module_thread_operation(action="status",

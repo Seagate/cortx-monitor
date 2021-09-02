@@ -124,7 +124,7 @@ def execute_thread(module, msgQlist, conf_reader, product, resume=True):
             logger.error(err_msg)
             if attempt > recovery_count:
                 logger.debug(traceback.format_exc())
-                description = f"{module_name} is stopped and unrecoverable due to {err_msg}"
+                description = f"{module_name} is stopped and unrecoverable. {err_msg}"
                 impact = module.impact()
                 recommendation = "Restart SSPL service"
                 logger.critical(
@@ -172,11 +172,10 @@ def _check_module_recovered(module):
     state is fault, raise fault_resolved alert and update cache.
     """
     module_name = module.name()
-    # Before raising module recovery fault_resolved alert, wait till
-    # no fault seen with sensor module after some recovery cycle time.
-    recovery_cycle = 2
-    recovery_count, recovery_interval = _get_recovery_config(module_name)
-    time.sleep(recovery_count * recovery_interval * recovery_cycle)
+    # Wait till sensor module completes few run cycle. Then
+    # raise module recovery fault_resolved alert.
+    polling_cycle_time = 300
+    time.sleep(polling_cycle_time)
     if not module.is_running():
         return
 
@@ -323,6 +322,7 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
                     continue_waiting = True
 
             if continue_waiting:
+                logger.debug("ThreadController, waiting for all modules to initialize")
                 self._scheduler.enter(10, self._priority, self.run, ())
                 return
 

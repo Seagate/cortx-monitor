@@ -22,6 +22,7 @@
  ****************************************************************************
 """
 
+from datetime import datetime
 import uuid
 import inspect
 import traceback
@@ -248,7 +249,7 @@ def send_node_controller_message_request(uuid, resource_type, instance_id="*"):
         "description":"Seagate Storage Platform Library - Actuator Request",
         "title":"SSPL-LL Actuator Request",
         "signature":"None",
-        "time":"2018-07-31 04:08:04.071170",
+        "time": str(datetime.now()),
         "message":{
             "sspl_ll_msg_header":{
                 "msg_version":"1.0.0",
@@ -280,7 +281,7 @@ def send_enclosure_request(resource_type, resource_id):
 
         "username" : "JohnDoe",
         "signature" : "None",
-        "time" : "2015-05-29 14:28:30.974749",
+        "time": str(datetime.now()),
         "expires" : 500,
 
         "message" : {
@@ -319,7 +320,7 @@ def send_thread_controller_actuator_request(module_name, state):
         "description":"Seagate Storage Platform Library - Actuator Request",
         "title":"SSPL-LL Actuator Request",
         "signature":"None",
-        "time":"2021-08-20 12:23.10.071170",
+        "time": str(datetime.now()),
         "message":{
             "sspl_ll_msg_header":{
                 "msg_version":"1.0.0",

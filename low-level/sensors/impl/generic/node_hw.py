@@ -134,9 +134,6 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         "Protocol Vendor ID": "7154"}
 
     channel_err = False
-
-    sdr_reset_required = False
-    request_shutdown = False
     sel_last_queried = None
     SEL_QUERY_FREQ = 300
 
@@ -258,6 +255,8 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
 
         # Initialize internal message queues for this module
         super(NodeHWsensor, self).initialize_msgQ(msgQlist)
+        self.sdr_reset_required = False
+        self.request_shutdown = False
 
         ipmi_client_name = Conf.get(SSPL_CONF, f"{NODEHWSENSOR}>{IPMI_CLIENT}",
                                     "ipmitool")
