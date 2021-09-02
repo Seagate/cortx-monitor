@@ -254,9 +254,13 @@ class NodeData(Debug):
         try:
             carrier_status = Network().get_link_state(interface)
         except NetworkError as err:
+            # NetworkError i.e. all OSError exceptions indicate that
+            # the carrier file is not available to access which
+            # constitute the UNKOWN status for network cable.
             logger.debug(err)
             carrier_status = "UNKNOWN"
         except Exception as e:
+            # All other exceptions are unexpected and are logged as errors.
             logger.excpetion(
                 "Problem occured while reading from nw carrier file:"
                 f" {self.nw_interface_path}/{interface}/carrier. Error: {e}")
