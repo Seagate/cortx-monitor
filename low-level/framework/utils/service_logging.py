@@ -24,13 +24,24 @@ import os
 import syslog
 from cortx.utils.log import Log
 
-def init_logging(dcs_service_name, file_path, log_level="INFO"):
+
+def init_logging(service_name, file_path, log_level="INFO"):
     """Initialize logging for SSPL component."""
+    # Log rotation is configured within cortx-utils with
+    # following attributes:
+    #   backup_count: 10,
+    #   file_size_in_mb: 10,
+    #   max_bytes: file_size_in_mb * 1024 * 1024
+    #
+    # It is recommended to refer to cortx-utils repo for
+    # latest values of these attributes.
     try:
-        Log.init(service_name=dcs_service_name, log_path=file_path, level=log_level)
+        Log.init(service_name=service_name,
+                 log_path=file_path, level=log_level)
     except Exception as err:
         syslog.syslog(f"[ Error ] CORTX Logger Init failed with error {err}")
         sys.exit(os.EX_SOFTWARE)
+
 
 logger = Log
 
