@@ -1,0 +1,9 @@
+System Fan 1A    | 11020.000  | RPM        | ok    | na        | 1045.000  | 1235.000  | na        | na        | na
+System Fan 1B    | 10396.000  | RPM        | ok    | na        | 1104.000  | 1288.000  | na        | na        | na
+System Fan 2A    | 10735.000  | RPM        | ok    | na        | 1045.000  | 1235.000  | na        | na        | na
+System Fan 2B    | 10488.000  | RPM        | ok    | na        | 1104.000  | 1288.000  | na        | na        | na
+PS1 Input Power  | 154.000    | Watts      | ok    | na        | na        | na        | 1358.000  | 1512.000  | na
+PS2 Input Power  | 0.000      | Watts      | ok    | na        | na        | na        | 1358.000  | 1512.000  | na
+Fan Redundancy   | 0x0        | discrete   | 0x0180| na        | na        | na        | na        | na        | na
+HDD 0 Status     | 0x0        | discrete   | 0x0180| na        | na        | na        | na        | na        | na
+HDD 1 Status     | 0x0        | discrete   | 0x0180| na        | na        | na        | na        | na        | na

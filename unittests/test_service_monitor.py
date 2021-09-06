@@ -40,7 +40,8 @@ class TestServiceMonitor(unittest.TestCase):
         self.mocked_conf_values = {
             "SERVICEMONITOR>thread_sleep": "1",
             "SERVICEMONITOR>polling_frequency": "5",
-            "SERVICEMONITOR>threshold_inactive_time": "10"
+            "SERVICEMONITOR>threshold_inactive_time": "10",
+            "SERVICEMONITOR>threshold_waiting_time": "10"
         }
         self.mocked_properties_value = {
             "Id": "spam.service",
@@ -115,6 +116,9 @@ class TestServiceMonitor(unittest.TestCase):
             fault_alert["sensor_request_type"]["service_status_alert"][
                 "specific_info"]["state"], "failed")
 
+    @patch(
+        'sensors.impl.centos_7.service_monitor.Service.in_same_state_for_threshold_time',
+        new=Mock(return_value=True))
     def test_fault_alert_if_service_change_state_from_active_to_failed(self):
         self.service_active_at_start()
         self.mocked_properties_value["ActiveState"] = "failed"
@@ -151,7 +155,7 @@ class TestServiceMonitor(unittest.TestCase):
                                     "spam.service"].properties_changed_handler,
                                 "", "", ""))
         self.service_monitor.services[
-            "spam.service"].is_active_for_threshold_time = Mock(
+            "spam.service"].in_same_state_for_threshold_time = Mock(
             return_value=True)
         self.service_monitor_run_iteration()
         self.assertEqual(self.service_monitor._write_internal_msgQ.call_count,
@@ -168,6 +172,9 @@ class TestServiceMonitor(unittest.TestCase):
             resolved_alert["sensor_request_type"]["service_status_alert"][
                 "specific_info"]["state"], "active")
 
+    @patch(
+        'sensors.impl.centos_7.service_monitor.Service.in_same_state_for_threshold_time',
+        new=Mock(return_value=True))
     def fail_service_at_start(self):
         self.mocked_properties_value["ActiveState"] = "failed"
         self.service_monitor.initialize(Mock(), Mock(), Mock())
@@ -201,7 +208,7 @@ class TestServiceMonitor(unittest.TestCase):
             "service_state": "inactive",
             "service_monitor_state": InactiveState,
             "nonactive_enter_timestamp": time.time() - 999,
-            "active_enter_timestamp": time.time()
+            "waiting_timestamp": time.time()
         })
         self.service_monitor.initialize(Mock(), Mock(), Mock())
         self.assertIs(
@@ -220,6 +227,10 @@ class TestServiceMonitor(unittest.TestCase):
         self.service_monitor_run_iteration()
         self.service_monitor._write_internal_msgQ.assert_not_called()
 
+
+    @patch(
+        'sensors.impl.centos_7.service_monitor.Service.in_same_state_for_threshold_time',
+        new=Mock(return_value=True))
     def test_alert_for_enabled_service(self):
         # Service is disabled at start
         self.test_no_alert_for_disabled_service()

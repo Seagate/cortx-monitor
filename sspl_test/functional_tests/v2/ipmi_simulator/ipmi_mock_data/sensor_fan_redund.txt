@@ -1,0 +1,6 @@
+Locating sensor record...
+Sensor ID              : Fan Redundancy (0xc)
+ Entity ID             : 30.1
+ Sensor Type (Discrete): Fan
+ States Asserted       : Fan
+                         [Fully Redundant]
