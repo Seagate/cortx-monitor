@@ -86,8 +86,14 @@ This guide provides a step-by-step walkthrough for getting you CORTX-Monitor Ser
     ```
 
 2. Build RPMs
-    
-   1. Checkout the main branch
+
+   1. Start Docker
+      ```sh
+      sudo systemctl start docker
+      sudo systemctl status docker
+      ```
+
+   2. Checkout the main branch
    
         `docker run --rm -v /root/cortx:/cortx-workspace ghcr.io/seagate/cortx-build:centos-7.8.2003 make checkout BRANCH=main`  
     
@@ -100,7 +106,7 @@ This guide provides a step-by-step walkthrough for getting you CORTX-Monitor Ser
         make: *** [checkout] Error 1
         ```
 
-   2. Build cortx-monitor RPMs
+   3. Build cortx-monitor RPMs
         ```
         docker run --rm -v /var/artifacts:/var/artifacts -v ~/cortx:/cortx-workspace ghcr.io/seagate/cortx-build:centos-7.8.2003 make clean cortx-prvsnr cortx-monitor cortx-prereq release_build
         ```
