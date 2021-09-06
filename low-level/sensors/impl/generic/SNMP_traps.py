@@ -61,7 +61,7 @@ class SNMPtraps(SensorThread, InternalMsgQ):
     @staticmethod
     def impact():
         """Returns impact of the module."""
-        return "SNMP traps in server can not be monitored."
+        return "Platform SNMP traps monitoring disabled."
 
     def __init__(self):
         super(SNMPtraps, self).__init__(self.SENSOR_NAME,

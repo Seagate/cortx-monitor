@@ -111,7 +111,7 @@ class RealStorLogicalVolumeSensor(SensorThread, InternalMsgQ):
     @staticmethod
     def impact():
         """Returns impact of the module."""
-        return "Disk group volumes in storage enclosure can not be monitored."
+        return "Disk groups and logical volumes of storage enclosure can not be monitored."
 
     @staticmethod
     def dependencies():

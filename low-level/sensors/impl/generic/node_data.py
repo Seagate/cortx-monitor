@@ -61,8 +61,8 @@ class NodeData(Debug):
     @staticmethod
     def impact():
         """Returns impact of the module."""
-        return ("CPU, network, disk space, process and local mount "
-                "data can not be monitored in server.")
+        return ("Server CPU, network, disk space, process and local mount "
+                "data can not be monitored.")
 
     def __init__(self):
         super(NodeData, self).__init__()

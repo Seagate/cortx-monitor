@@ -252,12 +252,14 @@ class SensorThread(ScheduledModuleThread):
 
     def start_thread(self, conf_reader, msgQlist, product):
         logger.debug("Begin {}.start_thread()".format(self.__class__.__name__))
+        self.init_status = InitState.INITIALIZING
         try:
             self.initialize(conf_reader, msgQlist, product)
-            self.init_status = InitState.INIT_SUCCESS
         except Exception as err:
             self.status = self.init_status = InitState.INIT_FAILED
             raise Exception("initialize() failed. {}".format(err))
+
+        self.init_status = InitState.INIT_SUCCESS
 
         self.lock.acquire()
 

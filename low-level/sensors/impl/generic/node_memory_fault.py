@@ -74,7 +74,7 @@ class MemFaultSensor(SensorThread, InternalMsgQ):
     @staticmethod
     def impact():
         """Returns impact of the module."""
-        return "Memory usage can not be monitored in server."
+        return "Server memory usage can not be monitored."
 
     def __init__(self, utility_instance=None):
         """init method"""

@@ -154,7 +154,7 @@ def execute_thread(module, msgQlist, conf_reader, product, resume=True):
                 time.sleep(recovery_interval)
 
             # Shutdown if no recovery attempt
-            logger.info(f"Shutting down, {module_name}")
+            logger.info(f"Terminating monitoring thread {module_name}")
             module.shutdown()
             retry = 5
             while module.is_running():

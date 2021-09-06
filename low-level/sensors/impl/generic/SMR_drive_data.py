@@ -60,7 +60,7 @@ class SMRdriveData(SensorThread, InternalMsgQ):
     @staticmethod
     def impact():
         """Returns impact of the module."""
-        return "SMR drives in server can not be monitored."
+        return "Server SMR drives can not be monitored."
 
     def __init__(self):
         super(SMRdriveData, self).__init__(self.SENSOR_NAME,

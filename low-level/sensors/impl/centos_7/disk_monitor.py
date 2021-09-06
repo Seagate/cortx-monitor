@@ -101,7 +101,7 @@ class DiskMonitor(SensorThread, InternalMsgQ):
     @staticmethod
     def impact():
         """Returns impact of the module."""
-        return "Disks in server can not be monitored."
+        return "Server disks can not be monitored."
 
     def __init__(self):
         super(DiskMonitor, self).__init__(self.SENSOR_NAME,

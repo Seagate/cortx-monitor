@@ -103,7 +103,7 @@ class SASPortSensor(SensorThread, InternalMsgQ):
     @staticmethod
     def impact():
         """Returns impact of the module."""
-        return "SAS ports can not be monitored in server."
+        return "Server SAS ports can not be monitored."
 
     def __init__(self, utility_instance=None):
         """init method"""

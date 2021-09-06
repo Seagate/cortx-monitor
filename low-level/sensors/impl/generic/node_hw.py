@@ -162,8 +162,8 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
     @staticmethod
     def impact():
         """Returns impact of the module."""
-        return ("FRUs such as fan, power supply, psu, drives and "
-                "platform sensors can not be monitored in server.")
+        return ("Server FRUs such as fan, power supply, psu, drives and "
+                "platform sensors can not be monitored.")
 
     def __init__(self):
         super(NodeHWsensor, self).__init__(self.SENSOR_NAME.upper(), self.PRIORITY)

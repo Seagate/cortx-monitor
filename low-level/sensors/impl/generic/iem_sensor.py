@@ -94,7 +94,7 @@ class IEMSensor(SensorThread, InternalMsgQ):
     @staticmethod
     def impact():
         """Returns impact of the module."""
-        return "Interesting events in server can not be monitored."
+        return "CORTX Software Events(IEMs) can not be processed and highlighted."
 
     @staticmethod
     def dependencies():
