@@ -62,6 +62,7 @@ ENCL_DOWNLOAD_LOG_WAIT_BEFORE_RETRY = 15
 PRODUCT_BASE_DIR = "/opt/seagate/%s/" % (PRODUCT_FAMILY)
 SSPL_BASE_DIR = "%s/sspl" % (PRODUCT_BASE_DIR)
 SSPL_CLI_DIR = "%s/low-level/cli" % (SSPL_BASE_DIR)
+RSYSLOG_IEM_CONF ="/etc/rsyslog.d/0-iemfwd.conf"
 SSPL_LOG_PATH = "/var/log/%s/sspl/" % PRODUCT_FAMILY
 SSPL_BUNDLE_PATH = "/var/%s/sspl/bundle/" % PRODUCT_FAMILY
 SETUP_LOG_PATH = "/var/log/%s/sspl/sspl-setup.log" % PRODUCT_FAMILY
