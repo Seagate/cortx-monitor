@@ -93,6 +93,9 @@ def execute_thread(module, msgQlist, conf_reader, product, resume=True):
         no recovery attempt will be made.
     """
     module_name = module.name()
+    # Suspend module threads
+    if resume == False:
+        module.suspend()
 
     # Initialize persistent cache for sensor status
     per_data_path = os.path.join(
@@ -112,9 +115,6 @@ def execute_thread(module, msgQlist, conf_reader, product, resume=True):
     while attempt <= recovery_count:
         attempt += 1
         try:
-            # Suspend module threads
-            if resume == False:
-                module.suspend()
             # Each module is passed a reference list to message queues so it
             # can transmit internal messages to other modules as desired
             module.start_thread(conf_reader, msgQlist, product)
@@ -174,7 +174,8 @@ def _check_module_recovered(module):
     module_name = module.name()
     # Wait till sensor module completes few run cycle. Then
     # raise module recovery fault_resolved alert.
-    polling_cycle_time = 300
+    polling_cycle_time = Conf.get(
+        SSPL_CONF, f"{SSPL_LL_SETTING}>sensor_polling_cycle_time", 60)
     time.sleep(polling_cycle_time)
     if not module.is_running():
         return
@@ -316,9 +317,7 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
                 thread_init_status = m.get_thread_init_status()
                 logger.debug("Thread status for {} is {}".format(
                     m.__class__, thread_init_status))
-                if thread_init_status == SensorThreadState.FAILED:
-                    m.shutdown()
-                elif thread_init_status == SensorThreadState.WAITING:
+                if thread_init_status == SensorThreadState.WAITING:
                     continue_waiting = True
 
             if continue_waiting:

@@ -62,8 +62,7 @@ class DriveManager(SensorThread, InternalMsgQ):
     @staticmethod
     def impact():
         """Returns impact of the module."""
-        return ("Drive path changes can not be monitored "
-                "on storage enclosure and server.")
+        return "Disks in server can not be monitored."
 
     def __init__(self):
         super(DriveManager, self).__init__(self.SENSOR_NAME,

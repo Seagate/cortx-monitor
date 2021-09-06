@@ -162,7 +162,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
     @staticmethod
     def impact():
         """Returns impact of the module."""
-        return ("FRUs such as fan, power supply, psu, drives and  "
+        return ("FRUs such as fan, power supply, psu, drives and "
                 "platform sensors can not be monitored in server.")
 
     def __init__(self):
@@ -678,7 +678,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
                 if err.find(self.ipmi_client.VM_ERROR) != -1:
                     self.request_shutdown = True
                     raise Exception((f"{self.ipmi_client.ACTIVE_IPMI_TOOL}"
-                        f"error:: {err}\n Dependencies failed,"
+                        f"error:: {err}\n Dependencies failed, "
                         "shutting down sensor"))
                 self.iem.iem_fault("IPMITOOL_ERROR")
                 if self.IPMI not in self.iem.fault_iems:

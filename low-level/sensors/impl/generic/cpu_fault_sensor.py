@@ -71,7 +71,7 @@ class CPUFaultSensor(SensorThread, InternalMsgQ):
     @staticmethod
     def impact():
         """Returns impact of the module."""
-        return "Server CPU list and its online offline status can not be monitored."
+        return "CPU state changes in server can not be monitored."
 
     def __init__(self, utility_instance=None):
         """init method"""

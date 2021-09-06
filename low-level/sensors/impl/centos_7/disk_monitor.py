@@ -101,8 +101,7 @@ class DiskMonitor(SensorThread, InternalMsgQ):
     @staticmethod
     def impact():
         """Returns impact of the module."""
-        return ("Disk insertion, removal and health can not be monitored "
-                "on storage enclosure and server.")
+        return "Disks in server can not be monitored."
 
     def __init__(self):
         super(DiskMonitor, self).__init__(self.SENSOR_NAME,

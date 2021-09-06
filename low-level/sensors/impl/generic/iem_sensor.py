@@ -94,7 +94,7 @@ class IEMSensor(SensorThread, InternalMsgQ):
     @staticmethod
     def impact():
         """Returns impact of the module."""
-        return "Interesting events can not be monitored."
+        return "Interesting events in server can not be monitored."
 
     @staticmethod
     def dependencies():

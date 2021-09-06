@@ -69,7 +69,7 @@ class RealStorFanSensor(SensorThread, InternalMsgQ):
     @staticmethod
     def impact():
         """Returns impact of the module."""
-        return "Fans in storage enclosure can not be monitored."
+        return "Fan modules in storage enclosure can not be monitored."
 
     @staticmethod
     def dependencies():
