@@ -35,7 +35,6 @@ from framework.base import sspl_constants as sspl_const
 from framework.utils.conf_utils import Conf, SSPL_CONF, CORTX_CONF
 from framework.utils.ipmi_client import IpmiFactory
 from framework.utils.drive_utils import DriveUtils
-from framework.platforms.realstor.realstor_enclosure import RealStorEnclosure
 
 
 # Load bundle request status tracker
@@ -154,10 +153,10 @@ class SupportBundle(object):
                                     (self.IEM_SENSOR)).replace("/iem_messages", "")
         os.makedirs(sspl_const.SSPL_SB_TMP, exist_ok=True)
 
-    def create(self, args):
+    def create(self, bundle_id, bundle_path, noencl):
         """create support bundle."""
         logger.info("Starting SSPL bundle generation")
-        self.prepare_bundle(args.id, args.path, args.noencl)
+        self.prepare_bundle(bundle_id, bundle_path, noencl)
         self.__clear_tmp_files()
 
     @staticmethod
@@ -207,6 +206,7 @@ class SupportBundle(object):
         self.get_drives_smart_data_in_file()
         try:
             if not exclude_encl:
+                from framework.platforms.realstor.realstor_enclosure import RealStorEnclosure
                 RealStorEnclosure().get_enclosure_logs(
                     self.enclosure_log, logger)
             if os.path.exists(self.enclosure_log) and not exclude_encl:
@@ -309,10 +309,10 @@ class SupportBundle(object):
     def parse_arguments():
         parser = argparse.ArgumentParser(description="SSPL Support Bundle")
         parser.add_argument('action',
-                            help='Support bundle action [generate|status]')
-        parser.add_argument('--id',
+                            help='Support bundle action [create|status]')
+        parser.add_argument('bundle_id',
                             help='Unique bundle id')
-        parser.add_argument('--path',
+        parser.add_argument('bundle_path',
                             help='Path to store the created bundle',
                             default="/var/seagate/cortx/support_bundle/")
         parser.add_argument('-noencl',
@@ -354,10 +354,12 @@ def main():
     bundle = SupportBundle()
     args, parser = bundle.parse_arguments()
     action = sys.argv[1]
+    bundle_id = sys.argv[2]
+    bundle_path = sys.argv[3]
     if action == "create":
-        bundle.create(args)
+        bundle.create(bundle_id, bundle_path, args.noencl)
     elif action == "status":
-        bundle.get_status(args.id)
+        bundle.get_status(bundle_id)
     else:
         parser.print_help()
 
