@@ -97,7 +97,7 @@ def test_service_failed_alert(args):
     check_sspl_ll_is_running()
     check_service_is_running(service_name)
     simulate_service_alerts.simulate_fault_alert()
-    time.sleep(5)
+    time.sleep(WAIT_TIME)
     sensor_response = read_ingress_queue()
     assert_on_mismatch(sensor_response, "fault")
     simulate_service_alerts.restore_service_file()
