@@ -1,0 +1,28 @@
+Sensor ID              : Pwr Unit Redund (0x2)
+ Entity ID             : 21.1 (Power Management)
+ Sensor Type (Discrete): Power Unit (0x09)
+ Sensor Reading        : 0h
+ Event Message Control : Per-threshold
+ States Asserted       : Power Unit
+                         [Redundancy Lost]
+ Assertion Events      : Power Unit
+                         [Redundancy Lost]
+ Assertions Enabled    : Power Unit
+                         [Fully Redundant]
+                         [Redundancy Lost]
+                         [Redundancy Degraded]
+                         [Non-Redundant: Sufficient from Redundant]
+                         [Non-Redundant: Sufficient from Insufficient]
+                         [Non-Redundant: Insufficient Resources]
+                         [Redundancy Degraded from Fully Redundant]
+                         [Redundancy Degraded from Non-Redundant]
+ Deassertions Enabled  : Power Unit
+                         [Fully Redundant]
+                         [Redundancy Lost]
+                         [Redundancy Degraded]
+                         [Non-Redundant: Sufficient from Redundant]
+                         [Non-Redundant: Sufficient from Insufficient]
+                         [Non-Redundant: Insufficient Resources]
+                         [Redundancy Degraded from Fully Redundant]
+                         [Redundancy Degraded from Non-Redundant]
+ OEM                   : 0

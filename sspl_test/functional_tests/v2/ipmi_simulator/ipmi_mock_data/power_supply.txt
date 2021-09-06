@@ -1,0 +1,1 @@
+PS2 Status       | 51h | ok  | 10.2 | Presence detected, Power Supply AC lost

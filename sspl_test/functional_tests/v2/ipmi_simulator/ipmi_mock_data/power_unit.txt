@@ -1,0 +1,1 @@
+Pwr Unit Redund  | 02h | ok  | 21.1 | Redundancy Lost
