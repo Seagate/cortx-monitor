@@ -24,13 +24,14 @@ from cortx.utils.validator.v_pkg import PkgV
 from .conf_based_sensors_enable import update_sensor_info
 from files.opt.seagate.sspl.setup.setup_logger import logger
 from framework.utils.utility import Utility
+from framework.base import sspl_constants
 from framework.base.sspl_constants import (
     PRODUCT_FAMILY, sspl_config_path, sspl_test_file_path,
     sspl_test_config_path, global_config_path, SSPL_CONFIG_INDEX,
-    SSPL_TEST_CONFIG_INDEX, IVT_TEST_PLANS, NOT_IMPLEMENTED_TEST_PLANS)
+    SSPL_TEST_CONFIG_INDEX, IVT_TEST_PLANS, NOT_IMPLEMENTED_TEST_PLANS,
+    sspl_testv2_config_path, sspl_testv2_file_path)
 
 
-TEST_DIR = f"/opt/seagate/{PRODUCT_FAMILY}/sspl/sspl_test"
 SSPL_TEST_GLOBAL_CONFIG = "sspl_test_gc"
 
 
@@ -42,6 +43,11 @@ class SSPLTestCmd:
         self.name = "sspl_test"
         self.plan = "sanity"
         self.coverage_enabled = self.args.coverage
+        self.test_dir = f"/opt/seagate/{PRODUCT_FAMILY}/sspl/sspl_test"
+        if self.args.v2:
+            self.test_dir = f"/opt/seagate/{PRODUCT_FAMILY}/sspl/sspl_test/functional_tests/v2"
+            sspl_constants.sspl_test_file_path = sspl_testv2_file_path
+            sspl_constants.sspl_test_config_path = sspl_testv2_config_path
 
         self.dbus_service = DbusServiceHandler()
         if args.config and args.config[0]:
@@ -145,9 +151,9 @@ class SSPLTestCmd:
             # Create dummy service and add service name in /etc/sspl.conf
             service_name = "dummy_service.service"
             service_file_path_src = \
-                f"{TEST_DIR}/alerts/os/dummy_service_files/dummy_service.service"
+                f"{self.test_dir}/alerts/os/dummy_service_files/dummy_service.service"
             service_executable_code_src = \
-                f"{TEST_DIR}/alerts/os/dummy_service_files/dummy_service.py"
+                f"{self.test_dir}/alerts/os/dummy_service_files/dummy_service.py"
             service_file_path_des = "/etc/systemd/system"
             service_executable_code_des = "/var/cortx/sspl/test"
 
@@ -219,7 +225,10 @@ class SSPLTestCmd:
             # from cortx.sspl.sspl_test.run_qa_test import RunQATest
             # RunQATest(self.plan, self.coverage_enabled).run()
             CMD = "%s/run_qa_test.sh --plan %s --coverage %s"\
-                   %(TEST_DIR, self.plan, self.coverage_enabled)
+                % (self.test_dir, self.plan, self.coverage_enabled)
+            if self.args.v2:
+                CMD = "%s/run_tests.sh --plan %s --coverage %s"\
+                   % (self.test_dir, self.plan, self.coverage_enabled)
             try:
                 _, error, rc = SimpleProcess(CMD).run(
                     realtime_output=True)
@@ -269,7 +278,9 @@ class SSPLTestCmd:
             # from cortx.sspl.sspl_test.run_qa_test import RunQATest
             # RunQATest(self.plan).run()
             try:
-                CMD = "%s/run_qa_test.sh --plan %s" % (TEST_DIR, self.plan)
+                CMD = "%s/run_qa_test.sh --plan %s" % (self.test_dir, self.plan)
+                if self.args.v2:
+                    CMD = "%s/run_tests.sh --plan %s" % (self.test_dir, self.plan)
                 _, error, returncode = SimpleProcess(CMD).run(
                     realtime_output=True)
             except KeyboardInterrupt:

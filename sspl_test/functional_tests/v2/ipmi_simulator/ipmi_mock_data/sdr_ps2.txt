@@ -1,0 +1,26 @@
+Sensor ID              : PS2 Status (0x51)
+ Entity ID             : 10.2 (Power Supply)
+ Sensor Type (Discrete): Power Supply (0x08)
+ Sensor Reading        : 0h
+ Event Message Control : Per-threshold
+ States Asserted       : Power Supply
+                         [Presence detected]
+                         [Power Supply AC lost]
+ Assertion Events      : Power Supply
+                         [Presence detected]
+                         [Power Supply AC lost]
+ Assertions Enabled    : Power Supply
+                         [Presence detected]
+                         [Failure detected]
+                         [Predictive failure]
+                         [Power Supply AC lost]
+                         [Config Error]
+                         [Power Supply Inactive]
+ Deassertions Enabled  : Power Supply
+                         [Presence detected]
+                         [Failure detected]
+                         [Predictive failure]
+                         [Power Supply AC lost]
+                         [Config Error]
+                         [Power Supply Inactive]
+ OEM                   : 0

@@ -1,0 +1,6 @@
+Locating sensor record...
+Sensor ID              : Pwr Unit Redund (0x2)
+ Entity ID             : 21.1
+ Sensor Type (Discrete): Power Unit
+ States Asserted       : Power Unit
+                         [Redundancy Lost]
