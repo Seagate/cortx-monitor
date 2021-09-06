@@ -92,7 +92,7 @@ class IPMITool(IPMI):
             self._run_ipmitool_subcommand(f"sdr type '{fru_type.title()}'")
         if retcode != 0:
             msg = "ipmitool sdr type command failed: {0}".format(error)
-            logger.warning(msg)
+            logger.warn(msg)
             return
         sensor_list = sensor_list_out.split("\n")
 
@@ -132,7 +132,7 @@ class IPMITool(IPMI):
             self._run_ipmitool_subcommand(f"sensor get '{sensor_id}'")
         if retcode != 0:
             msg = f"ipmitool sensor get command failed: {error}"
-            logger.warning(msg)
+            logger.warn(msg)
             err_response = {sensor_id: {"ERROR": msg}}
             return (False, err_response)
         props_list = props_list_out.split("\n")

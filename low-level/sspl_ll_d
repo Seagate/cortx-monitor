@@ -368,7 +368,7 @@ def main(conf_reader, systemd_support):
         # Loop through the list of instanced modules and start them on threads
         for name, curr_module in sspl_threaded_modules.items():
             if name in dependency_broken_modules:
-                logger.warning(
+                logger.warn(
                     "SSPL Bootstrap: Unable to load plugin {0} due to "
                     "failed dependency resolution".format(name))
                 continue
@@ -657,7 +657,7 @@ def signal_handler(signal_number, frame):
         if thread_controller_queue:
             send_thread_controller_request(state)
         else:
-            logger.warning(f'thread_controller_queue is not ready, saving the \
+            logger.warn(f'thread_controller_queue is not ready, saving the \
                             sspl role switch request state, State: {state} to \
                             process again later.')
 

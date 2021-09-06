@@ -59,12 +59,12 @@ class Utility(object):
             subout = subprocess.Popen(CMD, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             result = subout.stdout.readlines()
             if result == [] or result == "":
-                logger.warning("Not able to read whether env is vm or not, assuming VM env.")
+                logger.warn("Not able to read whether env is vm or not, assuming VM env.")
             else:
                 if 'false' in result[0].decode():
                     is_vm = False
         except Exception as e:
-            logger.warning("Error while reading whether env is vm or not, assuming VM env : {e}")
+            logger.warn("Error while reading whether env is vm or not, assuming VM env : {e}")
         return is_vm
 
     @staticmethod

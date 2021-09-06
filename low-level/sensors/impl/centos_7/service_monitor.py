@@ -105,7 +105,7 @@ class DisabledState:
 
     @staticmethod
     def enter(service):
-        logger.warning("{} service is disabled, it will not be "
+        logger.warn("{} service is disabled, it will not be "
                        "monitored".format(service.name))
         Service.non_active.discard(service.name)
         Service.monitoring_disabled.discard(service.name)

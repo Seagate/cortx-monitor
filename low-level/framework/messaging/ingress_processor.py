@@ -197,7 +197,7 @@ class IngressProcessor(ScheduledModuleThread, InternalMsgQ):
                 # if request is meant for the current node
                 target_node_id = message.get("target_node_id")
                 if target_node_id is None:
-                    logger.warning(
+                    logger.warn(
                         "Required attribute target_node_id is missing "
                         "from actuator request %s, IGNORING!!" % (msgType))
                     return
