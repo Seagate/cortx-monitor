@@ -22,7 +22,6 @@ from framework.utils.utility import Utility
 # Indexes
 GLOBAL_CONF = "GLOBAL"
 SSPL_CONF = "SSPL"
-CLUSTER_CONF = "CLUSTER"
 CORTX_CONF = "CORTX"
 
 # Keys constans
@@ -151,7 +150,6 @@ OPERATING_SYSTEM = utility.get_os()
 Conf.load(SSPL_CONF, "yaml:///etc/sspl.conf")
 global_config = Conf.get(SSPL_CONF, "SYSTEM_INFORMATION>global_config_copy_url")
 Conf.load(GLOBAL_CONF, global_config)
-Conf.load(CLUSTER_CONF, "json:///etc/cortx/cluster.conf")
 Conf.load(CORTX_CONF, "yaml:///etc/cortx/cortx.conf")
 
 SRVNODE = Conf.get(GLOBAL_CONF, "server_node>%s>name" % MACHINE_ID)
@@ -175,4 +173,4 @@ CNTRLR_SECRET_KEY = "storage_enclosure>%s>controller>secret" % ENCLOSURE
 BMC_IP_KEY = "server_node>%s>bmc>ip" % MACHINE_ID
 BMC_USER_KEY = "server_node>%s>bmc>user" % MACHINE_ID
 BMC_SECRET_KEY = "server_node>%s>bmc>secret" % MACHINE_ID
-CVG_INFO_KEY = "server_node>%s>cvg" % STORAGE
+CVG_INFO_KEY = "server_node>%s>storage>cvg" % MACHINE_ID
