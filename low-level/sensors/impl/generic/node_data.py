@@ -39,6 +39,8 @@ from framework.utils.sysfs_interface import SysFS
 from framework.utils.tool_factory import ToolFactory
 from framework.utils.os_utils import OSUtils
 from sensors.INode_data import INodeData
+from framework.platforms.server.network import Network
+from framework.platforms.server.error import NetworkError
 
 
 @implementer(INodeData)
@@ -250,27 +252,18 @@ class NodeData(Debug):
     def fetch_nw_cable_conn_status(self, interface):
         carrier_status = None
         try:
-            carrier_status = self._utility_instance.fetch_nw_cable_status(self.nw_interface_path, interface)
+            carrier_status = Network().get_link_state(interface)
+        except NetworkError as err:
+            # NetworkError i.e. all OSError exceptions indicate that
+            # the carrier file is not available to access which
+            # constitute the UNKOWN status for network cable.
+            logger.debug(err)
+            carrier_status = "UNKNOWN"
         except Exception as e:
-            if e == errno.ENOENT:
-                logger.error(
-                    "Problem occured while reading from nw carrier file:"
-                    f" {self.nw_interface_path}/{interface}/carrier."
-                    "file path doesn't exist")
-            elif e == errno.EACCES:
-                logger.error(
-                    "Problem occured while reading from nw carrier file:"
-                    f" {self.nw_interface_path}/{interface}/carrier."
-                    "Not enough permission to read from the file.")
-            elif e == errno.EPERM:
-                logger.error(
-                    "Problem occured while reading from nw carrier file:"
-                    f" {self.nw_interface_path}/{interface}/carrier."
-                    "Operation is not permitted.")
-            else:
-                logger.error(
-                    "Problem occured while reading from nw carrier file:"
-                    f" {self.nw_interface_path}/{interface}/carrier. Error: {e}")
+            # All other exceptions are unexpected and are logged as errors.
+            logger.excpetion(
+                "Problem occured while reading from nw carrier file:"
+                f" {self.nw_interface_path}/{interface}/carrier. Error: {e}")
         return carrier_status
 
     def _get_bmc_info(self):
