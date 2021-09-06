@@ -1,0 +1,6 @@
+Locating sensor record...
+Sensor ID              : HDD 0 Status (0xf0)
+ Entity ID             : 4.1
+ Sensor Type (Discrete): Drive Slot / Bay
+ States Asserted       : Drive Slot / Bay
+                         [Drive Present]
