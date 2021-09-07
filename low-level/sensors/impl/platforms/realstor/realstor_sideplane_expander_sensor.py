@@ -65,6 +65,11 @@ class RealStorSideplaneExpanderSensor(SensorThread, InternalMsgQ):
         """@return: name of the monitoring module."""
         return RealStorSideplaneExpanderSensor.SENSOR_NAME
 
+    @staticmethod
+    def impact():
+        """Returns impact of the module."""
+        return "Sideplane expander in storage enclosure can not be monitored."
+
     def __init__(self):
         super(RealStorSideplaneExpanderSensor, self).__init__(self.SENSOR_NAME,
                                                               self.PRIORITY)
@@ -141,11 +146,8 @@ class RealStorSideplaneExpanderSensor(SensorThread, InternalMsgQ):
         # Check for debug mode being activated
         self._read_my_msgQ_noWait()
 
-        try:
-            # periodically check are there any faults found in sideplane expanders
-            self._check_for_sideplane_expander_fault()
-        except Exception as exception:
-            logger.exception(exception)
+        # periodically check are there any faults found in sideplane expanders
+        self._check_for_sideplane_expander_fault()
 
         self._scheduler.enter(self.pollfreq_sideplane_expander_sensor,
                 self._priority, self.run, ())
@@ -167,8 +169,8 @@ class RealStorSideplaneExpanderSensor(SensorThread, InternalMsgQ):
 
         if response.status_code != self.rssencl.ws.HTTP_OK:
             if url.find(self.rssencl.ws.LOOPBACK) == -1:
-                logger.error(f"{self.rssencl.LDR_R1_ENCL}:: http request {url} to get enclosure failed with  \
-                                      err {response.status_code}")
+                raise Exception(f"{self.rssencl.LDR_R1_ENCL}:: http request {url} "
+                                f"to get enclosure failed with err {response.status_code}")
             return
 
         response_data = json.loads(response.text)

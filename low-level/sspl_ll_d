@@ -51,7 +51,7 @@ from framework.messaging.egress_processor import \
     EgressProcessor
 from framework.messaging.ingress_processor import \
     IngressProcessor
-from framework.messaging.thread_controller import ThreadController
+from framework.messaging.thread_controller import ThreadController, execute_thread
 from framework.utils.conf_utils import (GLOBAL_CONF, HOST, MONITOR,
     OPERATING_SYSTEM, PORT, PRODUCT, RELEASE, RSYSLOG, SETUP, SRVNODE,
     SSPL_CONF, SYSTEM_INFORMATION, THREADED, Conf, LOG_LEVEL,
@@ -73,7 +73,6 @@ from message_handlers.real_stor_actuator_msg_handler import \
     RealStorActuatorMsgHandler
 from message_handlers.real_stor_encl_msg_handler import RealStorEnclMsgHandler
 from message_handlers.service_msg_handler import ServiceMsgHandler
-from framework.base.module_thread import ThreadException
 
 from cortx.utils.iem_framework import EventMessage
 
@@ -372,7 +371,7 @@ def main(conf_reader, systemd_support):
                     "SSPL Bootstrap: Unable to load plugin {0} due to "
                     "failed dependency resolution".format(name))
                 continue
-            logger.info("Starting: %s" % curr_module.name())
+            logger.info("Starting: %s" % name)
 
             # SSPL will be started in degrade mode by default.
             # Run module only if it is allowed to run in degraded mode
@@ -382,17 +381,17 @@ def main(conf_reader, systemd_support):
                 or product.upper() == "LR2":
                 resume = True
 
-            thread = Thread(target=_run_thread_capture_errors,
-                            args=(curr_module, sspl_threaded_modules, msgQlist, conf_reader, product, resume))
+            thread = Thread(target=execute_thread,
+                            args=(curr_module, msgQlist, conf_reader, product, resume))
             thread.start()
-            logger.info(f"Started: {curr_module}")
+            logger.info(f"Started: {name}")
 
         # Start the ThreadController module with the list of threads
         logger.info("Starting: %s" % ThreadController.name())
 
         # Initialize the thread controller with the list of references to all modules
-        controller_thread = Thread(target=_run_thread_capture_errors,
-                            args=(threadController, sspl_threaded_modules, msgQlist, conf_reader, product, True))
+        controller_thread = Thread(target=execute_thread,
+                                   args=(threadController, msgQlist, conf_reader, product, True))
         threadController.initialize_thread_list(sspl_threaded_modules, OPERATING_SYSTEM, product, systemd_support)
         controller_thread.start()
 
@@ -543,43 +542,6 @@ def _sensors_actuators_factory(sspl_threaded_modules, msgQlist, operating_system
                 gsm.registerUtility(klass, interface_impl)
     return (sspl_threaded_modules, msgQlist)
 
-
-def _run_thread_capture_errors(curr_module, sspl_threaded_modules, msgQlist, conf_reader, product, resume):
-    """Run the given thread and log any errors that happen on it.
-    Will stop all sspl_threaded_modules if one of them fails."""
-    try:
-        # Suspend module threads
-        if resume == False:
-            curr_module.suspend()
-        # Each module is passed a reference list to message queues so it can transmit
-        # internal messages to other modules as desired
-        logger.info("Starting: %s" % curr_module.name())
-        curr_module.start_thread(conf_reader, msgQlist, product)
-
-    except ThreadException as ex:
-        #TODO: Restart thread instead of shutdown
-        logger.error("%s, error is unrecoverable , shutting down %s" %
-            (ex, curr_module.name()))
-        curr_module.shutdown()
-    except Exception as ex:
-        # Populate an actuator response message and transmit back to HAlon that we have a fatal error
-        # error_msg = "SSPL-LL encountered an error, terminating service Error, restarting daemon:{}" \
-        #             .format(str(logger.exception(ex)))
-        # jsonMsg   = ThreadControllerMsg(curr_module.name(), error_msg).getJson()
-        # curr_module._write_internal_msgQ(EgressProcessor.name(), jsonMsg)
-
-        # Shut down any running threads, error is non-recoverable
-        # shutdown_handler()
-
-        # Pause for threads to cleanup and kill main process
-        # logger.info("Killing main process in 10 seconds to allow thread cleanup time")
-        # time.sleep(10)
-        # logger.info("Systemd will restart SSPL-LL momentarily")
-        # os.kill(os.getpid(), signal.SIGKILL)
-
-        #TODO: Restart thread instead of shutdown
-        logger.error(f"{curr_module.name()} has encountered an error {ex}, error is unrecoverable , shutting down {curr_module.name()}")
-        curr_module.shutdown()
 
 def shutdown_handler(signum=None, frame=None):
     """Handler called when shutting down"""

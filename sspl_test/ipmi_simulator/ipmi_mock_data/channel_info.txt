@@ -1,0 +1,6 @@
+Channel 0xf info:
+  Channel Medium Type   : System Interface
+  Channel Protocol Type : KCS
+  Session Support       : session-less
+  Active Session Count  : 0
+  Protocol Vendor ID    : 7154

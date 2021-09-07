@@ -327,6 +327,11 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
         """@return: name of the module."""
         return ServiceMonitor.SENSOR_NAME
 
+    @staticmethod
+    def impact():
+        """Returns impact of the module."""
+        return "Service state change events in server can not be monitored."
+
     def __init__(self):
         """Initialize the relevant datastructures."""
         super(ServiceMonitor, self).__init__(self.SENSOR_NAME,

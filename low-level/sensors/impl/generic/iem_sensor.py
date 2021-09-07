@@ -92,6 +92,11 @@ class IEMSensor(SensorThread, InternalMsgQ):
         return IEMSensor.SENSOR_NAME
 
     @staticmethod
+    def impact():
+        """Returns impact of the module."""
+        return "CORTX Software Events(IEMs) can not be processed and highlighted."
+
+    @staticmethod
     def dependencies():
         """Returns a list of plugins and RPMs this module requires
            to function.
@@ -158,16 +163,11 @@ class IEMSensor(SensorThread, InternalMsgQ):
             self._read_iem()
 
         except IOError as io_error:
-            if io_error.errno == errno.ENOENT:
-                logger.debug(f"IEMSensor, self.run, {io_error.args} {io_error.filename}")
-            elif io_error.errno == errno.EACCES:
-                logger.error(f"IEMSensor, self.run, {io_error.args} {io_error.filename}")
-            else:
-                logger.error(f"IEMSensor, self.run, {io_error.args} {io_error.filename}")
-            self._scheduler.enter(10, self._priority, self.run, ())
+            raise Exception(f"Failed in monitoring IEM, {io_error.args} {io_error.filename}")
         except Exception as exception:
-            logger.error(f"IEMSensor, self.run, {exception.args}")
-            self._scheduler.enter(10, self._priority, self.run, ())
+            raise Exception(f"Failed in monitoring IEM, {exception.args}")
+
+        self._scheduler.enter(10, self._priority, self.run, ())
 
     def _read_iem(self):
         try:
@@ -175,16 +175,12 @@ class IEMSensor(SensorThread, InternalMsgQ):
                 for iem_log in self._iem_logs:
                     self._process_iem(iem_log.rstrip())
         except IOError as io_error:
-            if io_error.errno == errno.ENOENT:
-                logger.error(f"IEMSensor, self._read_iem, {io_error.args} {io_error.filename}")
-            elif io_error.errno == errno.EACCES:
-                logger.error(f"IEMSensor, self._read_iem, {io_error.args} {io_error.filename}")
-            else:
-                logger.error(f"IEMSensor, self._read_iem, {io_error.args} {io_error.filename}")
+            raise Exception(
+                f"IEMSensor, self._read_iem, {io_error.args} {io_error.filename}")
         except Exception as exception:
-            logger.error(f"IEMSensor, self._read_iem, {exception.args}")
-        finally:
-            self._scheduler.enter(10, self._priority, self._read_iem, ())
+            raise Exception(f"IEMSensor, self._read_iem, {exception.args}")
+
+        self._scheduler.enter(10, self._priority, self._read_iem, ())
 
     def _process_iem(self, iem_log):
         log_timestamp = iem_log[:iem_log.index(" ")]

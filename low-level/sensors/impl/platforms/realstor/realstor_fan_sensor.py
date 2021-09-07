@@ -67,6 +67,11 @@ class RealStorFanSensor(SensorThread, InternalMsgQ):
         return RealStorFanSensor.SENSOR_NAME
 
     @staticmethod
+    def impact():
+        """Returns impact of the module."""
+        return "Fan modules in storage enclosure can not be monitored."
+
+    @staticmethod
     def dependencies():
         """Returns a list of plugins and RPMs this module requires
            to function.
@@ -234,9 +239,8 @@ class RealStorFanSensor(SensorThread, InternalMsgQ):
 
         if response.status_code != self.rssencl.ws.HTTP_OK:
             if url.find(self.rssencl.ws.LOOPBACK) == -1:
-                logger.error(
-                    f"{self.rssencl.LDR_R1_ENCL}:: http request {url} to get fan-modules failed with http err  \
-                               {response.status_code}")
+                raise Exception(f"{self.rssencl.LDR_R1_ENCL}:: http request {url} "
+                                f"to get fan-modules failed with http err {response.status_code}")
             return
 
         response_data = json.loads(response.text)

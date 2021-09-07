@@ -81,6 +81,11 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
         """@return: name of the monitoring module."""
         return RAIDIntegritySensor.SENSOR_NAME
 
+    @staticmethod
+    def impact():
+        """Returns impact of the module."""
+        return "Server RAID integrity can not be monitored."
+
     def __init__(self):
         super(RAIDIntegritySensor, self).__init__(self.SENSOR_NAME,
                                          self.PRIORITY)
@@ -143,29 +148,25 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
         # Check for debug mode being activated
         self._read_my_msgQ_noWait()
 
-        try:
-            #cleanup
-            self._cleanup()
+        #cleanup
+        self._cleanup()
 
-            # Log RAIDIntegritySensor execution timestamp
-            self._create_file(self._timestamp_file_path)
-            self._log_timestamp()
+        # Log RAIDIntegritySensor execution timestamp
+        self._create_file(self._timestamp_file_path)
+        self._log_timestamp()
 
-            # Validate the raid data files and notify the node data msg handler
-            self._raid_health_monitor()
+        # Validate the raid data files and notify the node data msg handler
+        self._raid_health_monitor()
 
-
-            with open(self._timestamp_file_path, "r") as timestamp_file:
-                last_processed_log_timestamp = timestamp_file.read().strip()
-                current_time = int(time.time())
-                if current_time > int(last_processed_log_timestamp):
-                    self._next_scheduled_time = self._scan_frequency - \
-                        (current_time - int(last_processed_log_timestamp))
-            logger.info("Scheduling RAID validate again after: %s seconds"
-                        % self._next_scheduled_time)
-            self._scheduler.enter(self._next_scheduled_time, self._priority, self.run, ())
-        except Exception as ae:
-            logger.exception(ae)
+        with open(self._timestamp_file_path, "r") as timestamp_file:
+            last_processed_log_timestamp = timestamp_file.read().strip()
+            current_time = int(time.time())
+            if current_time > int(last_processed_log_timestamp):
+                self._next_scheduled_time = self._scan_frequency - \
+                    (current_time - int(last_processed_log_timestamp))
+        logger.info("Scheduling RAID validate again after: %s seconds"
+                    % self._next_scheduled_time)
+        self._scheduler.enter(self._next_scheduled_time, self._priority, self.run, ())
 
     def _raid_health_monitor(self):
         try:
@@ -222,8 +223,7 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
                             .format(device))
 
         except Exception as ae:
-            logger.error("Failed in monitoring RAID health. ERROR:{}"
-                         .format(str(ae)))
+            raise Exception(f"Failed in monitoring RAID health, {ae}")
 
     def _get_devices(self):
         try:
@@ -239,9 +239,7 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
                 logger.error("No RAID device found in mdstat file.")
             return device_array
         except Exception as ae:
-            logger.error("Failed to get the device array. ERROR:{}"
-                        .format(str(ae)))
-            raise
+            raise Exception(f"Failed to get the device array, {ae}")
 
     def _check_mismatch_count(self, device):
         try:

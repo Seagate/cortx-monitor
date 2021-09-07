@@ -192,7 +192,7 @@ class SensorThread(ScheduledModuleThread):
 
 
     def check_and_conclude_initialization(self):
-        logger.debug("Begin {}.conclude_initializatio()".format(
+        logger.debug("Begin {}.conclude_initialization()".format(
             self.__class__.__name__))
 
         # Check that self.lock is held by the caller
@@ -229,7 +229,7 @@ class SensorThread(ScheduledModuleThread):
             for d in self.waiting_dependers:
                 d.event(self, self.status == SensorThreadState.RUNNING)
 
-        logger.debug("End {}.conclude_initializatio() with state {}".format(
+        logger.debug("End {}.conclude_initialization() with state {}".format(
             self.__class__.__name__, self.status))
 
 
@@ -252,14 +252,16 @@ class SensorThread(ScheduledModuleThread):
 
     def start_thread(self, conf_reader, msgQlist, product):
         logger.debug("Begin {}.start_thread()".format(self.__class__.__name__))
-        status = self.initialize(conf_reader, msgQlist, product)
+        self.init_status = InitState.INITIALIZING
+        try:
+            self.initialize(conf_reader, msgQlist, product)
+        except Exception as err:
+            self.status = self.init_status = InitState.INIT_FAILED
+            raise Exception("initialize() failed. {}".format(err))
+
+        self.init_status = InitState.INIT_SUCCESS
 
         self.lock.acquire()
-
-        if status:
-            self.init_status = InitState.INIT_SUCCESS
-        else:
-            self.init_status = InitState.INIT_FAILED
 
         self.check_and_conclude_initialization()
 

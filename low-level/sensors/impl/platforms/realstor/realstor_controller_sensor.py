@@ -68,6 +68,11 @@ class RealStorControllerSensor(SensorThread, InternalMsgQ):
         return RealStorControllerSensor.SENSOR_NAME
 
     @staticmethod
+    def impact():
+        """Returns impact of the module."""
+        return "Controllers in storage enclosure can not be monitored."
+
+    @staticmethod
     def dependencies():
         """Returns a list of plugins and RPMs this module requires
            to function.
@@ -146,14 +151,11 @@ class RealStorControllerSensor(SensorThread, InternalMsgQ):
         self._read_my_msgQ_noWait()
 
         controllers = None
-        try:
-            controllers = self._get_controllers()
 
-            if controllers:
-                self._get_msgs_for_faulty_controllers(controllers)
+        controllers = self._get_controllers()
 
-        except Exception as exception:
-            logger.exception(exception)
+        if controllers:
+            self._get_msgs_for_faulty_controllers(controllers)
 
         # Reset debug mode if persistence is not enabled
         self._disable_debug_if_persist_false()
@@ -176,8 +178,8 @@ class RealStorControllerSensor(SensorThread, InternalMsgQ):
 
         if response.status_code != self.rssencl.ws.HTTP_OK:
             if url.find(self.rssencl.ws.LOOPBACK) == -1:
-                logger.error(f"{self.rssencl.LDR_R1_ENCL}:: http request {url} to get controllers failed with \
-                     err {response.status_code}")
+                raise Exception(f"{self.rssencl.LDR_R1_ENCL}:: http request {url} "
+                                f"to get controllers failed with err {response.status_code}")
             return
 
         response_data = json.loads(response.text)
