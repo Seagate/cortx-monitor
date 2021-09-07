@@ -109,6 +109,11 @@ class RealStorLogicalVolumeSensor(SensorThread, InternalMsgQ):
         return RealStorLogicalVolumeSensor.SENSOR_NAME
 
     @staticmethod
+    def impact():
+        """Returns impact of the module."""
+        return "Disk groups and logical volumes of storage enclosure can not be monitored."
+
+    @staticmethod
     def dependencies():
         """Returns a list of plugins and RPMs this module requires
            to function.
@@ -211,19 +216,15 @@ class RealStorLogicalVolumeSensor(SensorThread, InternalMsgQ):
         disk_groups = None
         logical_volumes = None
 
-        try:
-            disk_groups = self._get_disk_groups()
+        disk_groups = self._get_disk_groups()
 
-            if disk_groups:
-                self._get_msgs_for_faulty_disk_groups(disk_groups)
-                for disk_group in disk_groups:
-                    pool_serial_number = disk_group["pool-serial-number"]
-                    logical_volumes = self._get_logical_volumes(pool_serial_number)
-                    if logical_volumes:
-                        self._get_msgs_for_faulty_logical_volumes(logical_volumes, disk_group)
-
-        except Exception as exception:
-            logger.exception(exception)
+        if disk_groups:
+            self._get_msgs_for_faulty_disk_groups(disk_groups)
+            for disk_group in disk_groups:
+                pool_serial_number = disk_group["pool-serial-number"]
+                logical_volumes = self._get_logical_volumes(pool_serial_number)
+                if logical_volumes:
+                    self._get_msgs_for_faulty_logical_volumes(logical_volumes, disk_group)
 
         # Reset debug mode if persistence is not enabled
         self._disable_debug_if_persist_false()
@@ -246,8 +247,8 @@ class RealStorLogicalVolumeSensor(SensorThread, InternalMsgQ):
 
         if response.status_code != self.rssencl.ws.HTTP_OK:
             if url.find(self.rssencl.ws.LOOPBACK) == -1:
-                logger.error(f"{self.rssencl.LDR_R1_ENCL}:: http request {url} to get disk groups failed with  \
-                     err {response.status_code}")
+                raise Exception(f"{self.rssencl.LDR_R1_ENCL}:: http request {url} "
+                                f"to get disk groups failed with err {response.status_code}")
             return
 
         response_data = json.loads(response.text)
@@ -270,8 +271,8 @@ class RealStorLogicalVolumeSensor(SensorThread, InternalMsgQ):
             return
 
         if response.status_code != self.rssencl.ws.HTTP_OK:
-            logger.error(f"{self.rssencl.LDR_R1_ENCL}:: http request {url} to get logical volumes failed with \
-                 err {response.status_code}")
+            raise Exception(f"{self.rssencl.LDR_R1_ENCL}:: http request {url} "
+                            f"to get logical volumes failed with err {response.status_code}")
             return
 
         response_data = json.loads(response.text)

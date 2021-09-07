@@ -22,3 +22,4 @@ alerts.os.test_systemd_service_actuator
 alerts.os.test_service_monitor_sensor
 alerts.node.test_node_iem
 alerts.realstor.test_real_stor_enclosure_sensor
+alerts.os.test_sensor_recovery

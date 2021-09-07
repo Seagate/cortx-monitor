@@ -81,6 +81,11 @@ class RAIDsensor(SensorThread, InternalMsgQ):
         """@return: name of the monitoring module."""
         return RAIDsensor.SENSOR_NAME
 
+    @staticmethod
+    def impact():
+        """Returns impact of the module."""
+        return "Server RAID disks can not be monitored."
+
     def __init__(self):
         super(RAIDsensor, self).__init__(self.SENSOR_NAME,
                                          self.PRIORITY)
@@ -186,11 +191,8 @@ class RAIDsensor(SensorThread, InternalMsgQ):
         # self._set_debug(True)
         # self._set_debug_persist(True)
 
-        try:
-            # Check for a change in status file and notify the node data msg handler
-            self._notify_NodeDataMsgHandler()
-        except Exception as ae:
-            logger.exception(ae)
+        # Check for a change in status file and notify the node data msg handler
+        self._notify_NodeDataMsgHandler()
 
         # Reset debug mode if persistence is not enabled
         self._disable_debug_if_persist_false()

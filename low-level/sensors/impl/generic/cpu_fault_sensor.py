@@ -68,6 +68,11 @@ class CPUFaultSensor(SensorThread, InternalMsgQ):
         """@return: name of the module."""
         return CPUFaultSensor.SENSOR_NAME
 
+    @staticmethod
+    def impact():
+        """Returns impact of the module."""
+        return "Server CPU presence and status change can not be monitored."
+
     def __init__(self, utility_instance=None):
         """init method"""
         super(CPUFaultSensor, self).__init__(self.SENSOR_NAME,
@@ -91,7 +96,7 @@ class CPUFaultSensor(SensorThread, InternalMsgQ):
         super(CPUFaultSensor, self).initialize_msgQ(msgQlist)
 
         # get the cpu fault implementor from configuration
-        cpu_fault_utility = Conf.get(SSPL_CONF, f"{self.name().capitalize()}>{self.PROBE}",
+        cpu_fault_utility = Conf.get(SSPL_CONF, f"{self.name().upper()}>{self.PROBE}",
                                     'sysfs')
 
         # Creating the instance of ToolFactory class
@@ -101,9 +106,9 @@ class CPUFaultSensor(SensorThread, InternalMsgQ):
             # Get the instance of the utility using ToolFactory
             self._utility_instance = self._utility_instance or \
                                 self.tool_factory.get_instance(cpu_fault_utility)
-        except Exception as e:
-            logger.error(f"Error while initializing, shutting down CPUFaultSensor : {e}")
-            self.shutdown()
+        except Exception as err:
+            raise Exception("Error while initializing. "
+                f"Unable to get the instance of {cpu_fault_utility} Utility, {err}")
 
         self._node_id = Conf.get(GLOBAL_CONF, NODE_ID_KEY,'SN01')
         cache_dir_path = os.path.join(DATA_PATH, self.CACHE_DIR_NAME)
@@ -119,16 +124,14 @@ class CPUFaultSensor(SensorThread, InternalMsgQ):
             if self.stored_cpu_info is not None and self._node_id in self.stored_cpu_info.keys():
                 self.prev_cpu_info = self.stored_cpu_info[self._node_id]['CPU_LIST']
         except Exception as e:
-            logger.error(f"Error while reading stored cpu info, shutting down CPUFaultSensor : {e}")
-            self.shutdown()
+            raise Exception(f"Error while reading stored cpu info, {e}")
 
     def read_current_cpu_info(self):
         """Read current cpu info"""
         try:
             self.current_cpu_info = self._utility_instance.get_cpu_info()
         except Exception as e:
-            logger.error(f"Error while reading current cpu info, shutting down CPUFaultSensor : {e}")
-            self.shutdown()
+            raise Exception(f"Error while reading current cpu info, {e}")
 
     def run(self):
         """Run the sensor on its own thread"""
@@ -180,8 +183,7 @@ class CPUFaultSensor(SensorThread, InternalMsgQ):
                 to_update = True
 
         except Exception as e:
-            logger.error(f"Error while processing cpu info, shutting down CPUFaultSensor : {e}")
-            self.shutdown()
+            raise Exception(f"Failed while processing cpu info, {e}")
 
         # Send alerts
         for cpu, alert_type in self.alerts_for.items():

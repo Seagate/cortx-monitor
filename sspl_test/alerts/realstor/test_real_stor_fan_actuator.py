@@ -26,7 +26,7 @@ def test_real_stor_fan_module_actuator(agrs):
     instance_id = "4"
     resource_type = "enclosure:hw:fan"
     send_enclosure_request("ENCL:%s" % resource_type, instance_id)
-    ingressMsg = get_fru_response(resource_type, instance_id)
+    ingressMsg = get_fru_response(resource_type, "Fan Module 4")
     fan_module_actuator_msg = ingressMsg.get("actuator_response_type")
 
     assert(fan_module_actuator_msg is not None)
