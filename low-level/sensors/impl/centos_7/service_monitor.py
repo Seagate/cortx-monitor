@@ -117,7 +117,7 @@ class DisabledState:
 
     @staticmethod
     def enter(service):
-        logger.warning("{} service is disabled, it will not be "
+        logger.warn("{} service is disabled, it will not be "
                        "monitored".format(service.name))
         Service.non_active.discard(service.name)
         Service.monitoring_disabled.discard(service.name)
@@ -326,6 +326,11 @@ class ServiceMonitor(SensorThread, InternalMsgQ):
     def name():
         """@return: name of the module."""
         return ServiceMonitor.SENSOR_NAME
+
+    @staticmethod
+    def impact():
+        """Returns impact of the module."""
+        return "Service state change events in server can not be monitored."
 
     def __init__(self):
         """Initialize the relevant datastructures."""

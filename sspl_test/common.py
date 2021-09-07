@@ -22,6 +22,8 @@
  ****************************************************************************
 """
 
+from datetime import datetime
+import uuid
 import inspect
 import traceback
 import json
@@ -199,10 +201,11 @@ def check_os_platform():
         print("Failed to get the os platform: error:{}".format(error.decode().rstrip('\n')))
 
 
-def get_fru_response(resource_type, instance_id, ingress_msg_type="actuator_response_type"):
+def get_fru_response(resource_type, instance_id, ingress_msg_type="actuator_response_type",
+                     timeout=30, alert_type=None):
     """Returns message when resource type match with ingress message."""
     sensor_msg = None
-    for _ in range(30):
+    for _ in range(timeout):
         if world.sspl_modules[IngressProcessorTests.name()]._is_my_msgQ_empty():
             time.sleep(2)
         while not world.sspl_modules[IngressProcessorTests.name()]._is_my_msgQ_empty():
@@ -213,9 +216,13 @@ def get_fru_response(resource_type, instance_id, ingress_msg_type="actuator_resp
                 # Make sure we get back the message type that matches the request
                 msg_type = ingressMsg.get(ingress_msg_type)
                 if msg_type["info"]["resource_type"] == resource_type:
-                    # Break if condition is satisfied.
-                    sensor_msg = msg_type
-                    break
+                    if (instance_id and msg_type["info"]["resource_id"] == instance_id) or \
+                        not instance_id:
+                        if not alert_type:
+                            sensor_msg = msg_type
+                        elif alert_type and msg_type.get("alert_type") == alert_type:
+                            sensor_msg = msg_type
+                        break
             except Exception as exception:
                 print(exception)
         if sensor_msg:
@@ -242,7 +249,7 @@ def send_node_controller_message_request(uuid, resource_type, instance_id="*"):
         "description":"Seagate Storage Platform Library - Actuator Request",
         "title":"SSPL-LL Actuator Request",
         "signature":"None",
-        "time":"2018-07-31 04:08:04.071170",
+        "time": str(datetime.now()),
         "message":{
             "sspl_ll_msg_header":{
                 "msg_version":"1.0.0",
@@ -274,7 +281,7 @@ def send_enclosure_request(resource_type, resource_id):
 
         "username" : "JohnDoe",
         "signature" : "None",
-        "time" : "2015-05-29 14:28:30.974749",
+        "time": str(datetime.now()),
         "expires" : 500,
 
         "message" : {
@@ -304,6 +311,39 @@ def send_enclosure_request(resource_type, resource_id):
         }
     }
     write_to_egress_msgQ(request)
+
+
+def send_thread_controller_actuator_request(module_name, state):
+    request = {
+        "username":"sspl-ll",
+        "expires":3600,
+        "description":"Seagate Storage Platform Library - Actuator Request",
+        "title":"SSPL-LL Actuator Request",
+        "signature":"None",
+        "time": str(datetime.now()),
+        "message":{
+            "sspl_ll_msg_header":{
+                "msg_version":"1.0.0",
+                "uuid": str(uuid.uuid4()),
+                "schema_version":"1.0.0",
+                "sspl_version":"1.0.0"
+            },
+            "sspl_ll_debug":{
+                "debug_component":"sensor",
+                "debug_enabled": True
+            },
+            "response_dest": {},
+            "target_node_id": get_current_node_id(),
+            "actuator_request_type": {
+                "thread_controller": {
+                    "module_name": module_name,
+                    "thread_request": state
+                }
+            }
+        }
+    }
+    write_to_egress_msgQ(request)
+
 
 def write_to_egress_msgQ(request):
     world.sspl_modules[

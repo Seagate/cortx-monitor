@@ -23,6 +23,7 @@
 import json
 import os
 import time
+import traceback
 from socket import gethostname
 from threading import Thread
 
@@ -30,15 +31,17 @@ from framework.base.internal_msgQ import InternalMsgQ
 from framework.base.module_thread import (ScheduledModuleThread, SensorThread,
     SensorThreadState)
 from framework.base.sspl_constants import (OperatingSystem, cs_legacy_products,
-    cs_products, enabled_products)
+    cs_products, enabled_products, DATA_PATH)
 # Import modules to control
 from framework.messaging.egress_processor import \
     EgressProcessor
 from framework.messaging.ingress_processor import \
     IngressProcessor
-from framework.utils.conf_utils import SSPL_CONF, Conf
+from framework.utils.conf_utils import (
+    GLOBAL_CONF, SSPL_CONF, Conf, SSPL_LL_SETTING, NODE_ID_KEY)
 from framework.utils.service_logging import logger
 from json_msgs.messages.actuators.thread_controller import ThreadControllerMsg
+from json_msgs.messages.sensors.thread_monitor_msg import ThreadMonitorMsg
 from message_handlers.disk_msg_handler import DiskMsgHandler
 # Note that all threaded message handlers must have an import here to be controlled
 from message_handlers.node_controller_msg_handler import \
@@ -48,38 +51,159 @@ from message_handlers.real_stor_actuator_msg_handler import \
     RealStorActuatorMsgHandler
 from message_handlers.real_stor_encl_msg_handler import RealStorEnclMsgHandler
 from message_handlers.service_msg_handler import ServiceMsgHandler
+from framework.utils.store_factory import store
+
+module_persistent_data = {}
+module_cache_dir = os.path.join(DATA_PATH, "modules")
+node_id = Conf.get(GLOBAL_CONF, NODE_ID_KEY, "SN01")
+
+
+def _get_recovery_config(module_name):
+    """
+    Read sspl config for corresponding module recovery configs.
+
+    Common sensor recovery config will be overriden by individual
+    module recovery config.
+    """
+    recovery_count = Conf.get(
+        SSPL_CONF, f"{SSPL_LL_SETTING}>sensor_recovery_count", 0)
+    recovery_interval = Conf.get(
+        SSPL_CONF, f"{SSPL_LL_SETTING}>sensor_recovery_interval", 0)
+    # Override common recovery config if individual module has it
+    recovery_count = Conf.get(
+        SSPL_CONF,
+        f"{module_name.upper()}>sensor_recovery_count", recovery_count)
+    recovery_interval = Conf.get(
+        SSPL_CONF,
+        f"{module_name.upper()}>sensor_recovery_interval", recovery_interval)
+    return recovery_count, recovery_interval
 
 
 # Global method used by Thread to capture and log errors.  This must be global.
-def _run_thread_capture_errors(curr_module, sspl_modules, msgQlist,
-                               conf_reader, product):
-    """Run the given thread and log any errors that happen on it.
-    Will stop all sspl_modules if one of them fails."""
-    try:
-        # Each module is passed a reference list to message queues so it can transmit
-        #  internal messages to other modules as desired
-        curr_module.start_thread(conf_reader, msgQlist, product)
+def execute_thread(module, msgQlist, conf_reader, product, resume=True):
+    """
+    Run module as a thread. Recover the module if any error during
+    initialization and run time of the module.
 
-    except BaseException as ex:
-        logger.critical(
-            "SSPL-LL encountered a fatal error, terminating service Error: %s" % ex)
-        logger.exception(ex)
+    If recovery count>0,
+        module will be recovered from failure until the maximum recovery
+        attempt. If not recoverable, corresponding module will be shutdown
+        and failure alert will be raised due to its impact.
+    If recovery count=0,
+        no recovery attempt will be made.
+    """
+    module_name = module.name()
+    # Suspend module threads
+    if resume == False:
+        module.suspend()
 
-        # Populate an actuator response message and transmit back to HAlon
-        error_msg = "SSPL-LL encountered an error, terminating service Error: " + \
-                    ", Exception: " + logger.exception(ex)
-        json_msg = ThreadControllerMsg(curr_module.name(), error_msg).getJson()
+    # Initialize persistent cache for sensor status
+    per_data_path = os.path.join(
+        module_cache_dir, f"{module_name.upper()}_{node_id}")
+    if not os.path.isfile(per_data_path):
+        module_persistent_data[module_name] = {}
+        store.put(module_persistent_data[module_name], per_data_path)
 
-        if product.lower() in [x.lower() for x in enabled_products]:
-            self._write_internal_msgQ(EgressProcessor.name(), json_msg)
-        elif product.lower() in [x.lower() for x in cs_legacy_products]:
-            self._write_internal_msgQ(
-                PlaneCntrlRMQegressProcessor.name(), json_msg)
+    is_sensor_thread = False
+    recovery_count = recovery_interval = 0
+    if isinstance(module, SensorThread):
+        recovery_count, recovery_interval = _get_recovery_config(module_name)
+        is_sensor_thread = True
 
-        # Shut it down, error is non-recoverable
-        for name, other_module in list(sspl_modules.items()):
-            if other_module is not curr_module:
-                other_module.shutdown()
+    attempt = 0
+
+    while attempt <= recovery_count:
+        attempt += 1
+        try:
+            # Each module is passed a reference list to message queues so it
+            # can transmit internal messages to other modules as desired
+            module.start_thread(conf_reader, msgQlist, product)
+        except Exception as err:
+            curr_state = "fault"
+            err_msg = f"{module_name}, {err}"
+            logger.error(err_msg)
+            if attempt > recovery_count:
+                logger.debug(traceback.format_exc())
+                description = f"{module_name} is stopped and unrecoverable. {err_msg}"
+                impact = module.impact()
+                recommendation = "Restart SSPL service"
+                logger.critical(
+                    f"{description}. Impact: {impact} Recommendation: {recommendation}")
+                # Check previous state of the module and send fault alert
+                if os.path.isfile(per_data_path):
+                    module_persistent_data[module_name] = store.get(per_data_path)
+                prev_state = module_persistent_data[module_name].get('prev_state')
+                if is_sensor_thread and curr_state != prev_state:
+                    module_persistent_data[module_name] = {"prev_state": curr_state}
+                    store.put(module_persistent_data[module_name], per_data_path)
+                    specific_info = Conf.get(SSPL_CONF, f"{module_name.upper()}")
+                    info = {
+                        "module_name": module_name,
+                        "alert_type": curr_state,
+                        "description": description,
+                        "impact": impact,
+                        "recommendation": recommendation,
+                        "severity": "critical",
+                        "specific_info": specific_info
+                    }
+                    jsonMsg = ThreadMonitorMsg(info).getJson()
+                    module._write_internal_msgQ(EgressProcessor.name(), jsonMsg)
+            else:
+                logger.debug(f"Recovering {module_name} from failure, "
+                             f"attempt: {attempt}")
+                time.sleep(recovery_interval)
+
+            # Shutdown if no recovery attempt
+            logger.info(f"Terminating monitoring thread {module_name}")
+            module.shutdown()
+            retry = 5
+            while module.is_running():
+                module.shutdown()
+                retry -= 1
+                if not retry:
+                    break
+                time.sleep(2)
+
+
+def _check_module_recovered(module):
+    """
+    Once SSPL is restarted, check current status of the module after
+    certain recovery cycle time. If module is running and its previous
+    state is fault, raise fault_resolved alert and update cache.
+    """
+    module_name = module.name()
+    # Wait till sensor module completes few run cycle. Then
+    # raise module recovery fault_resolved alert.
+    polling_cycle_time = Conf.get(
+        SSPL_CONF, f"{SSPL_LL_SETTING}>sensor_polling_cycle_time", 60)
+    time.sleep(polling_cycle_time)
+    if not module.is_running():
+        return
+
+    curr_state = "fault_resolved"
+    per_data_path = os.path.join(
+        module_cache_dir, f'{module_name.upper()}_{node_id}')
+    if not os.path.isfile(per_data_path):
+        module_persistent_data[module_name] = {}
+        store.put(module_persistent_data[module_name], per_data_path)
+    # Check previous state before sending fault resolved alert
+    module_persistent_data[module_name] = store.get(per_data_path)
+    prev_state = module_persistent_data[module_name].get('prev_state')
+    if prev_state and curr_state != prev_state:
+        module_persistent_data[module_name] = {"prev_state": curr_state}
+        store.put(module_persistent_data[module_name], per_data_path)
+        specific_info = Conf.get(SSPL_CONF, f"{module_name.upper()}")
+        info = {
+            "module_name": module_name,
+            "alert_type": curr_state,
+            "description": f"{module_name} is recovered",
+            "impact": "",
+            "recommendation": "",
+            "severity": "info",
+            "specific_info": specific_info
+        }
+        jsonMsg = ThreadMonitorMsg(info).getJson()
+        module._write_internal_msgQ(EgressProcessor.name(), jsonMsg)
 
 
 class ThreadController(ScheduledModuleThread, InternalMsgQ):
@@ -193,12 +317,11 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
                 thread_init_status = m.get_thread_init_status()
                 logger.debug("Thread status for {} is {}".format(
                     m.__class__, thread_init_status))
-                if thread_init_status == SensorThreadState.FAILED:
-                    m.shutdown()
-                elif thread_init_status == SensorThreadState.WAITING:
+                if thread_init_status == SensorThreadState.WAITING:
                     continue_waiting = True
 
             if continue_waiting:
+                logger.debug("ThreadController, waiting for all modules to initialize")
                 self._scheduler.enter(10, self._priority, self.run, ())
                 return
 
@@ -207,6 +330,14 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
             json_msg = ThreadControllerMsg(ThreadController.name(), startup_msg).getJson()
             self._write_internal_msgQ(EgressProcessor.name(), json_msg)
             self._threads_initialized = True
+
+            # Check sensor module is recovered from previous failure
+            for module in self._sspl_modules.values():
+                if not isinstance(module, SensorThread):
+                    continue
+                module_checker = Thread(target=_check_module_recovered,
+                                        args=(module,))
+                module_checker.start()
 
             #self._set_debug(True)
             #self._set_debug_persist(True)
@@ -222,7 +353,6 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
                 jsonMsg, _ = self._read_my_msgQ()
                 if jsonMsg is not None:
                     self._process_msg(jsonMsg)
-
         except Exception as ex:
             # Log it and restart the whole process when a failure occurs
             logger.exception("ThreadController restarting: %r" % ex)
@@ -311,7 +441,7 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
         if self._product.lower() in [x.lower() for x in enabled_products]:
             self._write_internal_msgQ(EgressProcessor.name(), msgString)
         elif self._product.lower() in [x.lower() for x in cs_legacy_products]:
-            self._write_internal_msgQ(PlaneCntrlRMQegressProcessor.name(), msgString)
+            self._write_internal_msgQ(EgressProcessor.name(), msgString)
 
     def _restart_module(self, module_name):
         """Restart a module"""
@@ -407,9 +537,10 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
             # NOTE: This is internal code that is currently unused.
             # If this is brought into use again its interaction
             # with the init dependency code will need to be considered
-            module_thread = Thread(target=_run_thread_capture_errors,
-                                      args=(self._sspl_modules[module_name], self._sspl_modules,
-                                      self._msgQlist, self._conf_reader, self._product))
+            module_thread = Thread(target=execute_thread,
+                                   args=(self._sspl_modules[module_name],
+                                         self._msgQlist, self._conf_reader,
+                                         self._product))
 
             # Put a configure debug message on the module's queue before starting it up
             if self.debug_section is not None:
@@ -462,7 +593,7 @@ class ThreadController(ScheduledModuleThread, InternalMsgQ):
     def check_EgressProcessor_is_running(self):
         """Used by the shutdown_handler to allow queued egress msgs to complete"""
         if self._product.lower() in [x.lower() for x in enabled_products]:
-            return self._sspl_modules[PlaneCntrlRMQegressProcessor.name()].is_running()
+            return self._sspl_modules[EgressProcessor.name()].is_running()
         elif self._product.lower() in [x.lower() for x in cs_legacy_products]:
             return self._sspl_modules[EgressProcessor.name()].is_running()
 

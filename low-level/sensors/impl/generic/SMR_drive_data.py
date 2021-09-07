@@ -57,6 +57,11 @@ class SMRdriveData(SensorThread, InternalMsgQ):
         """@return: name of the monitoring module."""
         return SMRdriveData.SENSOR_NAME
 
+    @staticmethod
+    def impact():
+        """Returns impact of the module."""
+        return "Server SMR drives can not be monitored."
+
     def __init__(self):
         super(SMRdriveData, self).__init__(self.SENSOR_NAME,
                                          self.PRIORITY)
@@ -108,7 +113,7 @@ class SMRdriveData(SensorThread, InternalMsgQ):
                 self._send_ATA_command(dir)
 
         except Exception as ae:
-            logger.exception(ae)
+            raise Exception(ae)
 
         # Reset debug mode if persistence is not enabled
         self._disable_debug_if_persist_false()

@@ -77,6 +77,11 @@ class RealStorEnclosureSensor(SensorThread, InternalMsgQ):
         return RealStorEnclosureSensor.SENSOR_NAME
 
     @staticmethod
+    def impact():
+        """Returns impact of the module."""
+        return "Storage enclosure can not be monitored."
+
+    @staticmethod
     def dependencies():
         """Returns a list of plugins and RPMs this module requires
         to function.
@@ -136,50 +141,48 @@ class RealStorEnclosureSensor(SensorThread, InternalMsgQ):
         # Check for debug mode being activated
         self._read_my_msgQ_noWait()
 
-        try:
-            # Timeout counter for controller login failed and ws request failed
-            mc_timeout_counter = self.rssencl.mc_timeout_counter
-            # mc_timeout_counter==0, fault_alert==True & prev_alert_type!=FAULT_RESOLVED
-            # all can be met True with a sspl restart & persistent cache, so ws_response
-            # status finally decides whether to send FAULT_RESOLVED alert or not.
-            ws_response_status = self.rssencl.ws_response_status
+        # Timeout counter for controller login failed and ws request failed
+        mc_timeout_counter = self.rssencl.mc_timeout_counter
+        # mc_timeout_counter==0, fault_alert==True & prev_alert_type!=FAULT_RESOLVED
+        # all can be met True with a sspl restart & persistent cache, so ws_response
+        # status finally decides whether to send FAULT_RESOLVED alert or not.
+        ws_response_status = self.rssencl.ws_response_status
 
-            if mc_timeout_counter > 10 and self.fault_alert is False:
-                self.alert_type = self.rssencl.FRU_FAULT
-                self.encl_status = "Storage Enclosure unreachable,"+\
-                                    "Possible causes : Enclosure / Storage Controller /"+\
-                                    "Management Controller rebooting,"+\
-                                    "Network port blocked by firewall,"+\
-                                    "Network outage or Power outage."
+        if mc_timeout_counter > 10 and self.fault_alert is False:
+            self.alert_type = self.rssencl.FRU_FAULT
+            self.encl_status = "Storage Enclosure unreachable,"+\
+                                "Possible causes : Enclosure / Storage Controller /"+\
+                                "Management Controller rebooting,"+\
+                                "Network port blocked by firewall,"+\
+                                "Network outage or Power outage."
 
-                self.fault_alert = True
+            self.fault_alert = True
 
-            elif mc_timeout_counter == 0 and  ws_response_status == self.rssencl.ws.HTTP_OK \
-                and self.previous_alert_type != self.rssencl.FRU_FAULT_RESOLVED \
-                and self.fault_alert == True:
+        elif mc_timeout_counter == 0 and  ws_response_status == self.rssencl.ws.HTTP_OK \
+            and self.previous_alert_type != self.rssencl.FRU_FAULT_RESOLVED \
+            and self.fault_alert == True:
 
-                # Check system status
-                self.system_status = self.check_system_status()
+            # Check system status
+            self.system_status = self.check_system_status()
 
-                if self.system_status is not None:
-                    self.alert_type = self.rssencl.FRU_FAULT_RESOLVED
-                    enclosure_status = self.system_status[0:5]
+            if self.system_status is not None:
+                self.alert_type = self.rssencl.FRU_FAULT_RESOLVED
+                enclosure_status = self.system_status[0:5]
 
-                    for status in enclosure_status:
-                        if status["severity"] == "INFORMATIONAL":
-                            msg = status["message"]
-                            for event in self.ENCL_FAULT_RESOLVED_EVENTS:
-                                if event in msg:
-                                    self.encl_status = event
-                                    break
+                for status in enclosure_status:
+                    if status["severity"] == "INFORMATIONAL":
+                        msg = status["message"]
+                        for event in self.ENCL_FAULT_RESOLVED_EVENTS:
+                            if event in msg:
+                                self.encl_status = event
+                                break
 
-                    self.fault_alert = False
+                self.fault_alert = False
 
-            if self.alert_type is not None:
-                self.send_json_msg(self.alert_type, self.encl_status)
-                self.alert_type = None
-        except Exception as e:
-            logger.exception(e)
+        if self.alert_type is not None:
+            self.send_json_msg(self.alert_type, self.encl_status)
+            self.alert_type = None
+
         self._scheduler.enter(30, self._priority, self.run, ())
 
     def check_system_status(self):
@@ -197,8 +200,8 @@ class RealStorEnclosureSensor(SensorThread, InternalMsgQ):
 
         if response.status_code != self.rssencl.ws.HTTP_OK:
             if url.find(self.rssencl.ws.LOOPBACK) == -1:
-                logger.error(f"{self.rssencl.LDR_R1_ENCL}:: http request {url} \
-                                failed with http err {response.status_code}")
+                raise Exception(f"{self.rssencl.LDR_R1_ENCL}:: http request {url} "
+                                f"failed with http err {response.status_code}")
             return
 
         response_data = json.loads(response.text)

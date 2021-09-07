@@ -52,6 +52,11 @@ class HPIMonitor(SensorThread, InternalMsgQ):
         """@return: name of the monitoring module."""
         return HPIMonitor.SENSOR_NAME
 
+    @staticmethod
+    def impact():
+        """Returns impact of the module."""
+        return "Server HPI data can not be monitored."
+
     def __init__(self):
         super(HPIMonitor, self).__init__(self.SENSOR_NAME,
                                                   self.PRIORITY)
@@ -125,15 +130,7 @@ class HPIMonitor(SensorThread, InternalMsgQ):
         except Exception as ae:
             # Check for debug mode being activated when it breaks out of blocking loop
             self._read_my_msgQ_noWait()
-
-            if self.is_running() is True:
-                self._log_debug("HPIMonitor ungracefully breaking " \
-                                "out of iNotify Loop, restarting: %r" % ae)
-                self._scheduler.enter(1, self._priority, self.run, ())
-            else:
-                self._log_debug("HPIMonitor gracefully breaking out " \
-                                "of iNotify Loop, not restarting.")
-
+            raise Exception(f"Failed in monitoring disk HPI, {ae}")
 
         # Reset debug mode if persistence is not enabled
         self._disable_debug_if_persist_false()

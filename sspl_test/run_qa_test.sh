@@ -89,6 +89,7 @@ pre_requisites()
         chown -R sspl-ll:sspl-ll "$DATA_PATH/server/"
         chmod 755 "$DATA_PATH/server/"
         touch "$DATA_PATH/server/activate_ipmisimtool"
+        chown -R sspl-ll:sspl-ll "$DATA_PATH/server/activate_ipmisimtool"
     fi
 }
 

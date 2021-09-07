@@ -59,12 +59,12 @@ class Utility(object):
             subout = subprocess.Popen(CMD, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             result = subout.stdout.readlines()
             if result == [] or result == "":
-                logger.warning("Not able to read whether env is vm or not, assuming VM env.")
+                logger.warn("Not able to read whether env is vm or not, assuming VM env.")
             else:
                 if 'false' in result[0].decode():
                     is_vm = False
         except Exception as e:
-            logger.warning("Error while reading whether env is vm or not, assuming VM env : {e}")
+            logger.warn("Error while reading whether env is vm or not, assuming VM env : {e}")
         return is_vm
 
     @staticmethod
@@ -152,14 +152,15 @@ class Utility(object):
                 f.write(line)
 
     @staticmethod
-    def set_ownership_recursively(root_dir, uid, gid):
+    def set_ownership_recursively(list_root_dir, uid, gid):
         """Set ownership recursively."""
-        os.chown(root_dir, uid, gid)
-        for base, dirs, files in os.walk(root_dir):
-            for _dir in dirs:
-                os.chown(os.path.join(base, _dir), uid, gid)
-            for file in files:
-                os.chown(os.path.join(base, file), uid, gid)
+        for root_dir in list_root_dir:
+            os.chown(root_dir, uid, gid)
+            for base, dirs, files in os.walk(root_dir):
+                for _dir in dirs:
+                    os.chown(os.path.join(base, _dir), uid, gid)
+                for file in files:
+                    os.chown(os.path.join(base, file), uid, gid)
 
     @staticmethod
     def get_current_time():

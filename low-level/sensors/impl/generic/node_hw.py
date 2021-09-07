@@ -134,9 +134,6 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         "Protocol Vendor ID": "7154"}
 
     channel_err = False
-
-    sdr_reset_required = False
-    request_shutdown = False
     sel_last_queried = None
     SEL_QUERY_FREQ = 300
 
@@ -161,6 +158,12 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
     def name():
         """@return: name of the module."""
         return NodeHWsensor.SENSOR_NAME
+
+    @staticmethod
+    def impact():
+        """Returns impact of the module."""
+        return ("Server FRUs such as fan, power supply, psu, drives and "
+                "platform sensors can not be monitored.")
 
     def __init__(self):
         super(NodeHWsensor, self).__init__(self.SENSOR_NAME.upper(), self.PRIORITY)
@@ -252,6 +255,8 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
 
         # Initialize internal message queues for this module
         super(NodeHWsensor, self).initialize_msgQ(msgQlist)
+        self.sdr_reset_required = False
+        self.request_shutdown = False
 
         ipmi_client_name = Conf.get(SSPL_CONF, f"{NODEHWSENSOR}>{IPMI_CLIENT}",
                                     "ipmitool")
@@ -280,24 +285,22 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
                 self._bmc_passwd = encryptor.decrypt(
                     decryption_key, _bmc_secret, self.SENSOR_NAME)
             except Exception as err:
-                logger.critical(f"BMC password decryption failed due to {err},"
+                raise Exception(f"BMC password decryption failed due to {err},"
                     "NodeHWSensor monitoring disabled.")
-                self.shutdown()
 
         # Set flag 'request_shutdown' to true if ipmitool/simulator is non-functional
         _, _, retcode = self._run_ipmitool_subcommand("sel info")
         if retcode != 0 and self.channel_err:
             if self._channel_interface == system:
-                log_msg = (
+                err_msg = (
                     "ipmitool commands not able to access BMC through"
                     " configured %s interface." % self._channel_interface)
             else:
-                log_msg = (
+                err_msg = (
                     "ipmitool commands not able to access BMC through"
                     " configured %s interface or even fallback option"
                     " 'KCS' interface." % (self._channel_interface))
-            logger.critical(log_msg)
-            self.request_shutdown = True
+            raise Exception(err_msg)
         else:
             self._initialize_cache()
             self._fetch_channel_info()
@@ -374,8 +377,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
                     "sel list", grep_args=f"{available_fru}",
                     out_file=f)
             if retcode != 0:
-                msg = f"ipmitool sel list command failed: {err}"
-                logger.error(msg)
+                msg = f"{self.ipmi_client.ACTIVE_IPMI_TOOL} sel list command failed: {err}"
                 raise Exception(msg)
 
         # os.rename() is required to be atomic on POSIX,
@@ -437,7 +439,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
                     logger.debug(f"SEL % Used: calculated {used}%")
 
             if used > self.SEL_USAGE_THRESHOLD:
-                logger.warning(f"SEL usage above threshold {self.SEL_USAGE_THRESHOLD}%, \
+                logger.warn(f"SEL usage above threshold {self.SEL_USAGE_THRESHOLD}%, \
                     clearing SEL")
 
                 _, err, retcode = self._run_ipmitool_subcommand("sel clear")
@@ -469,49 +471,46 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         self._read_my_msgQ_noWait()
 
         if self.request_shutdown is False:
-            try:
-                # check BMC interface is accessible or not
-                if self.channel_err or self.lan_fault == "fault":
-                    self._fetch_channel_info()
+            # check BMC interface is accessible or not
+            if self.channel_err or self.lan_fault == "fault":
+                self._fetch_channel_info()
 
-                # Reset sensor_map_id after ipmi simulation
-                if not os.path.exists("%s/activate_ipmisimtool"
-                    % CACHE_DIR_NAME):
-                    # Sensor numbers set by ipmisimtool would cause key lookup
-                    # failure with actual ipmitool SDRs. So sensor_map_id needs
-                    # to be refreshed with current SDRs.
-                    if self.sdr_reset_required:
-                        if self.channel_err is False:
-                            self.sdr_reset_required = False
-                            self._read_sensor_list()
+            # Reset sensor_map_id after ipmi simulation
+            if not os.path.exists("%s/activate_ipmisimtool"
+                % CACHE_DIR_NAME):
+                # Sensor numbers set by ipmisimtool would cause key lookup
+                # failure with actual ipmitool SDRs. So sensor_map_id needs
+                # to be refreshed with current SDRs.
+                if self.sdr_reset_required:
+                    if self.channel_err is False:
+                        self.sdr_reset_required = False
+                        self._read_sensor_list()
 
-                if self.channel_err is False:
-                    # Check for a change in ipmi sel list and notify the node data
-                    # msg handler
-                    if os.path.getsize(self.list_file_name) != 0:
-                        # If the SEL list file is not empty, that means that some
-                        # of the processing from the last iteration is incomplete.
-                        # Complete that before getting the new SEL events.
-                        self._notify_NodeDataMsgHandler()
-
-                    self._update_list_file()
+            if self.channel_err is False:
+                # Check for a change in ipmi sel list and notify the node data
+                # msg handler
+                if os.path.getsize(self.list_file_name) != 0:
+                    # If the SEL list file is not empty, that means that some
+                    # of the processing from the last iteration is incomplete.
+                    # Complete that before getting the new SEL events.
                     self._notify_NodeDataMsgHandler()
 
-                    try:
-                        self._check_faulty_resource_status()
-                    except Exception as e:
-                        logger.error("Direct check for faulty resources recovery "
-                            "failed with error %s" % e)
+                self._update_list_file()
+                self._notify_NodeDataMsgHandler()
 
-                self._check_and_clear_sel()
-            except Exception as ae:
-                logger.exception(ae)
+                try:
+                    self._check_faulty_resource_status()
+                except Exception as e:
+                    logger.error("Direct check for faulty resources recovery "
+                        "failed with error %s" % e)
+
+            self._check_and_clear_sel()
 
             # Reset debug mode if persistence is not enabled
             self._disable_debug_if_persist_false()
             self._scheduler.enter(self.polling_interval, self._priority, self.run, ())
         else:
-            logger.warning(f"{self.SENSOR_NAME} Node hw monitoring disabled")
+            logger.warn(f"{self.SENSOR_NAME} Node hw monitoring disabled")
             self.shutdown()
 
     def _check_faulty_resource_status(self):
@@ -674,20 +673,20 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
         # Detect if ipmitool removed or facing error after sensor initialized
         if retcode != 0:
             logger.error("%s can't fetch monitoring data for %s"
-                         % (self.ipmi_client.NAME, self.SENSOR_NAME))
+                         % (self.ipmi_client.ACTIVE_IPMI_TOOL, self.SENSOR_NAME))
             if retcode == 1:
                 if err.find(self.ipmi_client.VM_ERROR) != -1:
-                    logger.error((f"{self.SENSOR_NAME}: {self.ipmi_client.NAME}"
-                        f"error:: {err}\n Dependencies failed,"
-                        "shutting down sensor"))
                     self.request_shutdown = True
+                    raise Exception((f"{self.ipmi_client.ACTIVE_IPMI_TOOL}"
+                        f"error:: {err}\n Dependencies failed, "
+                        "shutting down sensor"))
                 self.iem.iem_fault("IPMITOOL_ERROR")
                 if self.IPMI not in self.iem.fault_iems:
                     self.iem.fault_iems.append(self.IPMI)
             elif retcode == BASH_ILLEGAL_CMD:
-                logger.error(f"{self.SENSOR_NAME}: Required ipmitool missing \
-                    on Node. Dependencies failed, shutting down sensor")
                 self.request_shutdown = True
+                raise Exception(f"Required ipmitool missing on Node. "
+                                "Dependencies failed, shutting down sensor")
                 self.iem.iem_fault("IPMITOOL_ERROR")
                 if self.IPMI not in self.iem.fault_iems:
                     self.iem.fault_iems.append(self.IPMI)
@@ -741,7 +740,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
             # If error detected for lan/lanplus interface,
             # fallback to KCS interface.
             if self.active_bmc_if in BMCInterface.LAN_IF.value:
-                logger.warning(
+                logger.warn(
                     f"BMC is unreachable through {self.active_bmc_if}"
                     " interface, ipmitool fallback to KCS interface, if local"
                     " server is being monitored."
@@ -766,7 +765,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
                 channel_info = self.KCS_CHANNEL_INFO
         info = {
                 "resource_type": resource_type,
-                "resource_id": channel_info["Channel Medium Type"],
+                "resource_id": channel_info.get("Channel Medium Type"),
                 "event_time": str(int(time.time())),
                 "description": alert.description.format(IF_name),
                 "impact": alert.impact.format(IF_name),
@@ -803,7 +802,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
 
         if retcode != 0:
             msg = f"ipmitool sdr type command failed: {err}"
-            logger.warning(msg)
+            logger.warn(msg)
             return out
 
         sensor_list = sensor_list_out.split("\n")
@@ -856,7 +855,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
             self._run_ipmitool_subcommand(f"sdr get '{sensor_id}'")
         if retcode != 0:
             msg = f"ipmitool sensor get command failed: {err}"
-            logger.warning(msg)
+            logger.warn(msg)
             return
         props_list = props_list_out.split("\n")
 
@@ -896,7 +895,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
             self._run_ipmitool_subcommand(f"sensor get '{sensor_id}'")
         if retcode != 0:
             msg = f"ipmitool sensor get command failed: {err}"
-            logger.warning(msg)
+            logger.warn(msg)
             return (False, False, False)
         props_list = props_list_out.split('\n')
         props_list = props_list[1:] # The first line is 'Locating sensor record...'

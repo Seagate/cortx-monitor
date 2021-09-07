@@ -100,6 +100,11 @@ class SASPortSensor(SensorThread, InternalMsgQ):
         """@return: name of the module."""
         return SASPortSensor.SENSOR_NAME
 
+    @staticmethod
+    def impact():
+        """Returns impact of the module."""
+        return "Server SAS ports can not be monitored."
+
     def __init__(self, utility_instance=None):
         """init method"""
         super(SASPortSensor, self).__init__(self.SENSOR_NAME,
@@ -136,15 +141,7 @@ class SASPortSensor(SensorThread, InternalMsgQ):
         self.polling_interval = int(Conf.get(SSPL_CONF, f"{self.SENSOR_NAME.upper()}>{self.POLLING_INTERVAL}",
                                         self.DEFAULT_POLLING_INTERVAL))
 
-        try:
-            self.HOST_ID = SAS().get_host_list()[0].replace('host', '')
-        except SASError as err:
-            logger.error(f"Shutting Down the SASPort Sensor due to {err}")
-            return False
-        except Exception as err:
-            logger.exception("Shutting Down the SASPort Sensor with error: %s",
-                             err)
-            return False
+        self.HOST_ID = SAS().get_host_list()[0].replace('host', '')
 
         self.RESOURCE_ID = SAS_RESOURCE_ID + self.HOST_ID  # eg. SASHBA-0 if host_id=0
 
@@ -189,26 +186,20 @@ class SASPortSensor(SensorThread, InternalMsgQ):
             self.check_and_send_alert()
 
         except KeyError as key_error:
-            logger.error(
-                "Unable to get the instance of {} \
-                Utility. Hence shutting down the sensor".format(sas_port_utility))
-            self.shutdown()
+            raise Exception(f"Unable to get the instance of {sas_port_utility} "
+                            f"utility, {key_error}")
         except Exception as e:
             if e == errno.ENOENT:
-                logger.error(
-                    "Problem occured while reading from sas_phy \
-                    directory. directory path doesn't directory. Hence \
-                    shuting down the sensor")
+                raise Exception(
+                    "Problem occurred while reading from sas_phy \
+                    directory. directory path doesn't directory.")
             elif e == errno.EACCES:
-                logger.error(
-                    "Problem occured while reading from sas_phy directory. \
-                     Not enough permission to read from the directory. \
-                     Hence shuting down the sensor")
+                raise Exception(
+                    "Problem occurred while reading from sas_phy directory. \
+                     Not enough permission to read from the directory.")
             else:
-                logger.error(
-                    "Problem occured while reading from sas_phy directory. \
-                     {0}. Hence shuting down the sensor".format(e))
-            self.shutdown()
+                raise Exception(
+                    f"Problem occurred while reading from sas_phy directory. {e}")
 
         return True
 
@@ -324,7 +315,7 @@ class SASPortSensor(SensorThread, InternalMsgQ):
             # Exception will be raised if stored alert is None or no Version is available
             version = self.sas_phy_stored_alert['version']
         except Exception:
-            logger.warning(f"Found no data or old data format for SASPortSensor, \
+            logger.warn(f"Found no data or old data format for SASPortSensor, \
                             updating data format to version {self.CURRENT_DATA_VERSION}")
             # Versioning is not implemented or there is no data, write new data
             # Initialize dummy fault_resolved for all sas ports and conn
@@ -404,7 +395,7 @@ class SASPortSensor(SensorThread, InternalMsgQ):
                 self.phy_link_count = new_phy_link_count
 
         except Exception as ae:
-            logger.exception(ae)
+            raise Exception(ae)
 
         # Fire every 30 seconds to see if there's a change in the phy status
         self._scheduler.enter(self.polling_interval, self._priority, self.run, ())

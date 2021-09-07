@@ -58,6 +58,12 @@ class NodeData(Debug):
         """@return: name of the module."""
         return NodeData.SENSOR_NAME
 
+    @staticmethod
+    def impact():
+        """Returns impact of the module."""
+        return ("Server CPU, network, disk space, process and local mount "
+                "data can not be monitored.")
+
     def __init__(self):
         super(NodeData, self).__init__()
 
@@ -136,8 +142,7 @@ class NodeData(Debug):
                 self._get_disk_space_alert_data()
 
         except Exception as e:
-            logger.exception(e)
-            return False
+            raise Exception(f"Failed to read data, {e}")
 
         return True
 
@@ -290,7 +295,7 @@ class NodeData(Debug):
                 if retcode == 0:
                     bmcdata['nwStatus'] = "UP"
                 else:
-                    logger.warning("BMC Host:{0} is not reachable".format(bmcip))
+                    logger.warn("BMC Host:{0} is not reachable".format(bmcip))
         except Exception as e:
             logger.error("Exception occurs while fetching bmc_info:{}".format(e))
         return bmcdata

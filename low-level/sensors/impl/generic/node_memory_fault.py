@@ -71,6 +71,11 @@ class MemFaultSensor(SensorThread, InternalMsgQ):
         """@return: name of the module."""
         return MemFaultSensor.SENSOR_NAME
 
+    @staticmethod
+    def impact():
+        """Returns impact of the module."""
+        return "Server memory usage can not be monitored."
+
     def __init__(self, utility_instance=None):
         """init method"""
         super(MemFaultSensor, self).__init__(self.SENSOR_NAME, self.PRIORITY)
@@ -97,8 +102,8 @@ class MemFaultSensor(SensorThread, InternalMsgQ):
         self._node_id = Conf.get(GLOBAL_CONF, NODE_ID_KEY,'SN01')
 
         # get the mem fault implementor from configuration
-        mem_fault_utility = Conf.get(SSPL_CONF, f"{self.name().capitalize()}>{self.PROBE}",
-            "procfs")
+        mem_fault_utility = Conf.get(
+            SSPL_CONF, f"{self.name().upper()}>{self.PROBE}", "procfs")
 
         self.polling_interval = int(Conf.get(SSPL_CONF,f"{self.SENSOR_NAME.upper()}>{self.POLLING_INTERVAL_KEY}",
                     self.DEFAULT_POLLING_INTERVAL))
@@ -111,12 +116,9 @@ class MemFaultSensor(SensorThread, InternalMsgQ):
             self._utility_instance = self._utility_instance or \
                                 self.tool_factory.get_instance(mem_fault_utility)
 #            self._utility_instance.initialize()
-        except KeyError as key_error:
-            logger.error(
-                "Unable to get the instance of {} \
-                Utility. Hence shutting down the sensor {}"\
-                .format(mem_fault_utility, MemFaultSensor.SENSOR_NAME))
-            self.shutdown()
+        except Exception as err:
+            raise Exception("Error while initializing MemFaultSensor. "
+                f"Unable to get the instance of {mem_fault_utility} utility, {err}")
 
         cache_dir_path = os.path.join(DATA_PATH, self.CACHE_DIR_NAME)
         self.MEM_FAULT_SENSOR_DATA = os.path.join(cache_dir_path, f'MEM_FAULT_SENSOR_DATA_{self._node_id}')
@@ -131,7 +133,7 @@ class MemFaultSensor(SensorThread, InternalMsgQ):
             consul_data = (store.get(self.MEM_FAULT_SENSOR_DATA)).split(":")
             self.prev_mem = consul_data[0].strip()
             self.fault_alert_state = consul_data[1].strip()
-        
+
     def put_mem_info(self, total_memory_size):
         """ Store the current memory in Consul"""
 
@@ -170,13 +172,9 @@ class MemFaultSensor(SensorThread, InternalMsgQ):
                 else:
                     self.put_mem_info(self.total_mem)
             else:
-                logger.error("MemFaultSensor: invalid file, shutting down the sensor")
-                self.shutdown()
-                return True
+                raise Exception(f"Invalid file, {mem_path}.")
         else:
-            logger.error("MemFaultSensor: file does not exist, shutting down the sensor")
-            self.shutdown()
-            return True
+            raise Exception(f"File path {mem_path} does not exist.")
 
         # Do not proceed if module is suspended
         # Memory sensor is going to trigger only during SSPL reboot; at reboot time a sensor

@@ -432,7 +432,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             else:
                 self._host_memory_usage_threshold = float(self._host_memory_usage_threshold)
         except ValueError:
-            logger.warning("Host Memory Alert, Invalid host_memory_usage_threshold value are entered in config.")
+            logger.warn("Host Memory Alert, Invalid host_memory_usage_threshold value are entered in config.")
             # Assigning default value to _memory_usage_threshold
             self._host_memory_usage_threshold = self.DEFAULT_HOST_MEMORY_USAGE_THRESHOLD
 
@@ -473,7 +473,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                         self._high_memory_usage_wait_threshold
                     )
 
-                logger.warning(fault_event)
+                logger.warn(fault_event)
 
                 logged_in_users = []
                 # Create the host update message and hand it over to the egress processor to transmit
@@ -590,7 +590,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             else:
                 self._cpu_usage_threshold = float(self._cpu_usage_threshold)
         except ValueError:
-            logger.warning("CPU Usage Alert, Invalid host_memory_usage_threshold value are entered in config.")
+            logger.warn("CPU Usage Alert, Invalid host_memory_usage_threshold value are entered in config.")
             # Assigning default value to _cpu_usage_threshold
             self._cpu_usage_threshold = self.DEFAULT_CPU_USAGE_THRESHOLD
 
@@ -630,7 +630,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                         self._cpu_usage_threshold,
                         self._high_cpu_usage_wait_threshold
                     )
-                logger.warning(fault_event)
+                logger.warn(fault_event)
 
                 # Create the cpu usage update message and hand it over to the egress processor to transmit
                 cpuDataMsg = CPUdataMsg(self._node_sensor.host_id,
@@ -816,7 +816,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             else:
                 self._disk_usage_threshold = float(self._disk_usage_threshold)
         except ValueError:
-            logger.warning("Disk Space Alert, Invalid disk_usage_threshold value are entered in config.")
+            logger.warn("Disk Space Alert, Invalid disk_usage_threshold value are entered in config.")
             # Assigning default value to _disk_usage_threshold
             self._disk_usage_threshold = self.DEFAULT_DISK_USAGE_THRESHOLD
 
@@ -831,7 +831,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     self._node_sensor.disk_used_percentage,
                     self._disk_usage_threshold
                 )
-            logger.warning(fault_event)
+            logger.warn(fault_event)
             diskSpaceAlertMsg = DiskSpaceAlertMsg(self._node_sensor.host_id,
                                     self._epoch_time,
                                     self._node_sensor.total_space,
