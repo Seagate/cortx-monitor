@@ -439,7 +439,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
                     logger.debug(f"SEL % Used: calculated {used}%")
 
             if used > self.SEL_USAGE_THRESHOLD:
-                logger.warning(f"SEL usage above threshold {self.SEL_USAGE_THRESHOLD}%, \
+                logger.warn(f"SEL usage above threshold {self.SEL_USAGE_THRESHOLD}%, \
                     clearing SEL")
 
                 _, err, retcode = self._run_ipmitool_subcommand("sel clear")
@@ -510,7 +510,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
             self._disable_debug_if_persist_false()
             self._scheduler.enter(self.polling_interval, self._priority, self.run, ())
         else:
-            logger.warning(f"{self.SENSOR_NAME} Node hw monitoring disabled")
+            logger.warn(f"{self.SENSOR_NAME} Node hw monitoring disabled")
             self.shutdown()
 
     def _check_faulty_resource_status(self):
@@ -740,7 +740,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
             # If error detected for lan/lanplus interface,
             # fallback to KCS interface.
             if self.active_bmc_if in BMCInterface.LAN_IF.value:
-                logger.warning(
+                logger.warn(
                     f"BMC is unreachable through {self.active_bmc_if}"
                     " interface, ipmitool fallback to KCS interface, if local"
                     " server is being monitored."
@@ -802,7 +802,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
 
         if retcode != 0:
             msg = f"ipmitool sdr type command failed: {err}"
-            logger.warning(msg)
+            logger.warn(msg)
             return out
 
         sensor_list = sensor_list_out.split("\n")
@@ -855,7 +855,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
             self._run_ipmitool_subcommand(f"sdr get '{sensor_id}'")
         if retcode != 0:
             msg = f"ipmitool sensor get command failed: {err}"
-            logger.warning(msg)
+            logger.warn(msg)
             return
         props_list = props_list_out.split("\n")
 
@@ -895,7 +895,7 @@ class NodeHWsensor(SensorThread, InternalMsgQ):
             self._run_ipmitool_subcommand(f"sensor get '{sensor_id}'")
         if retcode != 0:
             msg = f"ipmitool sensor get command failed: {err}"
-            logger.warning(msg)
+            logger.warn(msg)
             return (False, False, False)
         props_list = props_list_out.split('\n')
         props_list = props_list[1:] # The first line is 'Locating sensor record...'

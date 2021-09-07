@@ -43,7 +43,7 @@ from framework.actuator_state_manager import actuator_state_manager
 from framework.base.module_thread import SensorThread
 from framework.base.sspl_constants import (SSPL_SETTINGS, COMMON_CONFIGS, PRODUCT_FAMILY,
     OperatingSystem, enabled_products, SYSLOG_HOST, SYSLOG_PORT,
-    IEM_INIT_FAILED)
+    IEM_INIT_FAILED, SSPL_LOG_PATH)
 from framework.messaging.egress_accumulated_msgs_processor import \
     EgressAccumulatedMsgsProcessor
 # Modules for handling messages and manipulating internal threads
@@ -367,7 +367,7 @@ def main(conf_reader, systemd_support):
         # Loop through the list of instanced modules and start them on threads
         for name, curr_module in sspl_threaded_modules.items():
             if name in dependency_broken_modules:
-                logger.warning(
+                logger.warn(
                     "SSPL Bootstrap: Unable to load plugin {0} due to "
                     "failed dependency resolution".format(name))
                 continue
@@ -619,7 +619,7 @@ def signal_handler(signal_number, frame):
         if thread_controller_queue:
             send_thread_controller_request(state)
         else:
-            logger.warning(f'thread_controller_queue is not ready, saving the \
+            logger.warn(f'thread_controller_queue is not ready, saving the \
                             sspl role switch request state, State: {state} to \
                             process again later.')
 
@@ -740,16 +740,9 @@ if __name__ == "__main__":
         sys.exit(os.EX_USAGE)
 
     # Initialize logging
-    try:
-        logging_level = Conf.get(SSPL_CONF, f"{SYSTEM_INFORMATION}>{LOG_LEVEL}", "INFO")
-        init_logging("SSPL-LL", logging_level, SYSLOG_HOST, SYSLOG_PORT)
-
-    except Exception as err:
-        # We don't have logger since it threw an exception, use generic 'print'
-        print("[ Error ] when initializing logging :")
-        print(err)
-        print("Exiting ...")
-        sys.exit(os.EX_USAGE)
+    logging_level = Conf.get(SSPL_CONF, f"{SYSTEM_INFORMATION}>{LOG_LEVEL}", "INFO")
+    init_logging("sspl", SSPL_LOG_PATH , logging_level)
+    logger.info(f"Logging has been initialized for SSPL !!!")
 
     # Handle signals for log level change
     # signal.signal(signal.SIGUSR1, set_log_level)

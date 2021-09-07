@@ -26,14 +26,16 @@ import pickle
 import shutil
 from configparser import ConfigParser
 from framework.utils.store import Store
-from framework.utils.service_logging import logger
+from framework.utils.service_logging import logger, init_logging
 from cortx.utils.process import SimpleProcess
+from framework.base.sspl_constants import SSPL_LOG_PATH
 
 class FileStore(Store):
 
     def __init__(self):
         super(FileStore, self).__init__()
         self.config_parser = ConfigParser()
+        init_logging("sspl", SSPL_LOG_PATH)
 
     def read(self, config_path=None):
         if config_path is None:
@@ -117,15 +119,15 @@ class FileStore(Store):
             except:
                 value = fh.read()
         except IOError as err:
-            logger.warning("I/O error[{0}] while loading data from file {1}): {2}"\
+            logger.warn("I/O error[{0}] while loading data from file {1}): {2}"\
                 .format(err.errno,absfilepath,err))
         except ValueError as jsonerr:
-            logger.warning("JSON error{0} while loading from {1}".format(jsonerr, absfilepath))
+            logger.warn("JSON error{0} while loading from {1}".format(jsonerr, absfilepath))
             value = None
         except OSError as oserr:
-            logger.warning("OS error{0} while loading from {1}".format(oserr, absfilepath))
+            logger.warn("OS error{0} while loading from {1}".format(oserr, absfilepath))
         except Exception as gerr:
-            logger.warning("Error{0} while reading data from file {1}"\
+            logger.warn("Error{0} while reading data from file {1}"\
                 .format(gerr, absfilepath))
         else:
             fh.close()

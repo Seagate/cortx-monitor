@@ -185,7 +185,7 @@ class RAIDIntegritySensor(SensorThread, InternalMsgQ):
                 # Check RAID device array state is 'idle' or not
                 result = self._check_raid_state(device)
                 if result == "failed":
-                    logger.warning("'Idle' state not found for RAID device:{}"
+                    logger.warn("'Idle' state not found for RAID device:{}"
                                     .format(device))
                     # Retry to check RAID state
                     self._retry_execution(self._check_raid_state, device)

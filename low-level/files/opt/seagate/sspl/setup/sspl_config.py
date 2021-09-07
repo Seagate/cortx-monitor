@@ -99,7 +99,7 @@ class SSPLConfig:
             os.utime(consts.SSPL_CONFIGURED)
         sspl_uid = Utility.get_uid(consts.USER)
         sspl_gid = Utility.get_gid(consts.USER)
-        Utility.set_ownership_recursively(consts.SSPL_CONFIGURED, sspl_uid, sspl_gid)
+        Utility.set_ownership_recursively([consts.SSPL_CONFIGURED], sspl_uid, sspl_gid)
 
         # Get the types of server and storage we are currently running on and
         # enable/disable sensor groups in the conf file accordingly.

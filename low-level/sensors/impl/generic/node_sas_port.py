@@ -315,7 +315,7 @@ class SASPortSensor(SensorThread, InternalMsgQ):
             # Exception will be raised if stored alert is None or no Version is available
             version = self.sas_phy_stored_alert['version']
         except Exception:
-            logger.warning(f"Found no data or old data format for SASPortSensor, \
+            logger.warn(f"Found no data or old data format for SASPortSensor, \
                             updating data format to version {self.CURRENT_DATA_VERSION}")
             # Versioning is not implemented or there is no data, write new data
             # Initialize dummy fault_resolved for all sas ports and conn
