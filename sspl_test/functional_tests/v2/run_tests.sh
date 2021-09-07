@@ -18,6 +18,7 @@
 MOCK_SERVER_IP=127.0.0.1
 MOCK_SERVER_PORT=28200
 IS_VIRTUAL=$(facter is_virtual)
+MOCK_CVG_NAME="A01"
 
 [[ $EUID -ne 0 ]] && sudo=sudo
 script_dir=$(dirname $0)
@@ -45,6 +46,9 @@ global_config=$(echo $global_config_url | tr -d "["\" | tr -d "\"]")
 
 machine_id=`cat /etc/machine-id`
 DATA_PATH="/var/$PRODUCT_FAMILY/sspl/data/"
+
+CVG_INFO=`conf $global_config get "server_node>$machine_id>storage>cvg[0]"`
+CVG_INFO=$(echo $CVG_INFO | tr -d "["\" | tr -d "\"]")
 
 flask_help()
 {
@@ -152,6 +156,17 @@ restore_cfg_services()
         conf "$global_config" set "server_node>$machine_id>site_id=DC01"
         conf "$global_config" set "server_node>$machine_id>rack_id=RC01"
         conf "$global_config" set "server_node>$machine_id>cluster_id=CC01"
+        if [ "${CVG_NAME}" == "null" ]
+            then
+            if [ "${CVG_INFO}" == "null" ]
+                then
+                `conf $global_config delete "server_node>$machine_id>storage>cvg"`
+            else
+                `conf $global_config delete "server_node>$machine_id>storage>cvg[0]>name"`
+            fi
+        else
+            `conf $global_config set "server_node>$machine_id>storage>cvg[0]>name=${CVG_NAME}"`
+        fi
     fi
 
     if [ "$IS_VIRTUAL" == "true" ]
@@ -228,6 +243,14 @@ then
             conf $global_config set "storage_enclosure>$encl_id>controller>primary>ip=$MOCK_SERVER_IP"
         fi
     fi
+    if [ "${CVG_INFO}" == "null" ]
+        then
+        CVG_NAME="null"
+    else
+        CVG_NAME=`conf $global_config get "server_node>$machine_id>storage>cvg[0]>name"`
+        CVG_NAME=$(echo $CVG_NAME | tr -d "["\" | tr -d "\"]")
+    fi
+    `conf $global_config set "server_node>$machine_id>storage>cvg[0]>name=${MOCK_CVG_NAME}"`
 else
     primary_ip=$(sed -n -e '/primary_controller_ip/ s/.*\: *//p' $SSPL_CONFIG_FILE)
     primary_port=$(sed -n -e '/primary_controller_port/ s/.*\: *//p' $SSPL_CONFIG_FILE)
@@ -244,11 +267,11 @@ fi
 # Setting pre-requisites first
 pre_requisites
 
-# Start mock API server if virtual machine
+# Stopping the SSPL service for sanity test
 if [ "$IS_VIRTUAL" == "true" ]
 then
-    echo "Starting mock server on 127.0.0.1:$MOCK_SERVER_PORT"
-    $script_dir/mock_server &
+    echo "Stopping the SSPL service"
+    $sudo systemctl stop sspl-ll
 fi
 
 # IMP NOTE: Please make sure that SSPL conf file has
@@ -313,8 +336,9 @@ fi
 
 if [ "$IS_VIRTUAL" == "true" ]
 then
-    echo "Stoping the SSPL service"
-    $sudo systemctl stop sspl-ll
+    # Start mock API server if virtual machine
+    echo "Starting mock server on 127.0.0.1:$MOCK_SERVER_PORT"
+    $script_dir/mock_server &
     echo "Code Coverage enabled : $coverage_enabled"
     if [ "$coverage_enabled" == "True" ]
     then
