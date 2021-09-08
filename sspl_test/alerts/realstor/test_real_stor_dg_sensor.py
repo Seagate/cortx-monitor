@@ -33,7 +33,7 @@ def test_real_stor_dg_sensor(agrs):
     check_sspl_ll_is_running()
     dg_sensor_message_request("enclosure:cortx:disk_group")
     ingress_msg_type = "sensor_response_type"
-    ingress_msg = get_fru_response("enclosure:cortx:disk_group", "*",
+    ingress_msg = get_fru_response("enclosure:cortx:disk_group", None,
         ingress_msg_type)
     dg_sensor_msg = ingress_msg.get(ingress_msg_type)
     assert(dg_sensor_msg is not None)
