@@ -20,7 +20,7 @@ from common import sensor_response_filter
 
 class RealStorDGSensorTest(TestCaseBase):
     resource_type = "enclosure:cortx:disk_group"
-    resource_id = "*"
+    resource_id = None
 
     def init(self):
         pass
