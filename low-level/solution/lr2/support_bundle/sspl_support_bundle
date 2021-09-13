@@ -195,7 +195,7 @@ class SupportBundle(object):
 
         if file_path:
             if os.path.exists(file_path):
-                self.tmp_bundle_path = os.path.normpath(file_path)
+                self.tmp_bundle_path = os.path.normpath(file_path+"/sspl")
             else:
                 msg = "Given path %s doesn't exist" % (file_path)
                 self.__clear_tmp_files()
