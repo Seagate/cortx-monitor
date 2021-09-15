@@ -221,8 +221,7 @@ class Service:
                     "command_line_path": command_line_path
                 }
             ]
-            if service_status == 'enabled' and state == 'active' \
-                    and substate == 'running':
+            if state == 'active' and substate == 'running':
                 health_status = 'OK'
                 health_description = f"{uid} is in good health"
                 recommendation = "NA"
