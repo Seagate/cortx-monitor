@@ -207,15 +207,44 @@ class SSPLPostInstall:
             shutil.copyfile("%s/conf/sspl.conf.%s.yaml" % (consts.SSPL_BASE_DIR,
                 self.product), consts.file_store_config_path)
 
+    def validate_user_existence(self):
+        max_retry = 3
+        for i in range(max_retry):
+            sspl_uid = Utility.get_uid(consts.USER)
+            if sspl_uid != -1:
+                break
+            else:
+                if i == (max_retry-1):
+                    msg = "No user found with name : %s" % (consts.USER)
+                    logger.error(msg)
+                    raise SetupError(errno.EINVAL, msg)
+                time.sleep(1)
+
+    def validate_group_existence(self):
+        max_retry = 3
+        for i in range(max_retry):
+            sspl_gid = Utility.get_gid(consts.USER)
+            if sspl_gid != -1:
+                break
+            else:
+                if i == (max_retry-1):
+                    msg = "No group found with name : %s" % (consts.USER)
+                    logger.error(msg)
+                    raise SetupError(errno.EINVAL, msg)
+                time.sleep(1)
+
     def create_user(self):
         """Add sspl-ll user and validate user creation."""
-        os.system("/usr/sbin/useradd -r %s -s /sbin/nologin \
-            -c 'User account to run the %s service'" % (consts.USER, consts.USER))
-        usernames = [x[0] for x in pwd.getpwall()]
-        if consts.USER not in usernames:
-            msg = "User %s doesn't exit. Please add user." % (consts.USER)
-            logger.error(msg)
-            raise SetupError(errno.EINVAL, msg)
+        command = f"/usr/sbin/useradd -r {consts.USER} -s /sbin/nologin \
+                  -c 'User account to run the {consts.USER} service'"
+        _, error, rc = SimpleProcess(command).run()
+        # rc 9 means user already exists
+        if rc != 0 and rc != 9:
+            logger.error(f"Failed to create sspl user. ERROR: {error}")
+            raise SetupError(rc, error, command)
+
+        self.validate_user_existence()
+        self.validate_group_existence()
         # Add sspl-ll user to required groups and sudoers file etc.
         sspl_reinit = "%s/low-level/framework/sspl_reinit" % consts.SSPL_BASE_DIR
         _ , error, rc = SimpleProcess(sspl_reinit).run()
@@ -237,10 +266,6 @@ class SSPLPostInstall:
             raise SetupError(errno.EINVAL, "Data path not set in sspl.conf")
         sspl_uid = Utility.get_uid(consts.USER)
         sspl_gid = Utility.get_gid(consts.USER)
-        if sspl_uid == -1 or sspl_gid == -1:
-            msg = "No user found with name : %s" % (consts.USER)
-            logger.error(msg)
-            raise SetupError(errno.EINVAL, msg)
         # Create sspl data directory if not exists
         os.makedirs(sspldp, exist_ok=True)
         # Create state file under sspl data directory
