@@ -351,7 +351,7 @@ then
     # before SSPL initialization
     $script_dir/messaging/consume.py
     echo "Starting the SSPL service"
-    $sudo systemctl start sspl.service
+    $sudo systemctl start $SERVICE_NAME
     sleep 5
     echo "Waiting for SSPL to complete initialization of all the plugins.."
     $script_dir/sspl_start_checker

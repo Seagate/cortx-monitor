@@ -22,6 +22,7 @@ from enum import Enum
 
 PRODUCT_NAME = 'LDR_R2'
 PRODUCT_FAMILY = 'cortx'
+SERVICE_NAME = "sspl.service"
 enabled_products = [ "CS-A", "SINGLE","DUAL","CLUSTER" ,"LDR_R1", "LDR_R2"]
 cs_products = ["CS-A"]
 cs_legacy_products = ["CS-L", "CS-G"]

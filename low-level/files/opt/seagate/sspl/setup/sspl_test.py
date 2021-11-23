@@ -29,7 +29,7 @@ from framework.base.sspl_constants import (
     PRODUCT_FAMILY, sspl_config_path, sspl_test_file_path,
     sspl_test_config_path, global_config_path, SSPL_CONFIG_INDEX,
     SSPL_TEST_CONFIG_INDEX, IVT_TEST_PLANS, NOT_IMPLEMENTED_TEST_PLANS,
-    sspl_testv2_config_path, sspl_testv2_file_path)
+    sspl_testv2_config_path, sspl_testv2_file_path, SERVICE_NAME)
 
 
 SSPL_TEST_GLOBAL_CONFIG = "sspl_test_gc"
@@ -263,7 +263,7 @@ class SSPLTestCmd:
                     "%s - ERROR: %s - CMD %s" % (self.name, error, CMD))
 
             print('Restarting the SSPL service..')
-            CMD = "systemctl restart sspl.service"
+            CMD = "systemctl restart %s" % SERVICE_NAME
             try:
                 SimpleProcess(CMD).run(realtime_output=True)
             except Exception as error:

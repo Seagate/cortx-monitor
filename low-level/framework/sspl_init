@@ -189,8 +189,8 @@ config_sspl() {
         done;
         [ "$ans" != "y" ] && exit 1;
         rm -f $SSPL_CONFIGURED;
-        systemctl stop sspl.service;
-        systemctl disable sspl.service;
+        systemctl stop $SERVICE_NAME;
+        systemctl disable $SERVICE_NAME;
     }
 
     # Get product
@@ -238,7 +238,7 @@ config_sspl() {
     touch /etc/mdadm.conf
     setfacl -m u:sspl-ll:rw /etc/mdadm.conf
 
-    cp /opt/seagate/$PRODUCT_FAMILY/sspl/conf/sspl.service.$product /etc/systemd/system/sspl.service
+    cp $SSPL_SERVICE_FILE.$product /etc/systemd/system/$SERVICE_NAME
     touch $SSPL_CONFIGURED
 
     # Configure log file path in Rsyslog and logrotate configuration file
@@ -266,8 +266,8 @@ config_sspl() {
     # /var/log/<product>/sspl/sspl.log file. So, initial logs needs to be collected from
     # /var/log/messages
     systemctl restart rsyslog
-    systemctl enable sspl.service
-    systemctl start sspl.service
+    systemctl enable $SERVICE_NAME
+    systemctl start $SERVICE_NAME
 }
 
 cmd="config"

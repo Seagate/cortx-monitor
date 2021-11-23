@@ -26,7 +26,7 @@ from cortx.utils.process import SimpleProcess
 # Add the top level directory to the sys.path to access classes
 topdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 os.sys.path.insert(0, topdir)
-from framework.base.sspl_constants import DATA_PATH
+from framework.base.sspl_constants import DATA_PATH, SERVICE_NAME
 
 SSPL_LL_D = "/opt/seagate/cortx/sspl/low-level/sspld"
 REPORT_PATH = f"{DATA_PATH}coverage/sspl_xml_coverage_report.xml"
@@ -134,7 +134,7 @@ def coverage_reset():
         except Exception as err:
             print(err)
     else:
-        print("sspl.service is not running.")
+        print("%s is not running." % SERVICE_NAME)
 
     time.sleep(5)
 
@@ -153,7 +153,7 @@ def coverage_reset():
         print("%s file does not exists."%REPORT_PATH)
 
     print("Stoping the SSPL service..")
-    cmd = 'systemctl stop sspl.service'
+    cmd = 'systemctl stop %s' % SERVICE_NAME
     _, err, return_code = SimpleProcess(cmd).run()
     if return_code:
         print(err)

@@ -102,7 +102,7 @@ setup_provisioner_prereq(){
 
 start_req_services(){
     [ "$rmq_cluster" == true ] && systemctl start rabbitmq-server.service
-    systemctl start sspl.service
+    systemctl start $SERVICE_NAME
 
     # TODO: Temporary change until HA integration is in place
     # Switch SSPL to active state to resume all the suspended plugins. If SSPL is
