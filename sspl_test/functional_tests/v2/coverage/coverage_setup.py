@@ -23,7 +23,7 @@ import psutil
 import time
 import sys
 from cortx.utils.process import SimpleProcess
-from sspl_constants import DATA_PATH
+from sspl_constants import DATA_PATH, SERVICE_NAME
 
 SSPL_LL_D = "/opt/seagate/cortx/sspl/low-level/sspl_ll_d"
 REPORT_PATH = f"{DATA_PATH}coverage/sspl_xml_coverage_report.xml"
@@ -138,7 +138,7 @@ def coverage_reset():
         except Exception as err:
             print(err)
     else:
-        print("sspl-ll.service is not running.")
+        print("%s is not running." % SERVICE_NAME)
 
     time.sleep(5)
 
@@ -159,7 +159,7 @@ def coverage_reset():
         print("%s file does not exists." % REPORT_PATH)
 
     print("Stoping the SSPL service..")
-    cmd = "systemctl stop sspl-ll.service"
+    cmd = "systemctl stop %s" % SERVICE_NAME
     _, err, return_code = SimpleProcess(cmd).run()
     if return_code:
         print(err)

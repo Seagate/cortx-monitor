@@ -272,7 +272,7 @@ pre_requisites
 if [ "$IS_VIRTUAL" == "true" ]
 then
     echo "Stopping the SSPL service"
-    $sudo systemctl stop sspl-ll
+    $sudo systemctl stop $SERVICE_NAME
 fi
 
 # IMP NOTE: Please make sure that SSPL conf file has
