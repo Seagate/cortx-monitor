@@ -201,7 +201,7 @@ def check_os_platform():
         print("Failed to get the os platform: error:{}".format(error.decode().rstrip('\n')))
 
 
-def get_fru_response(resource_type, instance_id, ingress_msg_type="actuator_response_type",
+def get_fru_response(resource_type, instance_id=None, ingress_msg_type="actuator_response_type",
                      timeout=30, alert_type=None):
     """Returns message when resource type match with ingress message."""
     sensor_msg = None
