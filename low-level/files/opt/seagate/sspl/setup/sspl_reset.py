@@ -20,7 +20,8 @@ import shutil
 from framework.base.sspl_constants import (PRODUCT_FAMILY,
                                            DATA_PATH,
                                            SSPL_CONFIG_INDEX,
-                                           sspl_config_path)
+                                           sspl_config_path,
+                                           SERVICE_NAME)
 from cortx.utils.service import DbusServiceHandler
 from cortx.utils.conf_store import Conf
 from files.opt.seagate.sspl.setup.setup_logger import logger
@@ -42,12 +43,12 @@ class Reset:
     def process(self):
         dbus_service = DbusServiceHandler()
         # Stop SSPL service if state is active
-        service_state = dbus_service.get_state('sspl-ll.service')
+        service_state = dbus_service.get_state(SERVICE_NAME)
         if service_state._state == 'active':
             logger.warning ("SSPL service should have been stopped,"
                             f"before {self.name} interface is invoked")
             logger.warning("Stopping SSPL service now...")
-            dbus_service.stop('sspl-ll.service')
+            dbus_service.stop(SERVICE_NAME)
 
         # Remove sspl data
         shutil.rmtree(DATA_PATH, ignore_errors=True)

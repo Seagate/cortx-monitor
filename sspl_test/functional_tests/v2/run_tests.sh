@@ -271,7 +271,7 @@ pre_requisites
 if [ "$IS_VIRTUAL" == "true" ]
 then
     echo "Stopping the SSPL service"
-    $sudo systemctl stop sspl-ll
+    $sudo systemctl stop "$SERVICE_NAME"
 fi
 
 # IMP NOTE: Please make sure that SSPL conf file has
@@ -350,7 +350,7 @@ then
     # before SSPL initialization
     $script_dir/framework/messaging/consume.py
     echo "Starting the SSPL service"
-    $sudo systemctl start sspl-ll
+    $sudo systemctl start "$SERVICE_NAME"
     sleep 5
     echo "Waiting for SSPL to complete initialization of all the plugins.."
     $script_dir/sspl_start_checker
@@ -364,7 +364,7 @@ echo "Initialization completed. Starting tests"
 if [ "$IS_VIRTUAL" == "true" ]
 then
     echo "state=active" > /var/$PRODUCT_FAMILY/sspl/data/state.txt
-    PID=`/usr/bin/pgrep -d " " -f /opt/seagate/cortx/sspl/low-level/sspl_ll_d`
+    PID=`/usr/bin/pgrep -d " " -f /opt/seagate/cortx/sspl/low-level/$SSPL_PROC_NAME`
     kill -s SIGHUP $PID
 fi
 

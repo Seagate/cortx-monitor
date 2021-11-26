@@ -23,6 +23,7 @@ from default import world
 from messaging.ingress_processor_tests import IngressProcessorTests
 from messaging.egress_processor_tests import EgressProcessorTests
 from common import get_current_node_id
+from framework.base import sspl_constants as const
 
 
 def init(args):
@@ -170,7 +171,7 @@ def check_sspl_ll_is_running():
 
     # Support for python-psutil < 2.1.3
     for proc in psutil.process_iter():
-        if proc.name == "sspl_ll_d" and \
+        if proc.name == const.SSPL_PROC_NAME and \
            proc.status in (psutil.STATUS_RUNNING, psutil.STATUS_SLEEPING):
                found = True
 
@@ -178,7 +179,7 @@ def check_sspl_ll_is_running():
     if found == False:
         for proc in psutil.process_iter():
             pinfo = proc.as_dict(attrs=['cmdline', 'status'])
-            if "sspl_ll_d" in str(pinfo['cmdline']) and \
+            if const.SSPL_PROC_NAME in str(pinfo['cmdline']) and \
                 pinfo['status'] in (psutil.STATUS_RUNNING, psutil.STATUS_SLEEPING):
                     found = True
 

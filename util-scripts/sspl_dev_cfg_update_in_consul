@@ -46,7 +46,7 @@ for conf_val in "${!sspl_conf_update[@]}";
 done
 
 echo "Restarting SSPL"
-$sudo systemctl restart sspl-ll
+$sudo systemctl restart sspl.service
 
 echo "SSPL Service started."
 echo "Waiting 5 seconds to initialize."
@@ -57,5 +57,5 @@ sleep 5
 # Doesn't need below line for dual node setup.
 # Uncomment below line of code for a single node setup or dev environment.
 # echo "state=active" > /var/cortx/sspl/data/state.txt
-PID=`/usr/bin/pgrep -d " " -f /opt/seagate/cortx/sspl/low-level/sspl_ll_d`
+PID=`/usr/bin/pgrep -d " " -f /opt/seagate/cortx/sspl/low-level/sspld`
 kill -s SIGHUP $PID

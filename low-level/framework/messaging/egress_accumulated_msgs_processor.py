@@ -98,7 +98,7 @@ class EgressAccumulatedMsgsProcessor(ScheduledModuleThread, InternalMsgQ):
         """Run the sensor on its own thread"""
         logger.debug("Consul accumulated messages processing started")
         if not self._is_my_msgQ_empty():
-            # Check for shut down message from sspl_ll_d and set a flag to shutdown
+            # Check for shut down message from sspld and set a flag to shutdown
             #  once our message queue is empty
             self._jsonMsg, _ = self._read_my_msgQ()
             if self._jsonMsg.get("message").get(
@@ -109,10 +109,10 @@ class EgressAccumulatedMsgsProcessor(ScheduledModuleThread, InternalMsgQ):
                     self._jsonMsg.get("message").get(
                         "actuator_response_type").get("thread_controller").get(
                         "thread_response") == \
-                    "SSPL-LL is shutting down":
+                    "SSPL is shutting down":
                 logger.info(
                     "EgressAccumulatedMsgsProcessor, run, received"
-                    "global shutdown message from sspl_ll_d")
+                    "global shutdown message from sspld")
                 self.shutdown()
         try:
             # TODO : Fix accumulated message processor when message bus changes are available to

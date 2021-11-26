@@ -25,7 +25,7 @@ from framework.platforms.server.error import BuildInfoError, ServiceError
 from framework.utils.conf_utils import SSPL_CONF, Conf
 from framework.base.sspl_constants import (CORTX_RELEASE_FACTORY_INFO,
     CONFIG_SPEC_TYPE, SYSTEMD_BUS, SERVICE_IFACE, UNIT_IFACE,
-    DEFAULT_RECOMMENDATION)
+    DEFAULT_RECOMMENDATION, SERVICE_NAME)
 from framework.utils.service_logging import logger
 from dbus import PROPERTIES_IFACE, DBusException, Interface
 
@@ -90,7 +90,7 @@ class Service:
             "s3backgroundconsumer.service",
             "hare-hax.service",
             "haproxy.service",
-            "sspl-ll.service",
+            SERVICE_NAME,
             "kibana.service",
             "csm_agent.service",
             "csm_web.service",

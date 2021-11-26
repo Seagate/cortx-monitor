@@ -14,22 +14,23 @@
 # cortx-questions@seagate.com.
 
 [Unit]
-Description=SSPL Daemon responsible for monitoring platform
-After=syslog.target
+Description=SSPL Low Level Process
+Wants=rabbitmq-server.service openhpid.service dcs-collector.service
+After=rabbitmq-server.service syslog.target
+Requires=rabbitmq-server.service dcs-collector.service
 
 [Service]
-#Type=notify
+Type=notify
 PermissionsStartOnly=true
-ExecStartPre=/opt/seagate/cortx/sspl/bin/sspl_setup check
+ExecStartPre=/opt/seagate/cortx/sspl/sspl_init check
 ExecStartPre=-/usr/bin/mkdir -p /var/run/sspl_ll
 ExecStartPre=/usr/bin/chown sspl-ll:root /var/run/sspl_ll
-ExecStart=/opt/seagate/cortx/sspl/low-level/sspl_ll_d
+ExecStart=/opt/seagate/cortx/sspl/low-level/sspld -c /etc/sspl.conf
 ExecStopPost=-/usr/bin/rm -Rf /var/run/sspl_ll
-PIDFile=/var/run/sspl_ll/sspl_ll.pid
+PIDFile=/var/run/sspl_ll/sspl_ll_d.pid
 User=sspl-ll
-Restart=no
+Restart=on-failure
 TimeoutStartSec=190
-TimeoutStopSec=90
 
 [Install]
 WantedBy=multi-user.target

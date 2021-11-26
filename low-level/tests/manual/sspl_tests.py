@@ -43,6 +43,7 @@ from dbus import SystemBus, Interface, exceptions as debus_exceptions
 
 import sys
 from framework.utils.config_reader import ConfigReader
+from framework.base.sspl_constants import SERVICE_NAME
 
 import ctypes
 SSPL_SEC = ctypes.cdll.LoadLibrary('libsspl_sec.so.0')
@@ -1181,7 +1182,7 @@ class SSPLtest():
                 : 1 -> respective test failed
         """
 
-        command = "systemctl restart sspl-ll"
+        command = "systemctl restart %s" % SERVICE_NAME
         subprocess.Popen(command, shell=True, stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE)
         time.sleep(300)

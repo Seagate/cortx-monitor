@@ -29,12 +29,11 @@ def init(args):
 
 def test_host_update_data_sensor(args):
     resource_type = "node:os:memory_usage"
-    instance_id = "*"
     ingress_msg_type="sensor_response_type"
     check_sspl_ll_is_running()
     node_data_sensor_message_request(resource_type)
     ingress_msg = get_fru_response(
-        resource_type, instance_id, ingress_msg_type)
+        resource_type, ingress_msg_type=ingress_msg_type)
 
     host_update_msg = ingress_msg.get(ingress_msg_type)
     assert(host_update_msg is not None)
