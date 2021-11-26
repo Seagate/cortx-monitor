@@ -26,9 +26,9 @@ from cortx.utils.process import SimpleProcess
 # Add the top level directory to the sys.path to access classes
 topdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 os.sys.path.insert(0, topdir)
-from framework.base.sspl_constants import DATA_PATH, SERVICE_NAME
+from framework.base.sspl_constants import DATA_PATH, SERVICE_NAME, SSPL_PROC_NAME
 
-SSPL_LL_D = "/opt/seagate/cortx/sspl/low-level/sspld"
+SSPL_LL_D = "/opt/seagate/cortx/sspl/low-level/%s" % SSPL_PROC_NAME
 REPORT_PATH = f"{DATA_PATH}coverage/sspl_xml_coverage_report.xml"
 
 PATCH_1 = """\
@@ -125,7 +125,7 @@ def coverage_reset():
     print("Generating the coverage report..")
     pid = 0
     for proc in psutil.process_iter():
-        if "sspld" in proc.name():
+        if SSPL_PROC_NAME in proc.name():
             pid = proc.pid
 
     if pid:

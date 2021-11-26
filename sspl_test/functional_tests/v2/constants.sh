@@ -15,6 +15,8 @@
 
 PRODUCT_NAME='LDR_R2'
 PRODUCT_FAMILY='cortx'
+SERVICE_NAME='sspl.service'
+SSPL_PROC_NAME='sspld'
 CONSUL_PATH="/usr/bin/"
 SSPL_STORE_TYPE='file'
 CONFIG_SPEC_TYPE="yaml"

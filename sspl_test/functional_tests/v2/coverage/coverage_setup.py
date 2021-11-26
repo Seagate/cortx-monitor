@@ -23,9 +23,9 @@ import psutil
 import time
 import sys
 from cortx.utils.process import SimpleProcess
-from sspl_constants import DATA_PATH, SERVICE_NAME
+from sspl_constants import DATA_PATH, SERVICE_NAME, SSPL_PROC_NAME
 
-SSPL_LL_D = "/opt/seagate/cortx/sspl/low-level/sspl_ll_d"
+SSPL_LL_D = "/opt/seagate/cortx/sspl/low-level/%s" % SSPL_PROC_NAME
 REPORT_PATH = f"{DATA_PATH}coverage/sspl_xml_coverage_report.xml"
 
 PATCH_1 = """\
@@ -129,7 +129,7 @@ def coverage_reset():
     print("Generating the coverage report..")
     pid = 0
     for proc in psutil.process_iter():
-        if "sspl_ll_d" in proc.name():
+        if SSPL_PROC_NAME in proc.name():
             pid = proc.pid
 
     if pid:
