@@ -271,7 +271,7 @@ pre_requisites
 if [ "$IS_VIRTUAL" == "true" ]
 then
     echo "Stopping the SSPL service"
-    $sudo systemctl stop $SERVICE_NAME
+    $sudo systemctl stop "$SERVICE_NAME"
 fi
 
 # IMP NOTE: Please make sure that SSPL conf file has
@@ -350,7 +350,7 @@ then
     # before SSPL initialization
     $script_dir/framework/messaging/consume.py
     echo "Starting the SSPL service"
-    $sudo systemctl start $SERVICE_NAME
+    $sudo systemctl start "$SERVICE_NAME"
     sleep 5
     echo "Waiting for SSPL to complete initialization of all the plugins.."
     $script_dir/sspl_start_checker
