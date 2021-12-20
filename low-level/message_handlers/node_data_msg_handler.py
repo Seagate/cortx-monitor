@@ -38,6 +38,7 @@ from json_msgs.messages.sensors.local_mount_data import LocalMountDataMsg
 from json_msgs.messages.sensors.node_hw_data import NodeIPMIDataMsg
 from json_msgs.messages.sensors.raid_data import RAIDdataMsg
 from json_msgs.messages.sensors.raid_integrity_msg import RAIDIntegrityMsg
+from json_msgs.messages.sensors.hba_data import HBADataMsg
 from framework.messaging.egress_processor import EgressProcessor
 from framework.utils.store_factory import file_store
 from framework.utils.utility import Utility
@@ -75,6 +76,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
     IPMI_RESOURCE_TYPE_CURRENT = "node:sensor:current"
     NW_RESOURCE_TYPE = "node:interface:nw"
     NW_CABLE_RESOURCE_TYPE = "node:interface:nw:cable"
+    HBA_RESOURCE_TYPE = "node:hw:hba"
     high_usage = {
         'cpu' : False,
         'disk' : False,
@@ -163,12 +165,13 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         self._epoch_time = str(int(time.time()))
         self._raid_drives = []
         self._raid_device = "N/A"
-        self.os_sensor_type = {
+        self.sensor_data = {
             "disk_space" : self.disk_sensor_data,
             "memory_usage" : self.host_sensor_data,
             "nw"   : self.if_sensor_data,
             "cpu_usage"  : self.cpu_sensor_data,
-            "raid_data" : self.raid_sensor_data
+            "raid_data" : self.raid_sensor_data,
+            "hba": None,
         }
 
         # UUID used in json msgs
@@ -316,6 +319,15 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         if isinstance(jsonMsg, dict) is False:
             jsonMsg = json.loads(jsonMsg)
 
+        if jsonMsg.get('message') and \
+            jsonMsg.get('message').get('sensor_response_type') and \
+            jsonMsg.get('message').get('sensor_response_type').get("info"):
+            info = jsonMsg.get('message').get('sensor_response_type').get("info")
+            # Update HBA sensor data
+            if info.get("resource_type") == self.HBA_RESOURCE_TYPE:
+                self.sensor_data["hba"] = jsonMsg
+            self._write_internal_msgQ(EgressProcessor.name(), jsonMsg)
+
         # Parse out the uuid so that it can be sent back in response message
         self._uuid = None
         if jsonMsg.get("sspl_ll_msg_header") is not None and \
@@ -326,69 +338,42 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
         if jsonMsg.get("sensor_request_type") is not None and \
            jsonMsg.get("sensor_request_type").get("node_data") is not None and \
            jsonMsg.get("sensor_request_type").get("node_data").get("sensor_type") is not None:
-            self.sensor_type = jsonMsg.get("sensor_request_type").get("node_data").get("sensor_type").split(":")[2]
+            resource_type = jsonMsg.get("sensor_request_type").get("node_data").get("sensor_type")
+            self.sensor_type = resource_type.split(":")[2]
             self._log_debug("_processMsg, sensor_type: %s" % self.sensor_type)
 
             if self.sensor_type == "memory_usage":
                 self._generate_host_update()
-                sensor_message_type = self.os_sensor_type.get(self.sensor_type, "")
-                if sensor_message_type:
-                    self._write_internal_msgQ(EgressProcessor.name(),
-                                          sensor_message_type)
-                else:
-                    self._log_debug(f"NodeDataMsgHandler, _process_msg, \
-                        No past data found for {self.sensor_type} sensor type")
 
             elif self.sensor_type == "cpu_usage":
                 self._generate_cpu_data()
-                sensor_message_type = self.os_sensor_type.get(self.sensor_type, "")
-                if sensor_message_type:
-                    self._write_internal_msgQ(EgressProcessor.name(),
-                                          sensor_message_type)
-                else:
-                    self._log_debug(f"NodeDataMsgHandler, _process_msg, \
-                        No past data found for {self.sensor_type} sensor type")
 
             elif self.sensor_type == "nw":
                 self._generate_if_data()
-                sensor_message_type = self.os_sensor_type.get(self.sensor_type, "")
-                if sensor_message_type:
-                    self._write_internal_msgQ(EgressProcessor.name(),
-                                          sensor_message_type)
-                else:
-                    self._log_debug(f"NodeDataMsgHandler, _process_msg, \
-                        No past data found for {self.sensor_type} sensor type")
 
             elif self.sensor_type == "disk_space":
                 self._generate_disk_space_alert()
-                sensor_message_type = self.os_sensor_type.get(self.sensor_type, "")
-                if sensor_message_type:
-                    self._write_internal_msgQ(EgressProcessor.name(),
-                                          sensor_message_type)
-                else:
-                    self._log_debug(f"NodeDataMsgHandler, _process_msg, \
-                        No past data found for {self.sensor_type} sensor type")
 
             elif self.sensor_type == "raid_data":
                 self._generate_raid_data(jsonMsg)
-                sensor_message_type = self.os_sensor_type.get(self.sensor_type, "")
-                if sensor_message_type:
-                    self._write_internal_msgQ(EgressProcessor.name(),
-                                            sensor_message_type)
-                else:
-                    self._log_debug("NodeDataMsgHandler, _process_msg " +
-                            f"No past data found for {self.sensor_type} sensor type")
 
             elif self.sensor_type == "raid_integrity":
                 self._generate_raid_integrity_data(jsonMsg)
-                sensor_message_type = self.os_sensor_type.get(self.sensor_type, "")
-                if sensor_message_type:
-                    self._write_internal_msgQ(EgressProcessor.name(),
-                                            sensor_message_type)
-                else:
-                    self._log_debug("NodeDataMsgHandler, _process_msg " +
-                            f"No past data found for {self.sensor_type} sensor type")
 
+            elif self.sensor_type == "hba":
+                sensor_message = self.sensor_data.get(self.sensor_type, "")
+                if not sensor_message:
+                    self._notify_hba_sensor(jsonMsg)
+                else:
+                    sensor_message["message"]["sspl_ll_msg_header"]["uuid"] = self._uuid
+                    self.sensor_data[self.sensor_type] = sensor_message
+
+            sensor_message = self.sensor_data.get(self.sensor_type, "")
+            if sensor_message:
+                self._write_internal_msgQ(EgressProcessor.name(), sensor_message)
+            else:
+                self._log_debug("NodeDataMsgHandler, _process_msg, "
+                    f"No past data found for {self.sensor_type} sensor type")
 
         # Update mapping of device names to serial numbers for global use
         elif jsonMsg.get("sensor_response_type") is not None:
@@ -495,7 +480,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 jsonMsg = hostUpdateMsg.getJson()
                 # Transmit it to message processor
                 self.host_sensor_data = jsonMsg
-                self.os_sensor_type["memory_usage"] = self.host_sensor_data
+                self.sensor_data["memory_usage"] = self.host_sensor_data
                 self._write_internal_msgQ(EgressProcessor.name(), jsonMsg)
                 self.persist_state_data('memory', 'MEMORY_USAGE_DATA')
 
@@ -538,7 +523,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     jsonMsg = hostUpdateMsg.getJson()
                     # Transmit it to message processor
                     self.host_sensor_data = jsonMsg
-                    self.os_sensor_type["memory_usage"] = self.host_sensor_data
+                    self.sensor_data["memory_usage"] = self.host_sensor_data
                     self._write_internal_msgQ(EgressProcessor.name(), jsonMsg)
                     self.high_usage['memory'] = False
                     self.usage_time_map['memory'] = int(-1)
@@ -655,7 +640,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                     cpuDataMsg.set_uuid(self._uuid)
                 jsonMsg = cpuDataMsg.getJson()
                 self.cpu_sensor_data = jsonMsg
-                self.os_sensor_type["cpu_usage"] = self.cpu_sensor_data
+                self.sensor_data["cpu_usage"] = self.cpu_sensor_data
 
                 # Transmit it to message processor
                 self._write_internal_msgQ(EgressProcessor.name(), jsonMsg)
@@ -704,7 +689,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                         cpuDataMsg.set_uuid(self._uuid)
                     jsonMsg = cpuDataMsg.getJson()
                     self.cpu_sensor_data = jsonMsg
-                    self.os_sensor_type["cpu_usage"] = self.cpu_sensor_data
+                    self.sensor_data["cpu_usage"] = self.cpu_sensor_data
 
                     # Transmit it to message processor
                     self._write_internal_msgQ(EgressProcessor.name(), jsonMsg)
@@ -728,7 +713,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
             ifDataMsg.set_uuid(self._uuid)
         jsonMsg = ifDataMsg.getJson()
         self.if_sensor_data = jsonMsg
-        self.os_sensor_type["nw"] = self.if_sensor_data
+        self.sensor_data["nw"] = self.if_sensor_data
 
         # Transmit it to message processor
         self._write_internal_msgQ(EgressProcessor.name(), jsonMsg)
@@ -798,6 +783,41 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                         self.FAULT_RESOLVED,
                         cable_alert_desc.format(if_name, "CONNECTED"))
 
+    def _notify_hba_sensor(self, request):
+        """
+        Parse request and notify HBA sensor to process the internal
+        request.
+
+        Parameters:
+            request (dict): To HBA sensor
+        """
+
+        successful = self._node_sensor.read_data("hba_data",
+                                                 self._get_debug(),
+                                                 self._units)
+        if not successful:
+            logger.error(
+                "NodeDataMsgHandler, _generate_hba_data was NOT successful.")
+            return
+
+        if not request.get("sensor_request_type").get("node_data"):
+            return
+
+        node_data = request.get("sensor_request_type").get("node_data")
+        resource_type = node_data.get("sensor_type")
+        resource_id = node_data.get("resource") or "*"
+        self._log_debug(f"perform_request, hba: {resource_type}")
+
+        internal_json_msg = json.dumps(
+            {
+                "sensor_request_type" : "node_hba",
+                "node_request" : resource_type,
+                "resource_id": resource_id,
+                "uuid" : self._uuid
+            })
+
+        self._write_internal_msgQ("HBASensor", internal_json_msg)
+
     def _generate_disk_space_alert(self):
         """Create & transmit a disk_space_alert message as defined
             by the sensor response json schema"""
@@ -845,7 +865,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 diskSpaceAlertMsg.set_uuid(self._uuid)
             jsonMsg = diskSpaceAlertMsg.getJson()
             self.disk_sensor_data = jsonMsg
-            self.os_sensor_type["disk_space"] = self.disk_sensor_data
+            self.sensor_data["disk_space"] = self.disk_sensor_data
 
             # Transmit it to message processor
             self._write_internal_msgQ(EgressProcessor.name(), jsonMsg)
@@ -878,7 +898,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 diskSpaceAlertMsg.set_uuid(self._uuid)
             jsonMsg = diskSpaceAlertMsg.getJson()
             self.disk_sensor_data = jsonMsg
-            self.os_sensor_type["disk_space"] = self.disk_sensor_data
+            self.sensor_data["disk_space"] = self.disk_sensor_data
 
             # Transmit it to message processor
             self._write_internal_msgQ(EgressProcessor.name(), jsonMsg)
@@ -911,7 +931,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 raidDataMsg.set_uuid(self._uuid)
             jsonMsg = raidDataMsg.getJson()
             self.raid_sensor_data = jsonMsg
-            self.os_sensor_type["raid_data"] = self.raid_sensor_data
+            self.sensor_data["raid_data"] = self.raid_sensor_data
 
             # Loop thru each index of drives containing only paths and fill in with s/n
             for drive in self._raid_drives:
@@ -956,7 +976,7 @@ class NodeDataMsgHandler(ScheduledModuleThread, InternalMsgQ):
                 RAIDintegrityMsg.set_uuid(self._uuid)
             jsonMsg = RAIDintegrityMsg.getJson()
             self.raid_integrity_data = jsonMsg
-            self.os_sensor_type["raid_integrity"] = self.raid_integrity_data
+            self.sensor_data["raid_integrity"] = self.raid_integrity_data
 
             self._log_debug("_generate_raid_integrity_data, host_id: %s" %
                     (self._node_sensor.host_id))

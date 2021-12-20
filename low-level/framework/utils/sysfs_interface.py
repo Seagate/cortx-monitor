@@ -22,13 +22,16 @@ drivers information and configuration.
 import os
 from pathlib import Path
 
+from framework.platforms.server.error import HBAError
+from framework.utils.os_utils import OSUtils
 from framework.utils.utility import Utility
 from framework.utils.conf_utils import SSPL_CONF, Conf
+
 
 class SysFS(Utility):
     """Module which is responsible for fetching information
        internal to system such as SAS Port/SAS phy/network
-       using /sys file system"""
+       and HBA hosts using /sys file system"""
 
     nw_phy_link_state = {'0':'DOWN', '1':'UP', 'unknown':'UNKNOWN'}
 
@@ -41,8 +44,59 @@ class SysFS(Utility):
         self.sas_phy_dir_list = []
         self.phy_dir_dict = {}
         self.sas_phy_dir_path = {}
+        self.host_base_dir = None
+        self.host_type = OSUtils.get_host_type()
 
-    def initialize(self):
+
+    def get_host_list(self):
+        """
+        Returns host list from host base directory.
+        /sys/class/fc_host or /sys/class/scsi_host
+
+        Example: ['host1', 'host2']
+        """
+
+        hosts = []
+
+        # Refresh host_type
+        self.host_type = OSUtils.get_host_type()
+
+        if self.host_type:
+            self.host_base_dir = os.path.join(self.sysfs, self.host_type)
+            #self.host_base_dir = os.path.join('/tmp/class', self.host_type)
+            try:
+                hosts = os.listdir(self.host_base_dir)
+            except FileNotFoundError:
+                # HBA card is not detected
+                self.host_type = None
+
+        hosts = [host for host in hosts if 'host' in host]
+
+        return hosts
+
+
+    def get_host_data(self, host, attr):
+        """
+        Returns value of the host attribute like port_name, state,
+        unique_id, etc..
+        """
+
+        if not self.host_type:
+            return
+
+        host_dir_path = os.path.join(self.host_base_dir, host)
+
+        try:
+            with open(os.path.join(host_dir_path, attr)) as cFile:
+                data = cFile.read().strip()
+        except FileNotFoundError as err:
+            raise HBAError(err.errno, "Failed to get '%s' due to '%s, %s'",
+                attr, err.strerror, err.filename)
+
+        return data
+
+
+    def initialize_sas_phy(self):
         """Method for initialization.
            This iterates over /sys/class/sas_phy directory using listdir
            method of os module. And stores iterator to that path in the

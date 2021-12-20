@@ -274,6 +274,44 @@ def send_node_controller_message_request(uuid, resource_type, instance_id="*"):
     write_to_egress_msgQ(request)
 
 
+def send_node_data_message_request(uuid, resource_type, instance_id="*"):
+    """
+    This method creates sensor request using resource_type and instance_id.
+
+    The request will be written in EgressProcesser message Queue.
+    param:
+        uuid: Unique ID for the request
+        resource_type: Type of resource
+        instance_id: Numeric or "*"
+    """
+    request = {
+        "username":"sspl-ll",
+        "expires":3600,
+        "description":"Seagate Storage Platform Library - Sensor Request",
+        "title":"SSPL-LL Sensor Request",
+        "signature":"None",
+        "time": str(datetime.now()),
+        "message":{
+            "sspl_ll_msg_header":{
+                "msg_version":"1.0.0",
+                "uuid": uuid,
+                "schema_version":"1.0.0",
+                "sspl_version":"1.0.0"
+            },
+            "sspl_ll_debug":{
+                "debug_component":"sensor",
+                "debug_enabled": True
+            },
+            "sensor_request_type": {
+                "node_data": {
+                    "sensor_type": resource_type
+                }
+            }
+        }
+    }
+    write_to_egress_msgQ(request)
+
+
 def send_enclosure_request(resource_type, resource_id):
     request = {
         "title": "SSPL Actuator Request",

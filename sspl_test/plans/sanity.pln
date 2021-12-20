@@ -5,6 +5,7 @@ alerts.node.test_node_fan_actuator
 alerts.node.test_node_disk_actuator
 alerts.node.test_node_psu_actuator
 alerts.node.test_node_platform_sensors
+alerts.node.test_node_hba_sensor
 alerts.self_hw.test_real_stor_enclosure_conn
 alerts.realstor.test_real_stor_fan_actuator
 alerts.realstor.test_real_stor_disk_actuator

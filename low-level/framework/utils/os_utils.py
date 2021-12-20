@@ -21,6 +21,8 @@
 
 import socket
 
+from cortx.utils.process import SimpleProcess, PipedProcess
+
 
 class OSUtils:
     """Base class for OS related utility functions."""
@@ -29,3 +31,28 @@ class OSUtils:
     def get_fqdn():
         """Get fully qualified domain name for current node."""
         return socket.getfqdn()
+
+    @staticmethod
+    def get_host_type():
+        """
+        Determine and get host hba type using lspci.
+
+        Returns:
+            scsi_host or fc_host if HBA card is installed
+            Otherwise None.
+        """
+        host_type = ""
+
+        # Check for fc host
+        fc_host_check_cmd = "lspci | grep -Ei 'Fibre Channel'"
+        _, _, rc = PipedProcess(fc_host_check_cmd).run()
+        if rc == 0:
+            host_type = "fc_host"
+
+        # check for scsi host
+        sas_hba_check_cmd = "lspci | grep -Ei 'Serial Attached SCSI|SAS|LSI|SCSI storage controller'"
+        _, _, rc = PipedProcess(sas_hba_check_cmd).run()
+        if rc == 0:
+            host_type = "scsi_host"
+
+        return host_type

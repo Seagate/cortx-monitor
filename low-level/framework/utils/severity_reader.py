@@ -27,7 +27,8 @@ class SeverityReader(object):
          "missing": "critical",
          "insertion": "informational",
          "threshold_breached:low": "warning",
-         "threshold_breached:high": "warning"
+         "threshold_breached:high": "warning",
+         "get": "informational",
     }
 
     def __init__(self):

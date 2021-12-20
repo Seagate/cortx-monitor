@@ -157,7 +157,7 @@ class SASPortSensor(SensorThread, InternalMsgQ):
             # Get the instance of the utility using ToolFactory
             self._utility_instance = self._utility_instance or \
                                 self.tool_factory.get_instance(sas_port_utility)
-            self._utility_instance.initialize()
+            self._utility_instance.initialize_sas_phy()
             phy_status = None
 
             link_value_phy_status_collection = ()

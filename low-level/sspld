@@ -481,6 +481,7 @@ def _sensors_actuators_factory(sspl_threaded_modules, msgQlist, operating_system
         from sensors.impl.generic.node_hw import NodeHWsensor
         from sensors.impl.generic.node_sas_port import SASPortSensor
         from sensors.impl.generic.node_memory_fault import MemFaultSensor
+        from sensors.impl.generic.node_hba import HBASensor
         from sensors.impl.generic.cpu_fault_sensor import CPUFaultSensor
 
     if product.lower() in [x.lower() for x in enabled_products]:

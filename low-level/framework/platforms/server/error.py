@@ -66,3 +66,11 @@ class ServiceError(InterfaceError):
     def __init__(self, rc, message, *message_args):
         """Initialize the Error information."""
         super(ServiceError, self).__init__(rc, message, *message_args)
+
+
+class HBAError(InterfaceError):
+    """Error handling for HBA related errors."""
+
+    def __init__(self, rc, message, *message_args):
+        """Initialize the error information."""
+        super(HBAError, self).__init__(rc, message, *message_args)

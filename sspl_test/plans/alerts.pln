@@ -1,4 +1,5 @@
 alerts.node.test_node_disk_actuator
+alerts.node.test_node_hba_sensor
 alerts.os.test_disk_space_alert
 alerts.os.test_node_cpu_data_sensor
 alerts.os.test_node_raid_integrity_sensor

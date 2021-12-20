@@ -37,6 +37,7 @@ SSPL_LL_SETTING:
       - SASPortSensor
       - MemFaultSensor
       - CPUFaultSensor
+      - HBASensor
    actuators:
       - Service
       - RAIDactuator
@@ -184,9 +185,14 @@ SASPORTSENSOR:
 MEMFAULTSENSOR:
    monitor: true
    threaded: true
-   probe: sysfs
+   probe: procfs
 
 CPUFAULTSENSOR:
+   monitor: true
+   threaded: true
+   probe: sysfs
+
+HBASENSOR:
    monitor: true
    threaded: true
    probe: sysfs
