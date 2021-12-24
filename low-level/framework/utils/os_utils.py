@@ -22,6 +22,7 @@
 import socket
 
 from cortx.utils.process import SimpleProcess, PipedProcess
+from framework.base import sspl_constants as const
 
 
 class OSUtils:
@@ -47,12 +48,12 @@ class OSUtils:
         fc_host_check_cmd = "lspci | grep -Ei 'Fibre Channel'"
         _, _, rc = PipedProcess(fc_host_check_cmd).run()
         if rc == 0:
-            host_type = "fc_host"
+            host_type = const.FC_HOST
 
         # check for scsi host
         sas_hba_check_cmd = "lspci | grep -Ei 'Serial Attached SCSI|SAS|LSI|SCSI storage controller'"
         _, _, rc = PipedProcess(sas_hba_check_cmd).run()
         if rc == 0:
-            host_type = "scsi_host"
+            host_type = const.SCSI_HOST
 
         return host_type

@@ -201,7 +201,8 @@ def check_os_platform():
         print("Failed to get the os platform: error:{}".format(error.decode().rstrip('\n')))
 
 
-def get_fru_response(resource_type, instance_id=None, ingress_msg_type="actuator_response_type",
+def get_fru_response(resource_type, instance_id=None, _uuid=None,
+                     ingress_msg_type="actuator_response_type",
                      timeout=30, alert_type=None):
     """Returns message when resource type match with ingress message."""
     sensor_msg = None
@@ -215,6 +216,11 @@ def get_fru_response(resource_type, instance_id=None, ingress_msg_type="actuator
             try:
                 # Make sure we get back the message type that matches the request
                 msg_type = ingressMsg.get(ingress_msg_type)
+                if _uuid:
+                    if ingressMsg.get('sspl_ll_msg_header').get('uuid') == _uuid:
+                        sensor_msg = msg_type
+                        break
+                    continue
                 if msg_type["info"]["resource_type"] == resource_type:
                     if (instance_id and msg_type["info"]["resource_id"] == instance_id) or \
                         not instance_id:

@@ -248,6 +248,9 @@ class HBASensor(SensorThread, InternalMsgQ):
         """Create specific info required in the response."""
 
         specific_info = {}
+        model, vendor = self._hba._get_model_vendor()
+        specific_info["model"] = model
+        specific_info["vendor"] = vendor
         specific_info["initiators_count"] = len(self.hosts)
         specific_info["initiators"] = self.host_data
         specific_info["host_type"] = self._hba.host_type

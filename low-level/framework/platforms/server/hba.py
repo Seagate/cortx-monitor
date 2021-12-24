@@ -21,7 +21,7 @@ from framework.platforms.server.error import HBAError
 from framework.utils.os_utils import OSUtils
 from framework.utils.tool_factory import ToolFactory
 from framework.base import sspl_constants as const
-from cortx.utils.process import SimpleProcess
+from cortx.utils.process import SimpleProcess, PipedProcess
 
 
 class HBA:
@@ -55,6 +55,24 @@ class HBA:
         _, err, rc = SimpleProcess("rescan-scsi-bus.sh").run()
         if rc != 0:
             raise HBAError(rc, "Failed to scan scsi bus due to %s", err)
+
+
+    def _get_model_vendor(self):
+        """Returns model and vendor name of HBA."""
+
+        model = vendor = ""
+        cmd = ""
+
+        if self.host_type == const.FC_HOST:
+            cmd = "lspci | grep -Ei 'Fibre Channel'"
+        elif self.host_type == const.SCSI_HOST:
+            cmd = "lspci | grep -Ei 'Serial Attached SCSI|SAS|LSI|SCSI storage controller'"
+
+        out, _, rc = PipedProcess(cmd).run()
+        if rc == 0:
+            model, vendor = out.decode().split(": ")
+
+        return model, vendor
 
 
     def _is_host_found(self, host):

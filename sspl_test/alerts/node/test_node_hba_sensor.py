@@ -27,10 +27,8 @@ def test_node_hba_sensor(args):
     check_sspl_ll_is_running()
     resource_type = "node:hw:hba"
     send_node_data_message_request(UUID, resource_type)
-    ingress_msg = get_fru_response(resource_type,
-                                  ingress_msg_type="sensor_response_type")
-
-    assert(ingress_msg.get("sspl_ll_msg_header").get("uuid") == UUID)
+    ingress_msg = get_fru_response(resource_type, _uuid=UUID,
+        ingress_msg_type="sensor_response_type")
 
     hba_sensor_msg = ingress_msg.get("sensor_response_type")
     assert(hba_sensor_msg is not None)
