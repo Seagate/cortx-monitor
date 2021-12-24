@@ -63,7 +63,6 @@ class SysFS(Utility):
 
         if self.host_type:
             self.host_base_dir = os.path.join(self.sysfs, self.host_type)
-            #self.host_base_dir = os.path.join('/tmp/class', self.host_type)
             try:
                 hosts = os.listdir(self.host_base_dir)
             except FileNotFoundError:

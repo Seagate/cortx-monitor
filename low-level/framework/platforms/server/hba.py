@@ -20,6 +20,7 @@ from framework.utils.conf_utils import (
 from framework.platforms.server.error import HBAError
 from framework.utils.os_utils import OSUtils
 from framework.utils.tool_factory import ToolFactory
+from framework.base import sspl_constants as const
 from cortx.utils.process import SimpleProcess
 
 
@@ -41,6 +42,10 @@ class HBA:
         # be greater than scan finish time.
         # Rescan multipath
         #self._rescan_scsi_bus()
+        self.host_data = {
+            const.FC_HOST: self._get_fc_host_data,
+            const.SCSI_HOST: self._get_scsi_host_data
+        }
 
 
     @staticmethod
@@ -132,16 +137,14 @@ class HBA:
         Returns host information based on its type.
 
         Parameters:
-            host (str): scsi host detected by HBA card
+            host (str): scsi/fc host detected by HBA card
         Returns:
-            data (dict): fc host information
+            data (dict): host information
         """
 
         data = {}
 
-        if self.host_type == 'scsi_host':
-            data = self._get_scsi_host_data(host)
-        elif self.host_type == 'fc_host':
-            data = self._get_fc_host_data(host)
+        if self.host_data.get(self.host_type):
+            data = self.host_data[self.host_type](host)
 
         return data

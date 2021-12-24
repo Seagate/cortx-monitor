@@ -113,7 +113,7 @@ class HBASensor(SensorThread, InternalMsgQ):
 
         # Get the hba implementor from configuration
         hba_utility = Conf.get(SSPL_CONF,
-                               f"{self.name().upper()}>{self.PROBE}", "sysfs")
+            f"{self.name().upper()}>{self.PROBE}", "sysfs")
 
         self.polling_interval = int(Conf.get(SSPL_CONF,
             f"{self.SENSOR_NAME.upper()}>{self.POLLING_INTERVAL}",
