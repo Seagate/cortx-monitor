@@ -20,20 +20,16 @@ import time
 import uuid
 from zope.interface import implementer
 
-from framework.base.debug import Debug
 from framework.base.internal_msgQ import InternalMsgQ
 from framework.base.module_thread import SensorThread
-from framework.base.sspl_constants import DATA_PATH, SAS_RESOURCE_ID
+from framework.base.sspl_constants import (
+    DATA_PATH, DEFAULT_RECOMMENDATION)
 from framework.utils.conf_utils import (GLOBAL_CONF, SSPL_CONF, Conf,
     NODE_ID_KEY)
-from framework.utils.service_logging import logger
 from framework.utils.severity_reader import SeverityReader
 from framework.utils.store_factory import file_store
-from framework.utils.tool_factory import ToolFactory
 from framework.utils.os_utils import OSUtils
-from framework.utils.mon_utils import MonUtils
 from message_handlers.node_data_msg_handler import NodeDataMsgHandler
-from framework.messaging.egress_processor import EgressProcessor
 from framework.platforms.server.component_factory import ServerCompFactory
 from json_msgs.messages.sensors.hba_data import HBADataMsg
 from sensors.Ihba import IHBASensor
@@ -206,7 +202,7 @@ class HBASensor(SensorThread, InternalMsgQ):
                 alert_type = self.FRU_MISSING
                 description = "HBA is missing"
                 impact = self.impact()
-                recommendation = "Please contact support team"
+                recommendation = DEFAULT_RECOMMENDATION
 
             elif hba_status == self.FRU_FAULT:
                 for host in self.hosts:
@@ -217,7 +213,7 @@ class HBASensor(SensorThread, InternalMsgQ):
                         description = "HBA port is not running"
                         impact = "HBA %s port_%s can not be monitored" % (
                             host, self.host_data[host]['port_id'])
-                        recommendation = "Please contact support team"
+                        recommendation = DEFAULT_RECOMMENDATION
                         break
 
             self._create_message(alert_type, resource_type, resource_id="*",
@@ -308,7 +304,7 @@ class HBASensor(SensorThread, InternalMsgQ):
             resource_type = self.HBA_RESOURCE_TYPE
             alert_type = self.FRU_MISSING
             description = "HBA card is missing"
-            recommendation = "Insert HBA card"
+            recommendation = DEFAULT_RECOMMENDATION
             self._create_message(alert_type, resource_type, resource_id,
                                  description=description,
                                  recommendation=recommendation,
@@ -384,7 +380,7 @@ class HBASensor(SensorThread, InternalMsgQ):
                 resource_type = self.HBA_RESOURCE_TYPE
                 alert_type = self.FRU_FAULT
                 description = f"{host} port status is not running"
-                recommendation = "Please check %s port %s" % (host, data['port_id'])
+                recommendation = DEFAULT_RECOMMENDATION
                 self._create_message(alert_type, resource_type, resource_id,
                                      description=description,
                                      recommendation=recommendation,
