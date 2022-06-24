@@ -1,6 +1,6 @@
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/4d251d6e46e4445a978b1616516a3bc7)](https://app.codacy.com/gh/Seagate/cortx-monitor?utm_source=github.com&utm_medium=referral&utm_content=Seagate/cortx-monitor&utm_campaign=Badge_Grade) [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://github.com/Seagate/cortx-monitor/blob/main/LICENSE) [![Slack](https://img.shields.io/badge/chat-on%20Slack-blue")](https://cortx.link/join-slack) [![YouTube](https://img.shields.io/badge/Video-YouTube-red)](https://cortx.link/videos) [![GitHub contributors](https://img.shields.io/github/contributors/Seagate/cortx-monitor)](https://github.com/Seagate/cortx-monitor/graphs/contributors/)
 
-**This project is not maintained anymore**
+## Disclaimer: This project is not maintained anymore
 
 
 # CORTX-Monitor
