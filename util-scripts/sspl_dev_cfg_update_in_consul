@@ -19,9 +19,9 @@
 ######################################################
 encl_primary_controller_ip="127.0.0.1"
 encl_primary_controller_port="28200"
-encl_user="manage"
-encl_pass="!manage"
-rbmq_pass="sspl4ever"
+encl_user=""
+encl_pass=""
+rbmq_pass=""
 ######################################################
 
 declare -A sspl_conf_update
